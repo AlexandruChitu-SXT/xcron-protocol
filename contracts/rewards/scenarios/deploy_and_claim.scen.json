@@ -1,0 +1,97 @@
+{
+    "name": "deploy-rewards",
+    "comment": "Test deploying the Rewards contract",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000",
+                    "storage": {}
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "10,000,000,000,000,000,000",
+                    "storage": {}
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:rewards"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "comment": "Deploy Rewards with 20% treasury split",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/rewards.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "2000"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-treasury-split",
+            "comment": "Verify treasury split is 2000 BPS (20%)",
+            "tx": {
+                "to": "sc:rewards",
+                "function": "getTreasurySplitBps",
+                "arguments": []
+            },
+            "expect": {
+                "out": [
+                    "2000"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-treasury-zero",
+            "comment": "Verify treasury starts at 0",
+            "tx": {
+                "to": "sc:rewards",
+                "function": "getTreasuryBalance",
+                "arguments": []
+            },
+            "expect": {
+                "out": [
+                    "0"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "reject-empty-claim",
+            "comment": "Claiming with no rewards should fail",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:rewards",
+                "function": "claimRewards",
+                "arguments": [],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:No pending rewards"
+            }
+        }
+    ]
+}

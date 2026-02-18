@@ -1,0 +1,82 @@
+{
+    "name": "deploy-scheduler",
+    "comment": "Test deploying the Scheduler contract with valid parameters",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000",
+                    "storage": {}
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000",
+                    "storage": {}
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000",
+                    "storage": {}
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "comment": "Deploy Scheduler with min_deposit=0.1 EGLD, fee=5%",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-task-nonce",
+            "comment": "Verify task nonce starts at 0",
+            "tx": {
+                "to": "sc:scheduler",
+                "function": "getTaskNonce",
+                "arguments": []
+            },
+            "expect": {
+                "out": ["0"],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-fee-bps",
+            "comment": "Verify protocol fee is 500 BPS (5%)",
+            "tx": {
+                "to": "sc:scheduler",
+                "function": "getProtocolFeeBps",
+                "arguments": []
+            },
+            "expect": {
+                "out": ["500"],
+                "status": "0"
+            }
+        }
+    ]
+}

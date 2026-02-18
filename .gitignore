@@ -1,0 +1,45 @@
+# ═══════════════════════════════════════════════════════════
+#  xCron Protocol — .gitignore
+# ═══════════════════════════════════════════════════════════
+
+# ──────── SECURITY: PRIVATE KEYS & WALLETS ────────
+wallets/
+*.pem
+*.keystore.json
+
+# ──────── RUST / SMART CONTRACTS ────────
+contracts/target/
+contracts/output/
+**/wasm/target/
+wasm/
+output/
+
+# ──────── NODE.JS ────────
+node_modules/
+dist/
+.cache/
+
+# ──────── PYTHON ────────
+.venv/
+__pycache__/
+*.pyc
+
+# ──────── IDE & OS ────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ──────── ENVIRONMENT & SECRETS ────────
+.env
+.env.local
+.env.*.local
+
+# ──────── MISC ────────
+*.log
+mx-ai-skills
+*.resolved
+*.resolved.*
+*.metadata.json
+.deployed_addresses.json

@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = [
+    "common",
+    "scheduler",
+    "scheduler/meta",
+    "keeper-registry",
+    "keeper-registry/meta",
+    "rewards",
+    "rewards/meta",
+]
+
+[workspace.dependencies]
+multiversx-sc = "0.54.6"
+multiversx-sc-meta-lib = "0.54.6"
+multiversx-sc-scenario = "0.54.6"
+multiversx-sc-wasm-adapter = "0.54.6"
+common = { path = "common" }

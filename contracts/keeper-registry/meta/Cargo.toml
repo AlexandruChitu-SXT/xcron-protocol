@@ -1,0 +1,11 @@
+[package]
+name = "keeper-registry-meta"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies.keeper-registry]
+path = ".."
+
+[dependencies.multiversx-sc-meta-lib]
+workspace = true

@@ -1,0 +1,17 @@
+[package]
+name = "keeper-registry"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies.multiversx-sc]
+workspace = true
+
+[dependencies.common]
+workspace = true
+
+[dev-dependencies.multiversx-sc-scenario]
+workspace = true

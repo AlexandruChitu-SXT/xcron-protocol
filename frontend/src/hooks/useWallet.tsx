@@ -306,8 +306,49 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     /* ── Auto-reconnect from localStorage ── */
     useEffect(() => {
         const saved = localStorage.getItem('xcron_wallet');
-        if (saved && !wallet.connected) connect(saved);
+        if (saved && !wallet.connected) {
+            connect(saved).catch(() => {
+                // Network might be down — retry once after 3s
+                setTimeout(() => {
+                    const stillSaved = localStorage.getItem('xcron_wallet');
+                    if (stillSaved && !wallet.connected) {
+                        connect(stillSaved).catch(() => {
+                            console.warn('Auto-reconnect failed after retry');
+                        });
+                    }
+                }, 3000);
+            });
+        }
     }, [connect, wallet.connected]);
+
+    /* ── Periodic balance refresh (every 30s) ── */
+    useEffect(() => {
+        if (!wallet.connected) return;
+        const interval = setInterval(() => refreshBalance(), 30000);
+        return () => clearInterval(interval);
+    }, [wallet.connected, refreshBalance]);
+
+    /* ── Network reconnection (WiFi ↔ mobile data) ── */
+    useEffect(() => {
+        const handleOnline = () => {
+            if (wallet.connected) {
+                refreshBalance();
+                addToast('Connection restored', 'success');
+            }
+        };
+        const handleOffline = () => {
+            if (wallet.connected) {
+                addToast('Network offline — will reconnect automatically', 'info');
+            }
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [wallet.connected, refreshBalance, addToast]);
 
     return (
         <WalletContext.Provider
@@ -323,3 +364,4 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         </WalletContext.Provider>
     );
 }
+

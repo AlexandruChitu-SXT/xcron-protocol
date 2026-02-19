@@ -20,6 +20,7 @@ export function ToastContainer() {
                     <button className="toast-close" onClick={() => removeToast(toast.id)}>
                         ×
                     </button>
+                    <div className="toast-progress" />
                 </div>
             ))}
         </div>

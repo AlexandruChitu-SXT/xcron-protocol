@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ConnectModal } from './components/ConnectModal';
 import { ToastContainer } from './components/ToastContainer';
+import { NetworkBadge } from './components/NetworkBadge';
 import { Dashboard } from './pages/Dashboard';
 import { ScheduleTask } from './pages/ScheduleTask';
 import { MyTasks } from './pages/MyTasks';
@@ -18,6 +19,7 @@ function App() {
         <Header />
         <ConnectModal />
         <ToastContainer />
+        <NetworkBadge />
         <main style={{ flex: 1 }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />

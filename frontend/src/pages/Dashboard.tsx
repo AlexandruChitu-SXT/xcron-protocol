@@ -4,6 +4,7 @@ import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '..
 import { CONTRACTS } from '../config';
 import { NavLink } from 'react-router-dom';
 import SlicedLogo3D from '../components/SlicedLogo3D';
+import { AnimatedCounter } from '../components/AnimatedCounter';
 
 interface ProtocolStats {
     totalTasks: number;
@@ -77,25 +78,25 @@ export function Dashboard() {
                     <div className="stat-card" style={{ background: 'rgba(59,130,246,0.12)', borderColor: 'rgba(59,130,246,0.25)', boxShadow: '0 0 25px rgba(59,130,246,0.25)' }}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" /><line x1="12" y1="2" x2="12" y2="22" /><line x1="2" y1="8.5" x2="22" y2="8.5" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(59,130,246)' }}>Total Tasks</div>
-                        <div className="stat-value">{loading ? '—' : stats.totalTasks}</div>
+                        <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.totalTasks} />}</div>
                         <div className="stat-sub">Scheduled on protocol</div>
                     </div>
                     <div className="stat-card" style={{ background: 'rgba(232,146,124,0.12)', borderColor: 'rgba(232,146,124,0.25)', boxShadow: '0 0 25px rgba(232,146,124,0.25)' }}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(232,146,124,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /><line x1="12" y1="1" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="1" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="23" y2="12" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(232,146,124)' }}>Active Keepers</div>
-                        <div className="stat-value">{loading ? '—' : stats.activeKeepers}</div>
+                        <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.activeKeepers} />}</div>
                         <div className="stat-sub">Executing tasks</div>
                     </div>
                     <div className="stat-card" style={{ background: 'rgba(251,191,36,0.1)', borderColor: 'rgba(251,191,36,0.2)', boxShadow: '0 0 25px rgba(251,191,36,0.25)' }}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><polygon points="12,2 20,12 12,22 4,12" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(251,191,36)' }}>Min Deposit</div>
-                        <div className="stat-value">{loading ? '—' : formatEgld(stats.minDeposit, 2)}</div>
+                        <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : formatEgld(stats.minDeposit, 2)}</div>
                         <div className="stat-sub">EGLD per task</div>
                     </div>
                     <div className="stat-card" style={{ background: 'rgba(244,114,182,0.1)', borderColor: 'rgba(244,114,182,0.2)', boxShadow: '0 0 25px rgba(244,114,182,0.25)' }}>
                         <svg width="24" height="24" viewBox="0 0 24 26" fill="none" stroke="rgba(244,114,182,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><path d="M12 2L3 7v6c0 5.25 3.85 10.15 9 11.35C17.15 23.15 21 18.25 21 13V7L12 2z" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(244,114,182)' }}>Protocol Fee</div>
-                        <div className="stat-value">{loading ? '—' : `${stats.protocolFeeBps / 100}%`}</div>
+                        <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <><AnimatedCounter value={stats.protocolFeeBps / 100} />%</>}</div>
                         <div className="stat-sub">Per execution</div>
                     </div>
                 </div>

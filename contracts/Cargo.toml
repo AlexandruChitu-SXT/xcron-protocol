@@ -8,6 +8,8 @@ members = [
     "keeper-registry/meta",
     "rewards",
     "rewards/meta",
+    "ping",
+    "ping/meta",
 ]
 
 [workspace.dependencies]

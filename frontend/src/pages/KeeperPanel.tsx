@@ -197,11 +197,11 @@ export function KeeperPanel() {
                     </div>
 
                     <div className="stats-grid">
-                        <div className="stat-card" style={{ background: 'rgba(249,115,22,0.12)', borderColor: 'rgba(249,115,22,0.25)', boxShadow: '0 0 25px rgba(249,115,22,0.25)' }}>
+                        <div className="stat-card" style={{ background: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)' }}>
                             <div className="stat-label" style={{ color: 'rgb(249,115,22)' }}>Active Keepers</div>
                             <div className="stat-value">{loading ? '—' : globalStats.totalKeepers}</div>
                         </div>
-                        <div className="stat-card" style={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.25)', boxShadow: '0 0 25px rgba(168,85,247,0.25)' }}>
+                        <div className="stat-card" style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)' }}>
                             <div className="stat-label" style={{ color: 'rgb(168,85,247)' }}>Min Deposit</div>
                             <div className="stat-value">{loading ? '—' : formatEgld(globalStats.minStake, 2)}</div>
                             <div className="stat-sub">EGLD required</div>
@@ -229,23 +229,23 @@ export function KeeperPanel() {
                 </div>
 
                 <div className="stats-grid">
-                    <div className="stat-card" style={{ background: 'rgba(249,115,22,0.12)', borderColor: 'rgba(249,115,22,0.25)', boxShadow: '0 0 25px rgba(249,115,22,0.25)' }}>
+                    <div className="stat-card" style={{ background: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)' }}>
                         <div className="stat-label" style={{ color: 'rgb(249,115,22)' }}>Active Keepers</div>
                         <div className="stat-value">{loading ? '—' : globalStats.totalKeepers}</div>
                     </div>
-                    <div className="stat-card" style={{ background: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.25)', boxShadow: '0 0 25px rgba(168,85,247,0.25)' }}>
+                    <div className="stat-card" style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)' }}>
                         <div className="stat-label" style={{ color: 'rgb(168,85,247)' }}>Min Deposit</div>
                         <div className="stat-value">{loading ? '—' : formatEgld(globalStats.minStake, 2)}</div>
                         <div className="stat-sub">EGLD required</div>
                     </div>
                     {stats?.isRegistered && (
                         <>
-                            <div className="stat-card" style={{ background: 'rgba(132,204,22,0.12)', borderColor: 'rgba(132,204,22,0.25)', boxShadow: '0 0 25px rgba(132,204,22,0.25)' }}>
+                            <div className="stat-card" style={{ background: 'rgba(132,204,22,0.08)', borderColor: 'rgba(132,204,22,0.2)' }}>
                                 <div className="stat-label" style={{ color: 'rgb(132,204,22)' }}>Your Deposit</div>
                                 <div className="stat-value">{formatEgld(stats.stake, 4)}</div>
                                 <div className="stat-sub">EGLD deposited</div>
                             </div>
-                            <div className="stat-card" style={{ background: 'rgba(236,72,153,0.12)', borderColor: 'rgba(236,72,153,0.25)', boxShadow: '0 0 25px rgba(236,72,153,0.25)' }}>
+                            <div className="stat-card" style={{ background: 'rgba(236,72,153,0.08)', borderColor: 'rgba(236,72,153,0.2)' }}>
                                 <div className="stat-label" style={{ color: 'rgb(236,72,153)' }}>Pending Rewards</div>
                                 <div className="stat-value" style={{ color: 'var(--success)' }}>
                                     {formatEgld(stats.pendingRewards, 4)}
@@ -366,7 +366,7 @@ export function KeeperPanel() {
                                     fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8
                                 }}>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(234,179,8)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                                    <span>Cooldown in progress. You can withdraw once the cooldown period elapses.</span>
+                                    <span>Cooldown in progress (~10 min). Your deposit is safe — you can withdraw once the cooldown period elapses.</span>
                                 </div>
                             )}
                         </div>

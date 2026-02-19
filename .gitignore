@@ -57,3 +57,4 @@ mx-ai-skills
 *.resolved.*
 *.metadata.json
 .deployed_addresses.json
+.agent/

@@ -11,7 +11,7 @@ export const NETWORK = {
 
 export const CONTRACTS = {
     scheduler:
-        "erd1qqqqqqqqqqqqqpgqjrysr6ml0mdsdxugjgy59u0v5j8x9qk57k8smjt09x",
+        "erd1qqqqqqqqqqqqqpgqsmmpmp7hh6cqrnng0vp9ywgre70luvus7k8svk7ejh",
     keeperRegistry:
         "erd1qqqqqqqqqqqqqpgq0zlpshzkjr5egtaueyn29a2t9kv8mywp7k8sxexula",
     rewards:

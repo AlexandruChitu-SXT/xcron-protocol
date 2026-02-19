@@ -18,7 +18,7 @@ export function Footer() {
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                 <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" />
                             </svg>
-                            Built on MultiversX
+                            Built on <span style={{ color: '#00e5ff', fontWeight: 700 }}>MultiversX</span> with <span style={{ color: '#ef4444' }}>❤️</span>
                         </div>
                     </div>
 

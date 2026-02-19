@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { NETWORK } from '../config';
 
 /* ──────────────── Types ──────────────── */
@@ -60,11 +60,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const [wallet, setWallet] = useState<WalletState>(defaultWallet);
     const [showConnectModal, setShowConnectModal] = useState(false);
     const [toasts, setToasts] = useState<Toast[]>([]);
-    let toastId = 0;
+    const toastIdRef = useRef(0);
 
     /* ── Toast helpers ── */
     const addToast = useCallback((message: string, type: ToastType) => {
-        const id = ++toastId;
+        const id = ++toastIdRef.current;
         setToasts((prev) => [...prev, { id, message, type }]);
         setTimeout(() => {
             setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -173,6 +173,65 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }
         }
 
+        if (provider === 'walletconnect') {
+            try {
+                addToast('Signing with xPortal...', 'info');
+                const { WalletConnectV2Provider } = await import('@multiversx/sdk-wallet-connect-provider');
+
+                const callbacks = {
+                    onClientLogin: () => { },
+                    onClientLogout: () => { },
+                    onClientEvent: () => { },
+                };
+
+                const wcProvider = new WalletConnectV2Provider(
+                    callbacks,
+                    NETWORK.chainId,
+                    'wss://relay.walletconnect.com',
+                    '9b36b2703c75eb57d9680e44b74c4df9'
+                );
+                await wcProvider.init();
+
+                const accountResp = await fetch(`${NETWORK.apiUrl}/accounts/${wallet.address}`);
+                const accountData = await accountResp.json();
+
+                const transaction = {
+                    nonce: accountData.nonce,
+                    value: tx.value,
+                    receiver: tx.receiver,
+                    sender: wallet.address,
+                    gasLimit: tx.gasLimit,
+                    gasPrice: 1000000000,
+                    data: btoa(tx.data),
+                    chainID: NETWORK.chainId,
+                    version: 1,
+                };
+
+                const signedTx = await wcProvider.signTransaction(transaction as any);
+
+                addToast('Broadcasting transaction...', 'info');
+                const broadcastResp = await fetch(`${NETWORK.apiUrl}/transactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(signedTx),
+                });
+
+                if (!broadcastResp.ok) {
+                    const errText = await broadcastResp.text();
+                    throw new Error(`Broadcast failed: ${errText}`);
+                }
+                const result = await broadcastResp.json();
+                addToast(`Transaction sent! Hash: ${result.txHash?.slice(0, 12)}...`, 'success');
+
+                setTimeout(() => refreshBalance(), 6000);
+                return result.txHash || null;
+            } catch (err: any) {
+                console.error('WalletConnect sign failed:', err);
+                addToast(`xPortal error: ${err.message}. Opening Web Wallet...`, 'error');
+                return signViaWebWallet(tx);
+            }
+        }
+
         // Default: sign via Web Wallet redirect
         addToast('Opening Web Wallet for signing...', 'info');
         return signViaWebWallet(tx);
@@ -180,11 +239,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     const signViaWebWallet = async (tx: TransactionPayload): Promise<string | null> => {
         try {
+            const callbackUrl = `${window.location.origin}${window.location.pathname}`;
             const params = new URLSearchParams();
             params.set('receiver', tx.receiver);
             params.set('value', tx.value);
             params.set('gasLimit', tx.gasLimit.toString());
             params.set('data', tx.data);
+            params.set('callbackUrl', callbackUrl);
 
             const webWalletUrl = `${NETWORK.walletUrl}/hook/transaction?${params.toString()}`;
             console.log('Web Wallet URL:', webWalletUrl);

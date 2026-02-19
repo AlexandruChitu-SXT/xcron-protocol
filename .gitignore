@@ -36,6 +36,11 @@ __pycache__/
 .env.local
 .env.*.local
 
+# ──────── PERSONAL DATA / GRANT DOCUMENTS ────────
+*.pdf
+xcron/*.pdf
+xcron/*.metadata.json
+
 # ──────── KEEPER BOT SECRETS & LOGS ────────
 keeper/keeper-config.json
 keeper/keeper-logs/

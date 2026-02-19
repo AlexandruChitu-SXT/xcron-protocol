@@ -36,6 +36,15 @@ __pycache__/
 .env.local
 .env.*.local
 
+# ──────── KEEPER BOT SECRETS & LOGS ────────
+keeper/keeper-config.json
+keeper/keeper-logs/
+keeper-logs/
+
+# ──────── BUILD ARTIFACTS ────────
+*.mxsc.json
+contracts/*/scenarios/output/
+
 # ──────── MISC ────────
 *.log
 mx-ai-skills

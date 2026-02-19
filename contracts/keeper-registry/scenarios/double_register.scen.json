@@ -1,0 +1,87 @@
+{
+    "name": "double-register",
+    "comment": "Test that a keeper cannot register twice",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "20,000,000,000,000,000,000"
+                },
+                "address:treasury": {
+                    "nonce": "0",
+                    "balance": "0"
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:keeper_registry"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/keeper-registry.mxsc.json",
+                "arguments": [
+                    "1,000,000,000,000,000,000",
+                    "1000",
+                    "600",
+                    "address:treasury"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "register-first",
+            "comment": "First registration — should succeed",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:keeper_registry",
+                "function": "registerKeeper",
+                "arguments": [],
+                "value": "5,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "register-again",
+            "comment": "Double registration — should fail",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:keeper_registry",
+                "function": "registerKeeper",
+                "arguments": [],
+                "value": "5,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Keeper already registered"
+            }
+        }
+    ]
+}

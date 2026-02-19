@@ -1,0 +1,157 @@
+{
+    "name": "unstake-flow",
+    "comment": "Test the full unstake lifecycle: register → request unstake → wait cooldown → withdraw",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "10,000,000,000,000,000,000"
+                },
+                "address:treasury": {
+                    "nonce": "0",
+                    "balance": "0"
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:keeper_registry"
+                }
+            ],
+            "currentBlockInfo": {
+                "blockRound": "100"
+            }
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/keeper-registry.mxsc.json",
+                "arguments": [
+                    "1,000,000,000,000,000,000",
+                    "1000",
+                    "600",
+                    "address:treasury"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "register",
+            "comment": "Register with 5 EGLD",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:keeper_registry",
+                "function": "registerKeeper",
+                "arguments": [],
+                "value": "5,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "request-unstake",
+            "comment": "Request unstake — sets cooldown timer",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:keeper_registry",
+                "function": "requestUnstake",
+                "arguments": [],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-inactive",
+            "comment": "Keeper should now be inactive",
+            "tx": {
+                "to": "sc:keeper_registry",
+                "function": "isActiveKeeper",
+                "arguments": [
+                    "address:keeper1"
+                ]
+            },
+            "expect": {
+                "out": [
+                    ""
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "withdraw-too-early",
+            "comment": "Try to withdraw before cooldown — should fail",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:keeper_registry",
+                "function": "withdrawStake",
+                "arguments": [],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Cooldown not elapsed"
+            }
+        },
+        {
+            "step": "setState",
+            "comment": "Advance past cooldown period (100 + 600 = 700)",
+            "currentBlockInfo": {
+                "blockRound": "800"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "withdraw-success",
+            "comment": "Withdraw after cooldown — should succeed",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:keeper_registry",
+                "function": "withdrawStake",
+                "arguments": [],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "checkState",
+            "comment": "Keeper should have received 5 EGLD back",
+            "accounts": {
+                "address:keeper1": {
+                    "balance": "10,000,000,000,000,000,000"
+                }
+            }
+        }
+    ]
+}

@@ -2,7 +2,7 @@
 
 ### Decentralized Task Automation for MultiversX
 
-![XCron Logo](/Users/alejandrochitu/.gemini/antigravity/brain/b21dfea5-5e66-4a29-9f1a-72403aab6fe7/xcron_logo_1771345530225.png)
+![XCron Logo](../frontend/public/logo.png)
 
 > **Whitepaper v1.2** | February 2026
 

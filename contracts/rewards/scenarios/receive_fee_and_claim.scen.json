@@ -1,0 +1,149 @@
+{
+    "name": "receive-fee-and-claim",
+    "comment": "Test receiving execution fee (treasury split + keeper bonus) and keeper claiming rewards",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "0"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:rewards"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "comment": "Deploy Rewards with 20% treasury split (2000 BPS)",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/rewards.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "2000"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "receive-fee",
+            "comment": "Owner sends 1 EGLD as execution fee for keeper1 (simulating Scheduler call). 20% treasury = 0.2 EGLD, 80% keeper = 0.8 EGLD",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:rewards",
+                "function": "receiveExecutionFee",
+                "arguments": [
+                    "address:keeper1",
+                    "1"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-pending-rewards",
+            "comment": "Keeper pending rewards should be 0.8 EGLD (80% of 1 EGLD)",
+            "tx": {
+                "to": "sc:rewards",
+                "function": "getPendingRewards",
+                "arguments": [
+                    "address:keeper1"
+                ]
+            },
+            "expect": {
+                "out": [
+                    "800,000,000,000,000,000"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-treasury",
+            "comment": "Treasury should be 0.2 EGLD (20% of 1 EGLD)",
+            "tx": {
+                "to": "sc:rewards",
+                "function": "getTreasuryBalance",
+                "arguments": []
+            },
+            "expect": {
+                "out": [
+                    "200,000,000,000,000,000"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "claim-rewards",
+            "comment": "Keeper1 claims 0.8 EGLD",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:rewards",
+                "function": "claimRewards",
+                "arguments": [],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "checkState",
+            "comment": "Keeper1 should now have 0.8 EGLD",
+            "accounts": {
+                "address:keeper1": {
+                    "balance": "800,000,000,000,000,000"
+                }
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-pending-zero",
+            "comment": "Pending rewards should be 0 after claiming",
+            "tx": {
+                "to": "sc:rewards",
+                "function": "getPendingRewards",
+                "arguments": [
+                    "address:keeper1"
+                ]
+            },
+            "expect": {
+                "out": [
+                    ""
+                ],
+                "status": "0"
+            }
+        }
+    ]
+}

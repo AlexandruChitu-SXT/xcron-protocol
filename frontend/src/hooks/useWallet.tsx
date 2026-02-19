@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { NETWORK } from '../config';
+import { NETWORK, WALLETCONNECT } from '../config';
 
 /* ──────────────── Types ──────────────── */
 
@@ -187,8 +187,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 const wcProvider = new WalletConnectV2Provider(
                     callbacks,
                     NETWORK.chainId,
-                    'wss://relay.walletconnect.com',
-                    '9b36b2703c75eb57d9680e44b74c4df9'
+                    WALLETCONNECT.relayUrl,
+                    WALLETCONNECT.projectId
                 );
                 await wcProvider.init();
 

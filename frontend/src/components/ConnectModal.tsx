@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
-import { NETWORK } from '../config';
+import { NETWORK, WALLETCONNECT } from '../config';
 
 /**
  * Wallet connection modal supporting:
@@ -73,8 +73,8 @@ export function ConnectModal() {
             const provider = new WalletConnectV2Provider(
                 callbacks,
                 NETWORK.chainId,
-                'wss://relay.walletconnect.com',
-                '9b36b2703c75eb57d9680e44b74c4df9' // WalletConnect V2 Project ID
+                WALLETCONNECT.relayUrl,
+                WALLETCONNECT.projectId
             );
 
             await provider.init();
@@ -103,7 +103,7 @@ export function ConnectModal() {
 
     const handleWebWalletLogin = () => {
         setLoading('webwallet');
-        const callbackUrl = encodeURIComponent(`${window.location.origin}/`);
+        const callbackUrl = encodeURIComponent(window.location.href);
         window.location.href = `${NETWORK.walletUrl}/hook/login?callbackUrl=${callbackUrl}`;
     };
 

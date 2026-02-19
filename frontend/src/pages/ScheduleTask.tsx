@@ -632,7 +632,7 @@ function addressToHex(addr: string): string {
     try {
         return Address.newFromBech32(addr).toHex();
     } catch {
-        return addr;
+        throw new Error(`Invalid contract address: "${addr}". Must be a valid erd1... address.`);
     }
 }
 

@@ -34,3 +34,9 @@ export const GAS_REGISTER_KEEPER = 10_000_000;
 export const GAS_CLAIM_REWARDS = 10_000_000;
 export const GAS_REQUEST_UNSTAKE = 10_000_000;
 export const GAS_WITHDRAW_STAKE = 10_000_000;
+
+// WalletConnect (xPortal)
+export const WALLETCONNECT = {
+    projectId: '9b36b2703c75eb57d9680e44b74c4df9',
+    relayUrl: 'wss://relay.walletconnect.com',
+};

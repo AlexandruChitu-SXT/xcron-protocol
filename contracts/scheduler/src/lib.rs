@@ -129,161 +129,76 @@ pub trait SchedulerContract:
     //  TASK EXECUTION (Phase 1 — Direct, no commit-reveal)
     // ═══════════════════════════════════════════════════════════
 
-    /// Execute a ripe task. Phase 1: keeper calls directly (no commit-reveal).
+    /// Execute a ripe task. Phase 1: keeper calls directly (synchronous).
     #[endpoint(executeTask)]
     fn execute_task(&self, task_id: u64) {
         let task = self.tasks(task_id).get();
-        let caller = self.blockchain().get_caller();
+        let keeper = self.blockchain().get_caller();
 
         // Checks
         require!(task.status == common::types::TaskStatus::Pending, "Task not Pending");
-        self.require_registered_keeper(&caller);
+        self.require_registered_keeper(&keeper);
         self.require_task_ripe(task_id, &task);
 
-        // Effects — update status BEFORE external call (CEI pattern)
+        // CEI — Effects first
         let mut task = task;
-        task.status = common::types::TaskStatus::Executing;
-        task.assigned_keeper = Some(caller.clone());
+        task.status = common::types::TaskStatus::Completed;
+        task.assigned_keeper = Some(keeper.clone());
         self.tasks(task_id).set(&task);
+        self.remove_from_indices(task_id, &task);
 
-        // Interactions — async call to target contract
-        let gas_for_callback = common::constants::CALLBACK_GAS_RESERVE;
-        let gas_for_execution = task.max_gas;
+        // Calculate reward
+        let reward = self.calculate_keeper_reward(&task);
+        let protocol_fee = self.calculate_protocol_fee(&task);
 
+        // Pay keeper directly
+        self.send().direct_egld(&keeper, &reward);
+
+        // Refund remaining deposit to owner after fees
+        let total_spent = &reward + &protocol_fee;
+        if task.deposit > total_spent {
+            let refund = &task.deposit - &total_spent;
+            self.send().direct_egld(&task.owner, &refund);
+        }
+
+        // Send protocol fee to Rewards contract
+        let rewards_addr = self.rewards_addr().get();
+        if protocol_fee > BigUint::zero() {
+            self.tx()
+                .to(&rewards_addr)
+                .raw_call("receiveExecutionFee")
+                .argument(&keeper)
+                .argument(&task_id)
+                .egld(&protocol_fee)
+                .gas(5_000_000u64)
+                .transfer_execute();
+        }
+
+        // Record execution on KeeperRegistry
+        let registry_addr = self.keeper_registry_addr().get();
+        self.tx()
+            .to(&registry_addr)
+            .raw_call("recordExecution")
+            .argument(&keeper)
+            .argument(&true)
+            .gas(5_000_000u64)
+            .transfer_execute();
+
+        // Call the target contract (fire-and-forget)
         self.tx()
             .to(&task.target_contract)
             .raw_call(task.target_endpoint.clone())
             .arguments_raw(task.target_args.clone().into())
-            .gas(gas_for_execution)
-            .callback(
-                self.callbacks()
-                    .execution_callback(task_id, caller),
-            )
-            .gas_for_callback(gas_for_callback)
-            .register_promise();
-    }
+            .gas(task.max_gas)
+            .transfer_execute();
 
-    #[promises_callback]
-    fn execution_callback(
-        &self,
-        task_id: u64,
-        keeper: ManagedAddress,
-        #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
-    ) {
-        let mut task = self.tasks(task_id).get();
-
-        match result {
-            ManagedAsyncCallResult::Ok(_) => {
-                // Effects
-                task.status = common::types::TaskStatus::Completed;
-                self.tasks(task_id).set(&task);
-                self.remove_from_indices(task_id, &task);
-
-                // Calculate reward
-                let reward = self.calculate_keeper_reward(&task);
-                let protocol_fee = self.calculate_protocol_fee(&task);
-
-                // Interactions — pay keeper directly
-                self.send().direct_egld(&keeper, &reward);
-
-                // Send protocol fee to Rewards contract via receiveExecutionFee
-                // so it properly tracks per-keeper pending rewards
-                let rewards_addr = self.rewards_addr().get();
-                if protocol_fee > BigUint::zero() {
-                    self.tx()
-                        .to(&rewards_addr)
-                        .raw_call("receiveExecutionFee")
-                        .argument(&keeper)
-                        .argument(&task_id)
-                        .egld(&protocol_fee)
-                        .gas(5_000_000u64)
-                        .transfer_execute();
-                }
-
-                // Record execution success on KeeperRegistry for reputation
-                let registry_addr = self.keeper_registry_addr().get();
-                self.tx()
-                    .to(&registry_addr)
-                    .raw_call("recordExecution")
-                    .argument(&keeper)
-                    .argument(&true)
-                    .gas(5_000_000u64)
-                    .transfer_execute();
-
-                // Handle recurring tasks — reschedule next occurrence
-                if let common::types::Trigger::TimeRecurring {
-                    interval,
-                    remaining_execs,
-                    ..
-                } = &task.trigger
-                {
-                    if *remaining_execs > 1 {
-                        // Refund remaining deposit to the new recurring task
-                        let total_spent = &reward + &protocol_fee;
-                        let remaining_deposit = if task.deposit > total_spent {
-                            &task.deposit - &total_spent
-                        } else {
-                            BigUint::zero()
-                        };
-                        // Create a temporary task with updated deposit for rescheduling
-                        let mut recurring_task = task.clone();
-                        recurring_task.deposit = remaining_deposit;
-                        self.reschedule_recurring(
-                            &recurring_task,
-                            *interval,
-                            *remaining_execs - 1,
-                        );
-                    } else {
-                        // Last execution — refund remaining deposit to owner
-                        let total_spent = &reward + &protocol_fee;
-                        if task.deposit > total_spent {
-                            let refund = &task.deposit - &total_spent;
-                            self.send().direct_egld(&task.owner, &refund);
-                        }
-                    }
-                } else {
-                    // One-time task — refund remaining deposit to owner
-                    let total_spent = &reward + &protocol_fee;
-                    if task.deposit > total_spent {
-                        let refund = &task.deposit - &total_spent;
-                        self.send().direct_egld(&task.owner, &refund);
-                    }
-                }
-
-                self.task_executed_event(task_id, &keeper, true);
-            }
-            ManagedAsyncCallResult::Err(_) => {
-                task.retry_count += 1;
-                if task.retry_count >= task.max_retries {
-                    task.status = common::types::TaskStatus::Failed;
-                    self.tasks(task_id).set(&task);
-                    self.remove_from_indices(task_id, &task);
-                    self.send().direct_egld(&task.owner, &task.deposit);
-                } else {
-                    task.status = common::types::TaskStatus::Pending;
-                    task.assigned_keeper = None;
-                    self.tasks(task_id).set(&task);
-                    self.reindex_task(task_id, &task);
-                }
-
-                // Record execution failure on KeeperRegistry for reputation
-                let registry_addr = self.keeper_registry_addr().get();
-                self.tx()
-                    .to(&registry_addr)
-                    .raw_call("recordExecution")
-                    .argument(&keeper)
-                    .argument(&false)
-                    .gas(5_000_000u64)
-                    .transfer_execute();
-
-                self.task_executed_event(task_id, &keeper, false);
-            }
-        }
+        self.task_executed_event(task_id, &keeper, true);
     }
 
     // ═══════════════════════════════════════════════════════════
     //  TIMEOUT HANDLING
     // ═══════════════════════════════════════════════════════════
+
 
     /// Mark tasks past their TTL as Expired and refund owners.
     #[endpoint(expireStaleTasks)]

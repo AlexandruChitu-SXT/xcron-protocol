@@ -73,8 +73,8 @@ export function ConnectModal() {
             const provider = new WalletConnectV2Provider(
                 callbacks,
                 NETWORK.chainId,
-                '9b36b2703c75eb57d9680e44b74c4df9', // WalletConnect V2 Project ID
-                'wss://relay.walletconnect.com'
+                'wss://relay.walletconnect.com',
+                '9b36b2703c75eb57d9680e44b74c4df9' // WalletConnect V2 Project ID
             );
 
             await provider.init();

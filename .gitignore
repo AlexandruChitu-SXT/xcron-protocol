@@ -58,3 +58,8 @@ mx-ai-skills
 *.metadata.json
 .deployed_addresses.json
 .agent/
+
+# ──────── WASM BUILD ARTIFACTS ────────
+*/target/
+contracts/*/target/
+contracts/*/wasm/target/

@@ -11,13 +11,13 @@ export const NETWORK = {
 
 export const CONTRACTS = {
     scheduler:
-        "erd1qqqqqqqqqqqqqpgqsmmpmp7hh6cqrnng0vp9ywgre70luvus7k8svk7ejh",
+        "erd1qqqqqqqqqqqqqpgqr5qa968a8wluwshh4k7ua06z0w4t9wnu7k8sefuv72",
     keeperRegistry:
-        "erd1qqqqqqqqqqqqqpgq0zlpshzkjr5egtaueyn29a2t9kv8mywp7k8sxexula",
+        "erd1qqqqqqqqqqqqqpgq9anru5s7hw4pxxf4jjdx0n883mcy85hx7k8s34ldyd",
     rewards:
-        "erd1qqqqqqqqqqqqqpgqzkhxp72uzdq49dmzsng3g0tp98629k8z7k8szas8nt",
+        "erd1qqqqqqqqqqqqqpgqzfp45vdryaqpl6agrc2qyz3h8hsx277x7k8syfss43",
     ping:
-        "erd1qqqqqqqqqqqqqpgq85c5nze8vnrkcd3sr7cscclj7tmv6nxn7k8sa9cq2a",
+        "erd1qqqqqqqqqqqqqpgq5nywkk07w37j8579v3uhayp6n78ppq8q7k8s2grq2r",
 };
 
 export const EXPLORER_TX = (hash: string) =>

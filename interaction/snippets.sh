@@ -15,12 +15,12 @@
 
 CHAIN="D"  # D=devnet, T=testnet, 1=mainnet
 PROXY="https://devnet-gateway.multiversx.com"
-WALLET="./wallets/deployer.pem"
+WALLET="../wallets/deployer.pem"
 
 # WASM paths
-SCHEDULER_WASM="./contracts/scheduler/wasm/target/wasm32-unknown-unknown/release/scheduler_wasm.wasm"
-KEEPER_REGISTRY_WASM="./contracts/keeper-registry/wasm/target/wasm32-unknown-unknown/release/keeper_registry_wasm.wasm"
-REWARDS_WASM="./contracts/rewards/wasm/target/wasm32-unknown-unknown/release/rewards_wasm.wasm"
+SCHEDULER_WASM="../contracts/scheduler/output/scheduler.wasm"
+KEEPER_REGISTRY_WASM="../contracts/keeper-registry/output/keeper-registry.wasm"
+REWARDS_WASM="../contracts/rewards/output/rewards.wasm"
 
 # Contract addresses (filled after deploy)
 SCHEDULER_ADDR=""
@@ -60,7 +60,7 @@ deploy_keeper_registry() {
     local MIN_STAKE="1000000000000000000"    # 1 EGLD
     local SLASH_BPS="1000"                    # 10%
     local COOLDOWN="600"                      # ~1 hour
-    local TREASURY_ADDR=$(mxpy wallet convert --infile "$WALLET" --in-format pem --out-format address-hex 2>/dev/null)
+    local TREASURY_ADDR=$(mxpy wallet convert --infile "$WALLET" --in-format pem --out-format address-hex 2>/dev/null | egrep -o "[a-z0-9]{64}" | tail -1)
 
     local RESULT=$(mxpy contract deploy \
         --bytecode "$KEEPER_REGISTRY_WASM" \
@@ -69,11 +69,10 @@ deploy_keeper_registry() {
         --proxy "$PROXY" \
         --chain "$CHAIN" \
         --arguments "$MIN_STAKE" "$SLASH_BPS" "$COOLDOWN" "0x$TREASURY_ADDR" \
-        --recall-nonce \
         --send 2>&1)
 
     echo "$RESULT"
-    KEEPER_REGISTRY_ADDR=$(echo "$RESULT" | grep -oP 'erd1[a-z0-9]+' | tail -1)
+    KEEPER_REGISTRY_ADDR=$(echo "$RESULT" | egrep -o "erd1[a-z0-9]{58}" | tail -1)
     echo ">> KeeperRegistry deployed at: $KEEPER_REGISTRY_ADDR"
 }
 
@@ -96,11 +95,10 @@ deploy_rewards() {
         --proxy "$PROXY" \
         --chain "$CHAIN" \
         --arguments "0x$REGISTRY_HEX" "$TREASURY_SPLIT_BPS" \
-        --recall-nonce \
         --send 2>&1)
 
     echo "$RESULT"
-    REWARDS_ADDR=$(echo "$RESULT" | grep -oP 'erd1[a-z0-9]+' | tail -1)
+    REWARDS_ADDR=$(echo "$RESULT" | egrep -o "erd1[a-z0-9]{58}" | tail -1)
     echo ">> Rewards deployed at: $REWARDS_ADDR"
 }
 
@@ -113,23 +111,22 @@ deploy_scheduler() {
         return 1
     fi
     
-    local REGISTRY_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$KEEPER_REGISTRY_ADDR" 2>/dev/null)
-    local REWARDS_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$REWARDS_ADDR" 2>/dev/null)
+    local REGISTRY_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$KEEPER_REGISTRY_ADDR" 2>/dev/null | egrep -o "[a-z0-9]{64}" | tail -1)
+    local REWARDS_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$REWARDS_ADDR" 2>/dev/null | egrep -o "[a-z0-9]{64}" | tail -1)
     local MIN_DEPOSIT="100000000000000000"   # 0.1 EGLD
     local PROTOCOL_FEE_BPS="1500"              # 15%
     
     local RESULT=$(mxpy contract deploy \
         --bytecode "$SCHEDULER_WASM" \
         --pem "$WALLET" \
-        --gas-limit 100000000 \
+        --gas-limit 200000000 \
         --proxy "$PROXY" \
         --chain "$CHAIN" \
         --arguments "0x$REGISTRY_HEX" "0x$REWARDS_HEX" "$MIN_DEPOSIT" "$PROTOCOL_FEE_BPS" \
-        --recall-nonce \
         --send 2>&1)
 
     echo "$RESULT"
-    SCHEDULER_ADDR=$(echo "$RESULT" | grep -oP 'erd1[a-z0-9]+' | tail -1)
+    SCHEDULER_ADDR=$(echo "$RESULT" | egrep -o "erd1[a-z0-9]{58}" | tail -1)
     echo ">> Scheduler deployed at: $SCHEDULER_ADDR"
 }
 
@@ -145,7 +142,7 @@ wire_contracts() {
         return 1
     fi
     
-    local SCHEDULER_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$SCHEDULER_ADDR" 2>/dev/null)
+    local SCHEDULER_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$SCHEDULER_ADDR" 2>/dev/null | egrep -o "[a-z0-9]{64}" | tail -1)
     
     # 1. Add Scheduler as authorized caller on KeeperRegistry
     echo ">> Setting Scheduler as authorized caller on KeeperRegistry..."
@@ -156,7 +153,6 @@ wire_contracts() {
         --chain "$CHAIN" \
         --function "addAuthorizedCaller" \
         --arguments "0x$SCHEDULER_HEX" \
-        --recall-nonce \
         --send
     
     # 2. Add Scheduler as authorized scheduler on Rewards
@@ -168,7 +164,6 @@ wire_contracts() {
         --chain "$CHAIN" \
         --function "addAuthorizedScheduler" \
         --arguments "0x$SCHEDULER_HEX" \
-        --recall-nonce \
         --send
     
     echo ">> Wiring complete ✅"
@@ -186,7 +181,7 @@ whitelist_keeper() {
         return 1
     fi
     
-    local KEEPER_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$KEEPER_ADDR" 2>/dev/null)
+    local KEEPER_HEX=$(mxpy wallet convert --in-format address-bech32 --out-format address-hex --value "$KEEPER_ADDR" 2>/dev/null | egrep -o "[a-z0-9]{64}" | tail -1)
     
     echo ">> Whitelisting keeper $KEEPER_ADDR on Scheduler..."
     mxpy contract call "$SCHEDULER_ADDR" \

@@ -3,6 +3,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # ──────── SECURITY: PRIVATE KEYS & WALLETS ────────
+.secrets/
 wallets/
 *.pem
 *.keystore.json

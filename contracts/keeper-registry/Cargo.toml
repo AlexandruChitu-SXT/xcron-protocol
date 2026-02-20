@@ -7,11 +7,9 @@ publish = false
 [lib]
 path = "src/lib.rs"
 
-[dependencies.multiversx-sc]
-workspace = true
-
-[dependencies.common]
-workspace = true
+[dependencies]
+multiversx-sc = "0.54.6"
+common = { path = "../common" }
 
 [dev-dependencies.multiversx-sc-scenario]
-workspace = true
+version = "0.54.6"

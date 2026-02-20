@@ -64,3 +64,6 @@ mx-ai-skills
 */target/
 contracts/*/target/
 contracts/*/wasm/target/
+
+# ──────── LOCAL RUNNERS ────────
+start.sh

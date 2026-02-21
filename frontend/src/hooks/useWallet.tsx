@@ -327,19 +327,34 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     /* ── Auto-reconnect from localStorage ── */
     useEffect(() => {
         const saved = localStorage.getItem('xcron_wallet');
-        if (saved && !wallet.connected) {
-            connect(saved).catch(() => {
-                // Network might be down — retry once after 3s
-                setTimeout(() => {
-                    const stillSaved = localStorage.getItem('xcron_wallet');
-                    if (stillSaved && !wallet.connected) {
-                        connect(stillSaved).catch(() => {
-                            console.warn('Auto-reconnect failed after retry');
-                        });
-                    }
-                }, 3000);
-            });
+        const provider = localStorage.getItem('xcron_wallet_provider');
+        if (!saved || wallet.connected) return;
+
+        // Clean up legacy zero-address from old Quick Connect
+        const ZERO_ADDR = 'erd1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6gq4hu';
+        if (saved === ZERO_ADDR || saved === 'erd1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6gq4hu') {
+            localStorage.removeItem('xcron_wallet');
+            localStorage.removeItem('xcron_wallet_provider');
+            return;
         }
+
+        // If saved as demo, reconnect in demo mode
+        if (saved === 'demo' || provider === 'demo') {
+            connectDemo();
+            return;
+        }
+
+        // Normal wallet reconnect
+        connect(saved).catch(() => {
+            setTimeout(() => {
+                const stillSaved = localStorage.getItem('xcron_wallet');
+                if (stillSaved && !wallet.connected) {
+                    connect(stillSaved).catch(() => {
+                        console.warn('Auto-reconnect failed after retry');
+                    });
+                }
+            }, 3000);
+        });
     }, [connect, wallet.connected]);
 
     /* ── Periodic balance refresh (every 30s) ── */

@@ -1,0 +1,52 @@
+#!/bin/bash
+# XCron Pre-commit Hook
+# Checks for sensitive data before allowing commits
+# Install: cp .github/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+echo "🔍 XCron pre-commit: scanning for sensitive data..."
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -v "^\.github/")
+FOUND=0
+
+if [ -z "$STAGED" ]; then
+    echo "✅ Only CI config files staged. Skipping scan."
+    exit 0
+fi
+
+# Check for private key headers
+for f in $STAGED; do
+    if grep -q "BEGIN PRIVATE KEY\|BEGIN EC PRIVATE KEY\|BEGIN RSA PRIVATE KEY" "$f" 2>/dev/null; then
+        echo "❌ BLOCKED: Private key found in $f!"
+        FOUND=1
+    fi
+done
+
+# Check for .pem files
+if echo "$STAGED" | grep -q "\.pem$"; then
+    echo "❌ BLOCKED: .pem file staged for commit!"
+    FOUND=1
+fi
+
+# Check for hardcoded mnemonics
+for f in $STAGED; do
+    if grep -q 'mnemonic.*=.*["'"'"']' "$f" 2>/dev/null; then
+        echo "⚠️  WARNING: Possible mnemonic in $f — review carefully"
+    fi
+done
+
+# Check for .env files
+if echo "$STAGED" | grep -q "\.env$"; then
+    echo "❌ BLOCKED: .env file staged! Use .env.example instead"
+    FOUND=1
+fi
+
+if [ $FOUND -eq 1 ]; then
+    echo ""
+    echo "🚨 Commit blocked. Remove sensitive data and try again."
+    echo "   To bypass (ONLY if you're sure): git commit --no-verify"
+    exit 1
+fi
+
+echo "✅ No sensitive data found. Proceeding with commit."

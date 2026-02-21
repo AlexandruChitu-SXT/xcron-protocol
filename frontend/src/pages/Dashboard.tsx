@@ -246,26 +246,17 @@ export function Dashboard() {
                     </div>
 
                     <div className="card benefit-card" style={{ background: 'rgba(16,185,129,0.06)', borderColor: 'rgba(16,185,129,0.2)' }}>
-                        <div className="benefit-badge" style={{ background: 'rgba(16,185,129,0.15)', color: 'rgb(16,185,129)' }}>For Node Operators</div>
+                        <div className="benefit-badge" style={{ background: 'rgba(16,185,129,0.15)', color: 'rgb(16,185,129)' }}>Earn With XCron</div>
                         <h3 style={{ color: 'var(--text-primary)', marginBottom: 8, fontSize: '1.15rem' }}>Run a Keeper Node</h3>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 12 }}>
-                            Join the decentralized network. Keepers execute the protocol's scheduled tasks and earn <strong style={{ color: 'var(--success)' }}>{100 - (stats.protocolFeeBps / 100)}%</strong> of the execution fees.
-                        </p>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                            <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Min Bond</div>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-light)' }}>{formatEgld(stats.minDeposit, 0)} EGLD</div>
-                            </div>
-                            <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Active Nodes</div>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)' }}>{stats.activeKeepers} Nodes</div>
-                            </div>
-                        </div>
-
-                        <NavLink to="/keeper" style={{ display: 'block' }}>
+                        <ul className="benefit-list">
+                            <li>Execute tasks and earn fees from the protocol</li>
+                            <li>Join the decentralized keeper network</li>
+                            <li>Earn <strong style={{ color: 'var(--success)' }}>{100 - (stats.protocolFeeBps / 100)}%</strong> of execution fees</li>
+                            <li>Ideal for validators and infrastructure operators</li>
+                        </ul>
+                        <NavLink to="/keeper" style={{ display: 'block', marginTop: 16 }}>
                             <button className="btn" style={{ width: '100%', padding: '12px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: 'rgb(34,197,94)' }}>
-                                View Keeper Panel & Node Guide
+                                Learn More →
                             </button>
                         </NavLink>
                     </div>

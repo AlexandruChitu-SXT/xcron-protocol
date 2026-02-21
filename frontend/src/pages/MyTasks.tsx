@@ -55,36 +55,61 @@ export function MyTasks() {
     useEffect(() => {
         loadTasks();
         loadExecHistory();
+
+        const intervalId = setInterval(() => {
+            loadTasks(true);
+            loadExecHistory();
+        }, 10000);
+
+        return () => clearInterval(intervalId);
     }, [wallet.connected]);
 
-    async function loadTasks() {
-        setLoading(true);
+    async function loadTasks(silent = false) {
+        if (!silent) setLoading(true);
         try {
-            const nonceRes = await query(CONTRACTS.scheduler, 'getTaskNonce');
-            const totalTasks = nonceRes.length > 0 ? bufferToNumber(nonceRes[0]) : 0;
-
-            const taskList: TaskInfo[] = [];
-            for (let i = 1; i <= totalTasks; i++) {
-                try {
-                    const res = await query(CONTRACTS.scheduler, 'getTask', [
-                        i.toString(16).padStart(2, '0'),
-                    ]);
-                    console.log(`Task ${i}: got ${res.length} buffers, size: ${res[0]?.length || 0}`);
-                    if (res.length > 0) {
-                        const data = res[0];
-                        const task = parseTaskData(i, data);
-                        taskList.push(task);
+            // Use getOwnerTasks for 'mine' filter (efficient) or iterate for 'all'
+            if (filter === 'mine' && wallet.connected) {
+                const addrHex = Address.newFromBech32(wallet.address).toHex();
+                const ownerRes = await query(CONTRACTS.scheduler, 'getOwnerTasks', [addrHex]);
+                const taskList: TaskInfo[] = [];
+                for (const buf of ownerRes) {
+                    if (buf.length === 0) continue;
+                    const taskId = bufferToNumber(buf);
+                    try {
+                        const res = await query(CONTRACTS.scheduler, 'getTask', [
+                            taskId.toString(16).padStart(2, '0'),
+                        ]);
+                        if (res.length > 0 && res[0].length > 0) {
+                            taskList.push(parseTaskData(taskId, res[0]));
+                        }
+                    } catch (err) {
+                        console.error(`Task ${taskId} failed to decode:`, err);
                     }
-                } catch (err) {
-                    console.error(`Task ${i} failed to decode:`, err);
                 }
-            }
+                setTasks(taskList);
+            } else {
+                const nonceRes = await query(CONTRACTS.scheduler, 'getTaskNonce');
+                const totalTasks = nonceRes.length > 0 ? bufferToNumber(nonceRes[0]) : 0;
 
-            setTasks(taskList);
+                const taskList: TaskInfo[] = [];
+                for (let i = 1; i <= totalTasks; i++) {
+                    try {
+                        const res = await query(CONTRACTS.scheduler, 'getTask', [
+                            i.toString(16).padStart(2, '0'),
+                        ]);
+                        if (res.length > 0 && res[0].length > 0) {
+                            taskList.push(parseTaskData(i, res[0]));
+                        }
+                    } catch (err) {
+                        console.error(`Task ${i} failed to decode:`, err);
+                    }
+                }
+                setTasks(taskList);
+            }
         } catch (err) {
             console.error('Failed to load tasks:', err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }
 
@@ -140,6 +165,21 @@ export function MyTasks() {
             // TimeRecurring { start_round: u64, interval: u64, remaining_execs: u64 }
             triggerRound = Number(data.readBigUInt64BE(offset));
             offset += 24; // 3 x u64
+        } else if (triggerVariant === 2) {
+            // ConditionOnChain — skip oracle fields
+            const oracleAddrLen = 32;
+            offset += oracleAddrLen;
+            const queryEndpointLen = data.readUInt32BE(offset);
+            offset += 4 + queryEndpointLen;
+            const queryArgsCount = data.readUInt32BE(offset);
+            offset += 4;
+            for (let j = 0; j < queryArgsCount; j++) {
+                const al = data.readUInt32BE(offset);
+                offset += 4 + al;
+            }
+            offset += 1; // Comparator enum
+            const thresholdLen = data.readUInt32BE(offset);
+            offset += 4 + thresholdLen;
         }
 
         // 7. max_gas: u64
@@ -161,9 +201,13 @@ export function MyTasks() {
         // 12. created_round: u64
         offset += 8;
 
-        // 13. status: TaskStatus (1 byte enum)
-        const statusByte = data[offset] ?? 0;
+        // 13. status: TaskStatus (1 byte enum) — read at correct offset, NOT from last byte
+        const statusByte = offset < data.length ? data[offset] : 0;
+        offset += 1;
         const status = STATUS_MAP[statusByte] || 'Unknown';
+
+        // 14. assigned_keeper: Option<ManagedAddress> — skip
+        // 0x00 = None, 0x01 + 32 bytes = Some
 
         const isOwner = wallet.connected && owner.toLowerCase() === wallet.address.toLowerCase();
 
@@ -279,7 +323,7 @@ export function MyTasks() {
                         >
                             All Tasks
                         </button>
-                        <button className="btn btn-secondary btn-sm" onClick={loadTasks} disabled={loading}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => loadTasks()} disabled={loading}>
                             {loading ? <span className="loading-spinner" /> : '↻'}
                         </button>
                     </div>

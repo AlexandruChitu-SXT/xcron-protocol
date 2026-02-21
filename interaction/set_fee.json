@@ -1,6 +1,6 @@
 {
     "emittedTransaction": {
-        "nonce": 255,
+        "nonce": 289,
         "value": "0",
         "receiver": "erd1qqqqqqqqqqqqqpgqr5qa968a8wluwshh4k7ua06z0w4t9wnu7k8sefuv72",
         "sender": "erd135zkexfnzryv7z04vppm28uajdsxfvnel2n3kdw2spv3jk0j7k8stpwpgu",
@@ -8,17 +8,17 @@
         "receiverUsername": "",
         "gasPrice": 1000000000,
         "gasLimit": 10000000,
-        "data": "c2V0X3Byb3RvY29sX2ZlZV9icHNAMDVkYw==",
+        "data": "c2V0UHJvdG9jb2xGZWVCcHNAMDVkYw==",
         "chainID": "D",
         "version": 2,
         "options": 0,
         "guardian": "",
-        "signature": "91a34179d4753f0b091fa66032a76071c8239aee5dd3034953ecba5ed42d4a873e649a5fca2cdd5534fd00f44d5b3f189c9b60f8b55a7e99c59578df248c7303",
+        "signature": "6b3074d6b86fa840c32ee6e75f3bd93ddc350b0a3b15bdd9c462e9098a7af0fe5b472451f5a00ce1a92bb6bc7eeea4b404879307c0f165b2d2d778e5b198a506",
         "guardianSignature": "",
         "relayer": "",
         "relayerSignature": ""
     },
-    "emittedTransactionData": "set_protocol_fee_bps@05dc",
-    "emittedTransactionHash": "85ad9f816fc812856c0f9631e93224096ed256cb40d63869b8934b5253272b20",
+    "emittedTransactionData": "setProtocolFeeBps@05dc",
+    "emittedTransactionHash": "201b754ab73105c68db52884aa6bd7670d0730db63c16c3e9d1d3e8e6da6b696",
     "contractAddress": "erd1qqqqqqqqqqqqqpgqr5qa968a8wluwshh4k7ua06z0w4t9wnu7k8sefuv72"
 }

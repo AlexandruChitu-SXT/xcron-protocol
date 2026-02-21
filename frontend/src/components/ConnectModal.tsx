@@ -3,11 +3,9 @@ import { useWallet } from '../hooks/useWallet';
 import { NETWORK, WALLETCONNECT } from '../config';
 
 /**
- * Wallet connection modal supporting:
- * 1. MultiversX DeFi Wallet (browser extension)
- * 2. xPortal Mobile (WalletConnect QR)
- * 3. MultiversX Web Wallet (redirect)
- * 4. Quick connect (deployer wallet for testing)
+ * Secure Wallet Connection Modal
+ * Supports: DeFi Wallet Extension, xPortal Mobile (WalletConnect QR),
+ * MultiversX Web Wallet (redirect), and Devnet Quick Connect (testing only)
  */
 export function ConnectModal() {
     const { showConnectModal, setShowConnectModal, connect } = useWallet();
@@ -110,7 +108,6 @@ export function ConnectModal() {
     const handleQuickConnect = async () => {
         setLoading('quick');
         try {
-            // Deployer wallet for testing
             await connect('erd1yakg9yvumdf67y6klp2yxy9yv4rw8rmrk6xw8462wdy0nk78dv4qkspvp9');
         } catch (err: any) {
             setError(err.message || 'Quick connect failed');
@@ -126,30 +123,147 @@ export function ConnectModal() {
         setLoading('');
     };
 
+    // SVG icons for each option
+    const ShieldIcon = () => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ff88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="M9 12l2 2 4-4" />
+        </svg>
+    );
+
+    const ExtensionIcon = () => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2" />
+            <path d="M7 11V7a5 5 0 0110 0v4" />
+        </svg>
+    );
+
+    const PhoneIcon = () => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
+        </svg>
+    );
+
+    const GlobeIcon = () => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#50c878" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+    );
+
+    const TestIcon = () => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+    );
+
+    const S = {
+        modal: {
+            background: 'linear-gradient(145deg, #0a2020, #0d2a2a)',
+            border: '1px solid rgba(0,255,180,0.15)',
+            borderRadius: 20,
+            padding: '28px 28px 20px',
+            width: '92%',
+            maxWidth: 440,
+            boxShadow: '0 24px 80px rgba(0,0,0,0.5), 0 0 40px rgba(0,255,120,0.05)',
+        } as React.CSSProperties,
+        securityBanner: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 14px',
+            background: 'rgba(0,255,136,0.06)',
+            border: '1px solid rgba(0,255,136,0.15)',
+            borderRadius: 10,
+            marginBottom: 20,
+        } as React.CSSProperties,
+        option: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            padding: '14px 16px',
+            borderRadius: 12,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            color: '#e8f5f0',
+            width: '100%',
+            textAlign: 'left' as const,
+        } as React.CSSProperties,
+        iconBox: {
+            width: 42,
+            height: 42,
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+        } as React.CSSProperties,
+    };
+
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={(e) => e.stopPropagation()}>
-                <h2>Connect Wallet</h2>
-                <p>Choose how you want to connect to XCron Protocol on MultiversX Devnet.</p>
+            <div style={S.modal} onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 6, color: '#e8f5f0' }}>
+                    Connect Wallet
+                </h2>
+                <p style={{ color: 'rgba(232,245,240,0.55)', fontSize: '0.82rem', marginBottom: 16 }}>
+                    Choose a secure connection method
+                </p>
+
+                {/* Security Banner */}
+                <div style={S.securityBanner}>
+                    <ShieldIcon />
+                    <div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#00ff88' }}>
+                            Secure Connection
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.5)', lineHeight: 1.4, marginTop: 2 }}>
+                            XCron never requests or stores your private keys. All transactions
+                            are signed securely through your wallet provider.
+                        </div>
+                    </div>
+                </div>
 
                 {error && (
-                    <div className="toast-error" style={{ position: 'relative', marginBottom: 12, padding: 10, borderRadius: 8, fontSize: '0.8rem' }}>
+                    <div style={{
+                        padding: '10px 14px', borderRadius: 10, fontSize: '0.8rem',
+                        background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.2)',
+                        color: '#fca5a5', marginBottom: 14,
+                    }}>
                         {error}
                     </div>
                 )}
 
-                <div className="modal-options">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {/* DeFi Wallet Extension */}
                     <button
-                        className="modal-option"
+                        style={S.option}
                         onClick={handleExtensionLogin}
                         disabled={!!loading}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = 'rgba(56,189,248,0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(56,189,248,0.25)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                        }}
                     >
-                        <div className="option-icon"></div>
+                        <div style={{ ...S.iconBox, background: 'rgba(56,189,248,0.1)' }}>
+                            <ExtensionIcon />
+                        </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>DeFi Wallet Extension</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                Browser extension — instant login
+                            <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>DeFi Wallet</div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
+                                Browser extension — instant & secure
                             </div>
                         </div>
                         {loading === 'extension' && <span className="loading-spinner" />}
@@ -157,15 +271,25 @@ export function ConnectModal() {
 
                     {/* xPortal Mobile */}
                     <button
-                        className="modal-option"
+                        style={S.option}
                         onClick={handleXPortalLogin}
                         disabled={!!loading}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = 'rgba(167,139,250,0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(167,139,250,0.25)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                        }}
                     >
-                        <div className="option-icon"></div>
+                        <div style={{ ...S.iconBox, background: 'rgba(167,139,250,0.1)' }}>
+                            <PhoneIcon />
+                        </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>xPortal Mobile</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                Scan QR code with xPortal app
+                            <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>xPortal Mobile</div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
+                                Scan QR code — WalletConnect v2
                             </div>
                         </div>
                         {loading === 'xportal' && <span className="loading-spinner" />}
@@ -173,41 +297,78 @@ export function ConnectModal() {
 
                     {/* Web Wallet */}
                     <button
-                        className="modal-option"
+                        style={S.option}
                         onClick={handleWebWalletLogin}
                         disabled={!!loading}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = 'rgba(80,200,120,0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(80,200,120,0.25)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                        }}
                     >
-                        <div className="option-icon"></div>
+                        <div style={{ ...S.iconBox, background: 'rgba(80,200,120,0.1)' }}>
+                            <GlobeIcon />
+                        </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>MultiversX Web Wallet</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                Login via web wallet (redirect)
+                            <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Web Wallet</div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
+                                Official MultiversX web wallet
                             </div>
                         </div>
                         {loading === 'webwallet' && <span className="loading-spinner" />}
                     </button>
 
-                    {/* Quick Connect (Devnet) */}
-                    <button
-                        className="modal-option"
-                        onClick={handleQuickConnect}
-                        disabled={!!loading}
-                        style={{ borderColor: 'rgba(99, 102, 241, 0.2)' }}
-                    >
-                        <div className="option-icon" style={{ background: 'rgba(99, 102, 241, 0.15)' }}></div>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, color: 'var(--accent-light)' }}>Deployer Wallet</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                Quick-connect for devnet testing
-                            </div>
+                    {/* Devnet Quick Connect — clearly labeled */}
+                    <div style={{
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        paddingTop: 8, marginTop: 4,
+                    }}>
+                        <div style={{
+                            fontSize: '0.62rem', fontWeight: 600, letterSpacing: '1px',
+                            color: 'rgba(232,245,240,0.3)', textTransform: 'uppercase',
+                            marginBottom: 6, paddingLeft: 4,
+                        }}>
+                            Devnet Testing Only
                         </div>
-                        {loading === 'quick' && <span className="loading-spinner" />}
-                    </button>
+                        <button
+                            style={{
+                                ...S.option,
+                                opacity: 0.7,
+                                border: '1px dashed rgba(251,191,36,0.2)',
+                            }}
+                            onClick={handleQuickConnect}
+                            disabled={!!loading}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.opacity = '1';
+                                e.currentTarget.style.background = 'rgba(251,191,36,0.06)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.opacity = '0.7';
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                            }}
+                        >
+                            <div style={{ ...S.iconBox, background: 'rgba(251,191,36,0.1)' }}>
+                                <TestIcon />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fbbf24' }}>
+                                    Quick Connect (Read-Only)
+                                </div>
+                                <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.4)', marginTop: 2 }}>
+                                    View deployer dashboard — no signing
+                                </div>
+                            </div>
+                            {loading === 'quick' && <span className="loading-spinner" />}
+                        </button>
+                    </div>
 
                     {/* WalletConnect QR Code */}
                     {qrUri && (
                         <div style={{ textAlign: 'center', padding: 16 }}>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+                            <p style={{ fontSize: '0.85rem', color: 'rgba(232,245,240,0.55)', marginBottom: 12 }}>
                                 Scan with xPortal app
                             </p>
                             <div style={{ background: 'white', padding: 16, borderRadius: 12, display: 'inline-block' }}>
@@ -222,7 +383,32 @@ export function ConnectModal() {
                     )}
                 </div>
 
-                <button className="modal-close" onClick={onClose}>
+                {/* Footer security note */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    marginTop: 16, paddingTop: 12,
+                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(232,245,240,0.3)" strokeWidth="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <span style={{ fontSize: '0.62rem', color: 'rgba(232,245,240,0.3)', letterSpacing: '0.3px' }}>
+                        Secured by MultiversX SDK • No private keys stored
+                    </span>
+                </div>
+
+                <button
+                    onClick={onClose}
+                    style={{
+                        width: '100%', marginTop: 12, padding: 11,
+                        background: 'transparent', border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 10, color: 'rgba(232,245,240,0.5)',
+                        fontFamily: "'Inter', sans-serif", fontSize: '0.82rem',
+                        cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+                >
                     Cancel
                 </button>
             </div>

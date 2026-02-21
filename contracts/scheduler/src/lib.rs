@@ -38,10 +38,34 @@ pub trait SchedulerContract:
         self.reveal_window().set(common::constants::DEFAULT_REVEAL_WINDOW);
         self.commit_bond().set(BigUint::zero());
         self.task_nonce().set(0u64);
+        self.paused().set(false);
+        self.executing_guard().set(false);
+        self.version().set(1u32);
     }
 
+    /// Safe upgrade — preserves storage, bumps version.
     #[upgrade]
-    fn upgrade(&self) {}
+    fn upgrade(&self) {
+        self.version().set(self.version().get() + 1);
+    }
+
+    // ── Circuit Breaker ─────────────────────────────────────
+
+    #[only_owner]
+    #[endpoint(pause)]
+    fn pause(&self) {
+        self.paused().set(true);
+    }
+
+    #[only_owner]
+    #[endpoint(unpause)]
+    fn unpause(&self) {
+        self.paused().set(false);
+    }
+
+    fn require_not_paused(&self) {
+        require!(!self.paused().get(), "Contract is paused");
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  TASK SCHEDULING
@@ -62,12 +86,19 @@ pub trait SchedulerContract:
         max_retries: u8,
         ttl_rounds: u64,
     ) -> u64 {
+        self.require_not_paused();
         let deposit = self.call_value().egld_value().clone_value();
 
         // Checks
         require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
         require!(max_gas >= common::constants::MIN_GAS_LIMIT, "max_gas too low");
         require!(ttl_rounds >= common::constants::MIN_TTL_ROUNDS, "TTL too short");
+
+        // C-2: Block targeting protocol contracts (prevents call injection)
+        let sc_self = self.blockchain().get_sc_address();
+        require!(target_contract != sc_self, "Cannot target self");
+        require!(target_contract != self.keeper_registry_addr().get(), "Cannot target registry");
+        require!(target_contract != self.rewards_addr().get(), "Cannot target rewards");
 
         // Effects
         let task_id = self.task_nonce().get() + 1;
@@ -106,6 +137,7 @@ pub trait SchedulerContract:
     /// Cancel a pending task and refund the deposit to the owner.
     #[endpoint(cancelTask)]
     fn cancel_task(&self, task_id: u64) {
+        self.require_not_paused();
         let mut task = self.tasks(task_id).get();
         let caller = self.blockchain().get_caller();
 
@@ -132,6 +164,12 @@ pub trait SchedulerContract:
     /// Execute a ripe task. Phase 1: keeper calls directly (synchronous).
     #[endpoint(executeTask)]
     fn execute_task(&self, task_id: u64) {
+        self.require_not_paused();
+
+        // H-2: Reentrancy guard
+        require!(!self.executing_guard().get(), "Reentrancy blocked");
+        self.executing_guard().set(true);
+
         let task = self.tasks(task_id).get();
         let keeper = self.blockchain().get_caller();
 
@@ -140,9 +178,18 @@ pub trait SchedulerContract:
         self.require_registered_keeper(&keeper);
         self.require_task_ripe(task_id, &task);
 
+        // C-3: Validate gas budget for all calls
+        let min_gas_needed = 5_000_000u64 + 5_000_000u64 + task.max_gas + 5_000_000u64;
+        require!(
+            self.blockchain().get_gas_left() >= min_gas_needed,
+            "Insufficient gas for full execution"
+        );
+
         // CEI — Effects first
+        // Phase 1: mark as Executing (fire-and-forget, no callback to confirm).
+        // Phase 2+: async callback will transition to Completed or Failed.
         let mut task = task;
-        task.status = common::types::TaskStatus::Completed;
+        task.status = common::types::TaskStatus::Executing;
         task.assigned_keeper = Some(keeper.clone());
         self.tasks(task_id).set(&task);
         self.remove_from_indices(task_id, &task);
@@ -154,12 +201,13 @@ pub trait SchedulerContract:
         // Pay keeper directly
         self.send().direct_egld(&keeper, &reward);
 
-        // Refund remaining deposit to owner after fees
+        // Calculate remaining deposit after keeper reward + protocol fee
         let total_spent = &reward + &protocol_fee;
-        if task.deposit > total_spent {
-            let refund = &task.deposit - &total_spent;
-            self.send().direct_egld(&task.owner, &refund);
-        }
+        let remaining_deposit = if task.deposit > total_spent {
+            &task.deposit - &total_spent
+        } else {
+            BigUint::zero()
+        };
 
         // Send protocol fee to Rewards contract
         let rewards_addr = self.rewards_addr().get();
@@ -185,6 +233,7 @@ pub trait SchedulerContract:
             .transfer_execute();
 
         // Call the target contract (fire-and-forget)
+        // Phase 1: no callback. Phase 2+: use async call with callback.
         self.tx()
             .to(&task.target_contract)
             .raw_call(task.target_endpoint.clone())
@@ -192,7 +241,36 @@ pub trait SchedulerContract:
             .gas(task.max_gas)
             .transfer_execute();
 
+        // ═══════════════════════════════════════════════════════════
+        //  RECURRING TASK RESCHEDULING
+        // ═══════════════════════════════════════════════════════════
+        // Only reschedule if:
+        //  1. Task is recurring with remaining executions
+        //  2. Remaining deposit covers at least min_deposit
+        if let common::types::Trigger::TimeRecurring {
+            interval,
+            remaining_execs,
+            ..
+        } = &task.trigger
+        {
+            let min_dep = self.min_deposit().get();
+            if *remaining_execs > 1 && remaining_deposit >= min_dep {
+                self.reschedule_recurring(&task, *interval, *remaining_execs - 1, remaining_deposit);
+            } else if remaining_deposit > BigUint::zero() {
+                // Not enough for another execution — refund remainder to owner
+                self.send().direct_egld(&task.owner, &remaining_deposit);
+            }
+        } else {
+            // Non-recurring: refund any remaining deposit to owner
+            if remaining_deposit > BigUint::zero() {
+                self.send().direct_egld(&task.owner, &remaining_deposit);
+            }
+        }
+
         self.task_executed_event(task_id, &keeper, true);
+
+        // H-2: Release reentrancy guard
+        self.executing_guard().set(false);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -201,10 +279,22 @@ pub trait SchedulerContract:
 
 
     /// Mark tasks past their TTL as Expired and refund owners.
+    /// H-1: Only keepers or owner can call. Capped at MAX_EXPIRE_BATCH.
     #[endpoint(expireStaleTasks)]
     fn expire_stale_tasks(&self, task_ids: MultiValueEncoded<u64>) {
+        let caller = self.blockchain().get_caller();
+        require!(
+            self.whitelisted_keepers().contains(&caller)
+                || caller == self.blockchain().get_owner_address(),
+            "Not authorized to expire tasks"
+        );
+
         let current_round = self.blockchain().get_block_round();
+        let mut processed: usize = 0;
         for task_id in task_ids {
+            if processed >= common::constants::MAX_EXPIRE_BATCH {
+                break;
+            }
             let mut task = self.tasks(task_id).get();
             if task.status != common::types::TaskStatus::Pending {
                 continue;
@@ -213,8 +303,11 @@ pub trait SchedulerContract:
                 task.status = common::types::TaskStatus::Expired;
                 self.tasks(task_id).set(&task);
                 self.remove_from_indices(task_id, &task);
+                // M-4: Clean owner_tasks index on expiry
+                self.owner_tasks(&task.owner).swap_remove(&task_id);
                 self.send().direct_egld(&task.owner, &task.deposit);
                 self.task_expired_event(task_id);
+                processed += 1;
             }
         }
     }

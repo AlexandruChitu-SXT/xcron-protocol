@@ -18,4 +18,12 @@ pub trait StorageModule {
     /// Addresses authorized to call receiveExecutionFee (Scheduler contracts)
     #[storage_mapper("authorizedSchedulers")]
     fn authorized_schedulers(&self) -> UnorderedSetMapper<ManagedAddress>;
+
+    /// Circuit breaker.
+    #[storage_mapper("paused")]
+    fn paused(&self) -> SingleValueMapper<bool>;
+
+    /// Contract version for safe upgrades.
+    #[storage_mapper("version")]
+    fn version(&self) -> SingleValueMapper<u32>;
 }

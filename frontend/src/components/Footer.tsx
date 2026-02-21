@@ -37,7 +37,7 @@ export function Footer() {
                     <div className="footer-col">
                         <h4 className="footer-heading">Resources</h4>
                         <div className="footer-links">
-                            <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+                            <a href="https://github.com/AlexandruChitu-SXT/xcron-protocol_v2_hackathon" target="_blank" rel="noopener noreferrer">GitHub</a>
                             <a href="https://devnet-explorer.multiversx.com" target="_blank" rel="noopener noreferrer">Explorer</a>
                             <a href="https://docs.multiversx.com" target="_blank" rel="noopener noreferrer">MultiversX Docs</a>
                         </div>

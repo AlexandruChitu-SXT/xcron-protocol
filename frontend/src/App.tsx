@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ConnectModal } from './components/ConnectModal';
 import { ToastContainer } from './components/ToastContainer';
+import { TubesBackground } from './components/TubesBackground';
 import { NetworkBadge } from './components/NetworkBadge';
 import { Dashboard } from './pages/Dashboard';
 import { ScheduleTask } from './pages/ScheduleTask';
@@ -15,6 +16,7 @@ import { NotFound } from './pages/NotFound';
 function App() {
   return (
     <WalletProvider>
+      <TubesBackground />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Header />
         <ConnectModal />

@@ -61,7 +61,7 @@ export function KeeperPanel() {
                                     const stake = stakeHex ? BigInt('0x' + stakeHex).toString() : '0';
                                     offset += stakeLen;
 
-                                    const isActive = offset < data.length ? data[offset] === 1 : false;
+                                    const isActive = data[data.length - 25] === 1;
                                     offset += 1;
 
                                     const totalExecs = offset + 8 <= data.length ? Number(data.readBigUInt64BE(offset)) : 0;
@@ -476,16 +476,51 @@ export function KeeperPanel() {
                                     <li>Repeated failures = <strong style={{ color: 'rgb(239,68,68)' }}>deactivation</strong> from the network</li>
                                 </ul>
                             </div>
-                        </div>
-                        <div style={{
-                            marginTop: 16, padding: '12px 16px', borderRadius: 'var(--radius-md)',
-                            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)',
-                            fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8
-                        }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                            <span>When you <strong style={{ color: 'var(--text-primary)' }}>unregister</strong> as keeper, your remaining bond is <strong style={{ color: 'var(--success)' }}>fully returned</strong> to your wallet.</span>
+                            <div style={{
+                                marginTop: 16, padding: '12px 16px', borderRadius: 'var(--radius-md)',
+                                background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)',
+                                fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8
+                            }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                <span>When you <strong style={{ color: 'var(--text-primary)' }}>unregister</strong> as keeper, your remaining bond is <strong style={{ color: 'var(--success)' }}>fully returned</strong> to your wallet.</span>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Node Operator Guide */}
+                    {stats?.isRegistered && (
+                        <div className="card" style={{ marginTop: 16, padding: 20, background: 'rgba(14,165,233,0.06)', borderColor: 'rgba(14,165,233,0.2)' }}>
+                            <div className="section-title" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="4 17 10 11 4 5"></polyline>
+                                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                                </svg>
+                                Node Operator Guide
+                            </div>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6, marginBottom: 16 }}>
+                                You are registered on-chain, but to earn rewards, your Keeper Node must be actively running and listening for tasks. Follow these steps to deploy your node:
+                            </p>
+
+                            <div style={{ background: 'var(--bg-card)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}># 1. Clone the repository and enter the keeper directory</div>
+                                <div style={{ color: '#38bdf8', marginBottom: 16 }}>git clone https://github.com/xcron-protocol/keeper-bot.git<br />cd keeper-bot</div>
+
+                                <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}># 2. Add your Wallet PEM file as 'wallet.pem' in the root folder</div>
+
+                                <div style={{ color: 'var(--text-muted)', marginBottom: 8, marginTop: 16 }}># 3. Start the node</div>
+                                <div style={{ color: '#34d399' }}>npm install && npm start</div>
+                            </div>
+
+                            <div style={{
+                                marginTop: 16, padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                                background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.15)',
+                                fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8
+                            }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(234,179,8)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                                <span>Keep your node online 24/7. Tasks are assigned randomly to active keepers, and missing a task assignment will result in a slash.</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

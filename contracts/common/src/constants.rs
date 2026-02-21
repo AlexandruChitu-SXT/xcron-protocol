@@ -30,3 +30,6 @@ pub const DEFAULT_TREASURY_SPLIT_BPS: u64 = 2_000;
 
 /// Gas reserved for callback execution
 pub const CALLBACK_GAS_RESERVE: u64 = 10_000_000;
+
+/// Maximum tasks processed per batch in expire_stale_tasks
+pub const MAX_EXPIRE_BATCH: usize = 50;

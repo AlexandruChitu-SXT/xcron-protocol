@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Address } from '@multiversx/sdk-core';
 import { useWallet } from '../hooks/useWallet';
-import { CONTRACTS, GAS_SCHEDULE_TASK, EXPLORER_TX } from '../config';
+import { useTxTracker } from '../hooks/useTxTracker';
+import { CONTRACTS, NETWORK, GAS_SCHEDULE_TASK } from '../config';
+import { TaskTelemetry } from '../components/TaskTelemetry';
 
 type TemplateType = 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom';
 
@@ -118,24 +120,24 @@ const TemplateIcon = ({ type, color, size = 20 }: { type: TemplateType; color: s
     }
 };
 
-const TEMPLATE_KEYS: TemplateType[] = ['compound', 'dca', 'stoploss', 'claim', 'nftmint', 'custom'];
+const TEMPLATE_KEYS: TemplateType[] = ['custom', 'compound', 'dca', 'stoploss', 'claim', 'nftmint'];
 
 const TEMPLATE_COLORS: Record<TemplateType, string> = {
+    custom: 'rgb(139,92,246)',
     compound: 'rgb(34,197,94)',
     dca: 'rgb(59,130,246)',
     stoploss: 'rgb(239,68,68)',
     claim: 'rgb(251,191,36)',
     nftmint: 'rgb(168,85,247)',
-    custom: 'rgb(139,92,246)',
 };
 
 const TEMPLATE_LABELS: Record<TemplateType, { contract: string; endpoint: string }> = {
+    custom: { contract: 'Target Contract', endpoint: 'Endpoint Function' },
     compound: { contract: 'Farm / Staking Contract', endpoint: 'Function to Call' },
     dca: { contract: 'DEX Contract (e.g. xExchange)', endpoint: 'Swap Function' },
     stoploss: { contract: 'DEX Contract', endpoint: 'Swap Function' },
     claim: { contract: 'Staking / Farm Contract', endpoint: 'Claim Function' },
     nftmint: { contract: 'NFT Collection Contract', endpoint: 'Mint Function' },
-    custom: { contract: 'Target Contract', endpoint: 'Endpoint Function' },
 };
 
 // Custom styled dropdown (replaces native <select>)
@@ -234,13 +236,15 @@ export function ScheduleTask() {
     const { wallet, setShowConnectModal, signAndSendTransaction, addToast } = useWallet();
     const [searchParams] = useSearchParams();
 
-    const initialTemplate = (searchParams.get('template') as TemplateType) || 'compound';
+    const initialTemplate = (searchParams.get('template') as TemplateType) || 'custom';
     const [template, setTemplate] = useState<TemplateType>(
-        TEMPLATE_KEYS.includes(initialTemplate) ? initialTemplate : 'compound'
+        TEMPLATE_KEYS.includes(initialTemplate) ? initialTemplate : 'custom'
     );
 
     const [form, setForm] = useState({ ...TEMPLATES[template].defaults });
-    const [txHash, setTxHash] = useState('');
+    const [argsList, setArgsList] = useState<{ type: 'string' | 'number' | 'address', value: string }[]>([]);
+
+    const { txHash, setTxHash, status: txStatus, loading: txLoading } = useTxTracker();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     // Human-friendly time state (in seconds)
@@ -252,6 +256,7 @@ export function ScheduleTask() {
     useEffect(() => {
         const tmplDefaults = TEMPLATES[template].defaults;
         setForm({ ...tmplDefaults });
+        setArgsList([]);
         setTxHash('');
         setError('');
         setDelaySeconds(0);
@@ -261,12 +266,52 @@ export function ScheduleTask() {
     const update = (field: string, value: string) => {
         setForm((prev: any) => ({ ...prev, [field]: value }));
         setError('');
-        setTxHash('');
+        setTxHash(null);
     };
 
     // Normalize commas to dots for decimal inputs
     const updateDecimal = (field: string, value: string) => {
         update(field, value.replace(/,/g, '.'));
+    };
+
+    const addArgument = () => {
+        setArgsList([...argsList, { type: 'string', value: '' }]);
+    };
+
+    const updateArgument = (index: number, field: 'type' | 'value', val: string) => {
+        const newArgs = [...argsList];
+        newArgs[index] = { ...newArgs[index], [field]: val };
+        setArgsList(newArgs);
+    };
+
+    const removeArgument = (index: number) => {
+        setArgsList(argsList.filter((_, i) => i !== index));
+    };
+
+    const encodeArguments = (): string => {
+        if (argsList.length === 0) return '00000000'; // Empty vec length
+
+        let encoded = numToHex8(argsList.length); // u32 length of args vector (not true u32 but 1 byte hack for small args)
+        // Wait, for safety we should encode u32 properly.
+        encoded = argsList.length.toString(16).padStart(8, '0');
+
+        for (const arg of argsList) {
+            let argHex = '';
+            if (arg.type === 'string') {
+                argHex = stringToHex(arg.value);
+            } else if (arg.type === 'number') {
+                argHex = parseInt(arg.value).toString(16);
+                if (argHex.length % 2 !== 0) argHex = '0' + argHex;
+            } else if (arg.type === 'address') {
+                argHex = addressToHex(arg.value);
+            }
+
+            // Append length of this specific argument as u32
+            const argLenBase = (argHex.length / 2).toString(16).padStart(8, '0');
+            encoded += argLenBase + argHex;
+        }
+
+        return encoded;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -282,15 +327,36 @@ export function ScheduleTask() {
         try {
             const targetAddrHex = addressToHex(form.targetContract);
             const endpointHex = stringToHex(form.targetEndpoint);
-            const emptyVec = '00000000';
+
+            // Encode custom arguments securely
+            const encodedArgsList = encodeArguments();
+
+            // Fetch current blockchain round for proper target_round calculation
+            let currentRound = 0;
+            try {
+                const res = await fetch(`${NETWORK.apiUrl}/stats`);
+                const stats = await res.json();
+                // MultiversX /stats returns: { epoch, roundsPassed (in current epoch), roundsPerEpoch }
+                const epoch = stats.epoch || 0;
+                const roundsPassed = stats.roundsPassed || 0;
+                const roundsPerEpoch = stats.roundsPerEpoch || 2400;
+                currentRound = epoch * roundsPerEpoch + roundsPassed;
+            } catch {
+                // If we can't get current round, use 0 (keeper will check ripeness)
+                console.warn('Could not fetch current round, using 0');
+            }
 
             let triggerHex: string;
             const delayRounds = secondsToRounds(delaySeconds);
+            let targetRound = currentRound + delayRounds;
+            // Safety: never send NaN or negative values
+            if (!Number.isFinite(targetRound) || targetRound < 0) targetRound = 0;
+
             if (form.triggerType === 'once') {
-                triggerHex = '00' + roundToHex(delayRounds);
+                triggerHex = '00' + roundToHex(targetRound);
             } else {
                 const intervalRounds = secondsToRounds(intervalSeconds);
-                triggerHex = '01' + roundToHex(delayRounds)
+                triggerHex = '01' + roundToHex(targetRound)
                     + roundToHex(intervalRounds)
                     + roundToHex(10);
             }
@@ -300,7 +366,7 @@ export function ScheduleTask() {
             const maxRetriesHex = numToHex8(parseInt(form.maxRetries));
             const ttlHex = roundToHex(parseInt(form.ttlRounds));
 
-            const data = `scheduleTask@${targetAddrHex}@${endpointHex}@${emptyVec}@${triggerHex}@${maxGasHex}@${maxRetriesHex}@${ttlHex}`;
+            const data = `scheduleTask@${targetAddrHex}@${endpointHex}@${encodedArgsList}@${triggerHex}@${maxGasHex}@${maxRetriesHex}@${ttlHex}`;
 
             const result = await signAndSendTransaction({
                 receiver: CONTRACTS.scheduler,
@@ -383,20 +449,64 @@ export function ScheduleTask() {
                                 </div>
 
                                 {template === 'custom' && (
-                                    <div className="form-group">
-                                        <label>{labels.endpoint}</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. claimRewards"
-                                            value={form.targetEndpoint}
-                                            onChange={(e) => update('targetEndpoint', e.target.value)}
-                                            required
-                                            style={{ fontFamily: 'monospace' }}
-                                        />
-                                        <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                            The smart contract function name to call (e.g. claimRewards, swap, mint)
-                                        </small>
-                                    </div>
+                                    <>
+                                        <div className="form-group">
+                                            <label>{labels.endpoint}</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. claimRewards"
+                                                value={form.targetEndpoint}
+                                                onChange={(e) => update('targetEndpoint', e.target.value)}
+                                                required
+                                                style={{ fontFamily: 'monospace' }}
+                                            />
+                                            <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                                The smart contract function name to call (e.g. claimRewards, swap, mint)
+                                            </small>
+                                        </div>
+
+                                        <div className="form-group" style={{ marginTop: 24 }}>
+                                            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span>Function Arguments</span>
+                                                <button type="button" onClick={addArgument} className="btn-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                    + Add Argument
+                                                </button>
+                                            </label>
+
+                                            {argsList.length === 0 ? (
+                                                <div style={{ textAlign: 'center', padding: '16px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-primary)', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                    No arguments required for this function.
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                                    {argsList.map((arg, idx) => (
+                                                        <div key={idx} style={{ display: 'flex', gap: 8 }}>
+                                                            <select
+                                                                value={arg.type}
+                                                                onChange={(e) => updateArgument(idx, 'type', e.target.value)}
+                                                                style={{ width: '100px', padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                            >
+                                                                <option value="string">String</option>
+                                                                <option value="number">Number</option>
+                                                                <option value="address">Address</option>
+                                                            </select>
+                                                            <input
+                                                                type="text"
+                                                                placeholder={arg.type === 'number' ? 'e.g. 1000' : arg.type === 'address' ? 'erd1...' : 'text'}
+                                                                value={arg.value}
+                                                                onChange={(e) => updateArgument(idx, 'value', e.target.value)}
+                                                                required
+                                                                style={{ flex: 1, fontFamily: 'monospace', padding: '8px', borderRadius: 'var(--radius-sm)' }}
+                                                            />
+                                                            <button type="button" onClick={() => removeArgument(idx)} style={{ background: 'rgba(239,68,68,0.1)', color: 'rgb(239,68,68)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)', width: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </div>
 
@@ -602,22 +712,11 @@ export function ScheduleTask() {
                         )}
 
                         {txHash && txHash !== 'pending-web-wallet' && (
-                            <div className="card" style={{ borderColor: 'rgba(34, 197, 94, 0.3)' }}>
-                                <div className="section-title" style={{ color: 'var(--success)' }}>
-                                    Task Scheduled!
-                                </div>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 12 }}>
-                                    Your task has been submitted to the blockchain.
-                                </p>
-                                <a
-                                    href={EXPLORER_TX(txHash)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="btn btn-secondary btn-sm"
-                                >
-                                    View on Explorer →
-                                </a>
-                            </div>
+                            <TaskTelemetry
+                                txHash={txHash}
+                                txStatus={(txStatus as 'idle' | 'pending' | 'success' | 'fail') || 'idle'}
+                                txLoading={txLoading}
+                            />
                         )}
                     </div>
                 </div>

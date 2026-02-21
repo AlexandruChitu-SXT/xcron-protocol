@@ -1,0 +1,24 @@
+{
+    "emittedTransaction": {
+        "nonce": 259,
+        "value": "0",
+        "receiver": "erd1qqqqqqqqqqqqqpgq9anru5s7hw4pxxf4jjdx0n883mcy85hx7k8s34ldyd",
+        "sender": "erd135zkexfnzryv7z04vppm28uajdsxfvnel2n3kdw2spv3jk0j7k8stpwpgu",
+        "senderUsername": "",
+        "receiverUsername": "",
+        "gasPrice": 1000000000,
+        "gasLimit": 10000000,
+        "data": "d2hpdGVsaXN0S2VlcGVyc0A4ZDA1NmM5OTMzMTBjOGNmMDlmNTYwNDNiNTFmOWQ5MzYwNjRiMjc5ZmFhNzFiMzVjYTgwNTkxOTU5ZjJmNThm",
+        "chainID": "D",
+        "version": 2,
+        "options": 0,
+        "guardian": "",
+        "signature": "613b0fa18c2caf22d705a85387e139d267be30afe25e72a7228628062a1e1686160e707abbb8980cad61b14e77ca98706a51af5cc3ba72d21d7065428dfcbc07",
+        "guardianSignature": "",
+        "relayer": "",
+        "relayerSignature": ""
+    },
+    "emittedTransactionData": "whitelistKeepers@8d056c993310c8cf09f56043b51f9d936064b279faa71b35ca80591959f2f58f",
+    "emittedTransactionHash": "70c0e086ae466664d635951a685c9db10cd5ced674c58d068e30582cd99383aa",
+    "contractAddress": "erd1qqqqqqqqqqqqqpgq9anru5s7hw4pxxf4jjdx0n883mcy85hx7k8s34ldyd"
+}

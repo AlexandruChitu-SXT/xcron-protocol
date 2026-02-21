@@ -5,9 +5,14 @@ multiversx_sc::imports!();
 /// Views never panic — they return default/empty values instead.
 #[multiversx_sc::module]
 pub trait ViewsModule: crate::storage::StorageModule {
+    /// Returns task data. Returns empty/default values if task does not exist.
     #[view(getTask)]
-    fn get_task(&self, task_id: u64) -> common::types::Task<Self::Api> {
-        self.tasks(task_id).get()
+    fn get_task(&self, task_id: u64) -> OptionalValue<common::types::Task<Self::Api>> {
+        if self.tasks(task_id).is_empty() {
+            OptionalValue::None
+        } else {
+            OptionalValue::Some(self.tasks(task_id).get())
+        }
     }
 
     #[view(getTaskNonce)]

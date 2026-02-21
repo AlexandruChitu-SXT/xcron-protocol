@@ -46,6 +46,7 @@ xcron/*.metadata.json
 keeper/keeper-config.json
 keeper/keeper-logs/
 keeper-logs/
+xportal-claim-state.json
 
 # ──────── BUILD ARTIFACTS ────────
 *.mxsc.json

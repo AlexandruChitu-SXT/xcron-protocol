@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '../hooks/useContractQuery';
-import { CONTRACTS } from '../config';
+import { CONTRACTS, NETWORK } from '../config';
 import { NavLink } from 'react-router-dom';
+import { LiveActivityFeed } from '../components/LiveActivityFeed';
 import SlicedLogo3D from '../components/SlicedLogo3D';
 import { AnimatedCounter } from '../components/AnimatedCounter';
+
 
 interface ProtocolStats {
     totalTasks: number;
@@ -22,6 +24,7 @@ export function Dashboard() {
         minDeposit: '0',
         protocolFeeBps: 0,
     });
+    const [txStats, setTxStats] = useState({ lifetime: 0, daily: 0 });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -45,6 +48,21 @@ export function Dashboard() {
                 minDeposit: depositRes.length > 0 ? bufferToBigInt(depositRes[0]) : '0',
                 protocolFeeBps: feeRes.length > 0 ? bufferToNumber(feeRes[0]) : 0,
             });
+
+            // Fetch transaction count stats from API (proxy through current network)
+            try {
+                const oneDayAgo = Math.floor(Date.now() / 1000) - 86400;
+                const [lifetimeRes, dailyRes] = await Promise.all([
+                    fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions/count?status=success`),
+                    fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions/count?after=${oneDayAgo}&status=success`)
+                ]);
+                const lifetimeCount = Number(await lifetimeRes.text()) || 0;
+                const dailyCount = Number(await dailyRes.text()) || 0;
+                setTxStats({ lifetime: lifetimeCount, daily: dailyCount });
+            } catch (err) {
+                console.warn('Could not fetch tx counts:', err);
+            }
+
         } catch (err) {
             console.error('Failed to load stats:', err);
         } finally {
@@ -59,9 +77,19 @@ export function Dashboard() {
                 <div className="hero-section">
                     <SlicedLogo3D />
                     <h1>Decentralized Task Automation</h1>
-                    <p className="hero-sub">
+                    <p className="hero-sub" style={{ marginBottom: 12 }}>
                         The automation layer for MultiversX. Schedule smart contract executions and let decentralized keepers handle the rest.
                     </p>
+                    <div style={{ display: 'flex', gap: 24, justifyContent: 'center', marginBottom: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-glass)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-primary)' }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Lifetime Executions: <span style={{ color: 'var(--text-primary)' }}>{txStats.lifetime.toLocaleString()}</span></span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-glass)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-primary)' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Past 24H: <span style={{ color: 'var(--text-primary)' }}>{txStats.daily.toLocaleString()}</span></span>
+                        </div>
+                    </div>
                     {!wallet.connected && (
                         <button
                             className="btn btn-connect"
@@ -99,6 +127,11 @@ export function Dashboard() {
                         <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <><AnimatedCounter value={stats.protocolFeeBps / 100} />%</>}</div>
                         <div className="stat-sub">Per execution</div>
                     </div>
+                </div>
+
+                {/* Live Protocol Activity Feed */}
+                <div style={{ marginTop: 32 }}>
+                    <LiveActivityFeed />
                 </div>
 
                 {/* How It Works */}
@@ -207,25 +240,36 @@ export function Dashboard() {
                             <li>No technical knowledge required</li>
                             <li>Cancel or modify tasks anytime</li>
                         </ul>
-                        <NavLink to="/schedule">
-                            <button className="btn btn-primary" style={{ marginTop: 16 }}>Schedule a Task</button>
+                        <NavLink to="/schedule" style={{ display: 'block', marginTop: 16 }}>
+                            <button className="btn btn-primary" style={{ width: '100%', padding: '12px' }}>Schedule a Task</button>
                         </NavLink>
                     </div>
-                    <div className="card benefit-card">
-                        <div className="benefit-badge" style={{ background: 'rgba(16,185,129,0.15)', color: 'rgb(16,185,129)' }}>For Keepers</div>
-                        <h3 style={{ color: 'var(--text-primary)', marginBottom: 8, fontSize: '1.15rem' }}>Earn Rewards Automatically</h3>
-                        <ul className="benefit-list">
-                            <li>Deposit 1 EGLD to become a keeper</li>
-                            <li>Your bot executes tasks and earns 95% of fees</li>
-                            <li>Runs 24/7 automatically — set and forget</li>
-                            <li>More tasks in the protocol = more earnings</li>
-                        </ul>
-                        <NavLink to="/keeper">
-                            <button className="btn btn-primary" style={{ marginTop: 16 }}>Become a Keeper</button>
+
+                    <div className="card benefit-card" style={{ background: 'rgba(16,185,129,0.06)', borderColor: 'rgba(16,185,129,0.2)' }}>
+                        <div className="benefit-badge" style={{ background: 'rgba(16,185,129,0.15)', color: 'rgb(16,185,129)' }}>For Node Operators</div>
+                        <h3 style={{ color: 'var(--text-primary)', marginBottom: 8, fontSize: '1.15rem' }}>Run a Keeper Node</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 12 }}>
+                            Join the decentralized network. Keepers execute the protocol's scheduled tasks and earn <strong style={{ color: 'var(--success)' }}>{100 - (stats.protocolFeeBps / 100)}%</strong> of the execution fees.
+                        </p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                            <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Min Bond</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-light)' }}>{formatEgld(stats.minDeposit, 0)} EGLD</div>
+                            </div>
+                            <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Active Nodes</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)' }}>{stats.activeKeepers} Nodes</div>
+                            </div>
+                        </div>
+
+                        <NavLink to="/keeper" style={{ display: 'block' }}>
+                            <button className="btn" style={{ width: '100%', padding: '12px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: 'rgb(34,197,94)' }}>
+                                View Keeper Panel & Node Guide
+                            </button>
                         </NavLink>
                     </div>
                 </div>
-
 
             </div>
         </div>

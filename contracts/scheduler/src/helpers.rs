@@ -87,11 +87,15 @@ pub trait HelpersModule: crate::storage::StorageModule {
     }
 
     /// Reschedule the next occurrence of a recurring task.
+    ///
+    /// Uses the actual remaining deposit (after keeper reward + protocol fee),
+    /// NOT the original deposit which has already been distributed.
     fn reschedule_recurring(
         &self,
         original_task: &common::types::Task<Self::Api>,
         interval: u64,
         remaining_execs: u64,
+        remaining_deposit: BigUint,
     ) {
         let next_round = self.blockchain().get_block_round() + interval;
         let new_id = self.task_nonce().get() + 1;
@@ -109,7 +113,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
                 remaining_execs,
             },
             max_gas: original_task.max_gas,
-            deposit: original_task.deposit.clone(),
+            deposit: remaining_deposit,
             max_retries: original_task.max_retries,
             retry_count: 0,
             ttl_rounds: original_task.ttl_rounds,

@@ -5,7 +5,7 @@ source .deployed_addresses.json
 
 CHAIN="D"
 PROXY="https://devnet-gateway.multiversx.com"
-WALLET="../wallets/deployer.pem"
+WALLET="../.secrets/deployer.pem"
 
 KEEPER_REGISTRY_ADDR=$(cat .deployed_addresses.json | grep keeperRegistry | awk -F '"' '{print $4}')
 SCHEDULER_ADDR=$(cat .deployed_addresses.json | grep scheduler | awk -F '"' '{print $4}')

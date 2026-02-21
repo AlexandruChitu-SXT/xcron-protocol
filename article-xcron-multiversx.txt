@@ -1,0 +1,81 @@
+Why I Built XCron — And Why MultiversX Needs It
+
+I've been building on MultiversX for a while now, and there's one thing that kept bothering me: there's no native way to automate on-chain actions. Every time a project needs something to happen automatically — a reward claim, a rebalance, a scheduled execution — they have to build their own off-chain bot from scratch. That's fragmented, inefficient, and honestly, it's a gap that shouldn't exist in 2026.
+
+That's why I built XCron Protocol.
+
+
+1. Recurring Transactions Mean Direct Revenue for the Network
+
+Every task executed through XCron is a real, on-chain transaction. That means gas fees flowing to validators — not once, but repeatedly. A single recurring task running once per epoch generates 365 transactions per year. Scale that to thousands of active tasks and you're looking at hundreds of thousands of organic transactions annually.
+
+This isn't speculative DeFi volume that disappears when incentives dry up. This is predictable, utility-driven network activity — the kind that sustains a healthy blockchain long-term.
+
+
+2. Locked Value That Stays in the Ecosystem
+
+XCron requires deposits from users who schedule tasks and stakes from keepers who execute them. That capital sits locked in smart contracts for the duration of their operation. It doesn't get dumped on the market. It doesn't leave the ecosystem. It stays productive and on-chain.
+
+As the protocol scales, this locked value grows organically with adoption — not through artificial inflation or unsustainable yield farming.
+
+
+3. The Infrastructure Primitive That's Missing
+
+Ethereum has Chainlink Automation. It has Gelato Network. It has OpenZeppelin Defender. These are billion-dollar infrastructure layers that power thousands of dApps.
+
+MultiversX has nothing equivalent. Zero.
+
+Every project that needs automation today has to reinvent the wheel — writing custom bots, managing their own infrastructure, handling failures on their own. XCron solves this once, for everyone. It's a shared infrastructure layer that the entire ecosystem can build on top of.
+
+
+4. The Multiplier Effect on Existing dApps
+
+XCron doesn't compete with any dApp on MultiversX. It makes them all better.
+
+xExchange could offer auto-compounding of farming rewards. Hatom could enable automatic deleverage when a user's health factor drops. xPortal users could automate their daily XP streak claims — something we've already built and shipped. DAOs could execute approved proposals automatically. NFT projects could schedule launches with precision.
+
+Every integration that plugs into XCron generates more transactions, more gas fees, and more utility for the network. It's a flywheel: the more dApps integrate, the more valuable the protocol becomes, and the more MultiversX benefits.
+
+
+5. How MultiversX Benefits — In Numbers
+
+Here's a breakdown of the direct and indirect value XCron brings to the network at different stages of adoption:
+
+Transaction Volume
+
+- 100 active tasks → 36,500 transactions/year
+- 1,000 active tasks → 365,000 transactions/year
+- 10,000 active tasks → 3,650,000 transactions/year
+- 100,000 active tasks → 36,500,000 transactions/year
+
+All organic. All utility-driven. All paying gas fees to validators.
+
+EGLD Locked in Protocol (TVL)
+
+- Early stage: ~150 EGLD (task deposits + keeper stakes)
+- Growth phase: ~1,500 EGLD
+- Mature: ~15,000 EGLD
+- At scale: ~50,000+ EGLD
+
+This is capital that stays locked and productive within the MultiversX ecosystem.
+
+Protocol Revenue (15% Fee Model)
+
+XCron takes a 15% protocol fee on every task execution. This revenue stays entirely on-chain and is split between treasury development and keeper incentives.
+
+| Adoption Stage  | Active Tasks/Month | Avg Deposit | Protocol Revenue/Year |
+|-----------------|-------------------|-------------|----------------------|
+| Early           | 100               | 0.05 EGLD   | ~0.9 EGLD            |
+| Growth          | 1,000             | 0.10 EGLD   | ~18 EGLD             |
+| Mature          | 10,000            | 0.20 EGLD   | ~360 EGLD            |
+| Scale           | 100,000           | 0.50 EGLD   | ~9,000 EGLD          |
+
+At scale, that's approximately $270,000/year in protocol revenue at $30/EGLD — all transparent, all verifiable on-chain.
+
+Network Efficiency
+
+XCron distributes computational load uniformly across epochs rather than creating unpredictable traffic spikes. Tasks execute on schedule, keepers operate across all three shards, and the network's adaptive state sharding architecture is fully leveraged. We've already demonstrated this with our xPortal XP auto-claim feature, which maps all three Social Module contracts across shards 0, 1, and 2.
+
+The Bottom Line
+
+XCron is the automation layer that MultiversX doesn't have yet — but needs. It generates real transaction volume, locks real value, and creates a multiplier effect across every dApp in the ecosystem. The infrastructure gap is clear, the demand is real, and we've already built it.

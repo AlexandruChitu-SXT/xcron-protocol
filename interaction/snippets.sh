@@ -15,7 +15,7 @@
 
 CHAIN="D"  # D=devnet, T=testnet, 1=mainnet
 PROXY="https://devnet-gateway.multiversx.com"
-WALLET="../wallets/deployer.pem"
+WALLET="../.secrets/deployer.pem"
 
 # WASM paths
 SCHEDULER_WASM="../contracts/scheduler/output/scheduler.wasm"
@@ -191,7 +191,7 @@ whitelist_keeper() {
         --chain "$CHAIN" \
         --function "addWhitelistedKeeper" \
         --arguments "0x$KEEPER_HEX" \
-        --recall-nonce \
+         \
         --send
 }
 

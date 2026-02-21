@@ -29,10 +29,33 @@ pub trait RewardsContract:
         self.keeper_registry_addr().set(&keeper_registry);
         self.treasury_split_bps().set(treasury_split_bps);
         self.treasury_balance().set(BigUint::zero());
+        self.paused().set(false);
+        self.version().set(1u32);
     }
 
+    /// Safe upgrade — preserves storage, bumps version.
     #[upgrade]
-    fn upgrade(&self) {}
+    fn upgrade(&self) {
+        self.version().set(self.version().get() + 1);
+    }
+
+    // ── Circuit Breaker ─────────────────────────────────────
+
+    #[only_owner]
+    #[endpoint(pause)]
+    fn pause(&self) {
+        self.paused().set(true);
+    }
+
+    #[only_owner]
+    #[endpoint(unpause)]
+    fn unpause(&self) {
+        self.paused().set(false);
+    }
+
+    fn require_not_paused(&self) {
+        require!(!self.paused().get(), "Contract is paused");
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  FEE RECEPTION
@@ -63,6 +86,7 @@ pub trait RewardsContract:
     /// Keepers claim their accumulated rewards.
     #[endpoint(claimRewards)]
     fn claim_rewards(&self) {
+        self.require_not_paused();
         let caller = self.blockchain().get_caller();
         let amount = self.pending_rewards(&caller).get();
 

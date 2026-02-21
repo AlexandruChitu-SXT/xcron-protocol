@@ -29,7 +29,7 @@ To the developers, node runners, and early supporters of MultiversX: building a 
 Our absolute focus now shifts to crafting a seamless client-side experience. We are building the Keeper Dashboard and expanding the frontend so that anyone can participate in this automated ecosystem. 
 
 **Devnet Addresses (v2.0):**
-- Keeper Registry: `erd1qqqqqqqqqqqqqpgq9anru5s7hw4pxxf4jjdx0n883mcy85hx7k8s34ldyd`
+- Keeper Registry: `erd1qqqqqqqqqqqqqpgqwhly8njerhg53vurgk2uz8eysgrx64tt7k8s8mv8fy`
 - Rewards Engine: `erd1qqqqqqqqqqqqqpgqzfp45vdryaqpl6agrc2qyz3h8hsx277x7k8syfss43`
 - Scheduler Core: `erd1qqqqqqqqqqqqqpgqr5qa968a8wluwshh4k7ua06z0w4t9wnu7k8sefuv72`
 

@@ -51,4 +51,17 @@ pub trait StorageModule {
     // ── Keeper whitelist (Phase 1 only) ─────────────────────
     #[storage_mapper("whitelistedKeepers")]
     fn whitelisted_keepers(&self) -> UnorderedSetMapper<ManagedAddress>;
+
+    // ── Protocol safety ─────────────────────────────────────
+    /// Circuit breaker — pauses all user-facing endpoints.
+    #[storage_mapper("paused")]
+    fn paused(&self) -> SingleValueMapper<bool>;
+
+    /// Reentrancy guard for execute_task.
+    #[storage_mapper("executingGuard")]
+    fn executing_guard(&self) -> SingleValueMapper<bool>;
+
+    /// Contract version for safe upgrades.
+    #[storage_mapper("version")]
+    fn version(&self) -> SingleValueMapper<u32>;
 }

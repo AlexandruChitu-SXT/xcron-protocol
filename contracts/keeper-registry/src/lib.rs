@@ -31,10 +31,33 @@ pub trait KeeperRegistryContract:
         self.slash_pct_bps().set(slash_pct_bps);
         self.cooldown_rounds().set(cooldown_rounds);
         self.treasury_addr().set(&treasury_addr);
+        self.paused().set(false);
+        self.version().set(1u32);
     }
 
+    /// Safe upgrade — preserves storage, bumps version.
     #[upgrade]
-    fn upgrade(&self) {}
+    fn upgrade(&self) {
+        self.version().set(self.version().get() + 1);
+    }
+
+    // ── Circuit Breaker ─────────────────────────────────────
+
+    #[only_owner]
+    #[endpoint(pause)]
+    fn pause(&self) {
+        self.paused().set(true);
+    }
+
+    #[only_owner]
+    #[endpoint(unpause)]
+    fn unpause(&self) {
+        self.paused().set(false);
+    }
+
+    fn require_not_paused(&self) {
+        require!(!self.paused().get(), "Contract is paused");
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  KEEPER REGISTRATION
@@ -44,6 +67,7 @@ pub trait KeeperRegistryContract:
     #[payable("EGLD")]
     #[endpoint(registerKeeper)]
     fn register_keeper(&self) {
+        self.require_not_paused();
         let caller = self.blockchain().get_caller();
         let stake = self.call_value().egld_value().clone_value();
 
@@ -70,6 +94,7 @@ pub trait KeeperRegistryContract:
     #[payable("EGLD")]
     #[endpoint(addStake)]
     fn add_stake(&self) {
+        self.require_not_paused();
         let caller = self.blockchain().get_caller();
         require!(!self.keepers(&caller).is_empty(), "Keeper not registered");
 
@@ -77,6 +102,8 @@ pub trait KeeperRegistryContract:
         let mut info = self.keepers(&caller).get();
         info.stake += additional;
         self.keepers(&caller).set(&info);
+        // I-6: Event for stake tracking
+        self.keeper_registered_event(&caller);
     }
 
     // ═══════════════════════════════════════════════════════════

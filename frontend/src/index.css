@@ -92,7 +92,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
   overflow-x: hidden;
+  position: relative;
 }
+
+
 
 #root {
   min-height: 100vh;
@@ -114,7 +117,7 @@ a:hover {
 
 /* ── Layout ── */
 .app-container {
-  max-width: 1200px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 0 24px;
   width: 100%;
@@ -137,7 +140,14 @@ a:hover {
   }
 }
 
-
+/* Ensure hero section handles positioning */
+.hero-section {
+  position: relative;
+  overflow: visible;
+  padding: 64px 0;
+  text-align: center;
+  z-index: 2;
+}
 
 .page-header {
   margin-bottom: 32px;
@@ -157,12 +167,22 @@ a:hover {
 
 /* ── Header ── */
 .header {
-  background: transparent;
-  position: sticky;
-  top: 12px;
-  z-index: 100;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
   margin: 12px 24px 0;
   padding: 0 20px;
+  box-shadow: var(--shadow-sm);
+  z-index: 100;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  /* Added flex-wrap to prevent overlap */
+  gap: 12px;
+  /* Add gap between wrapped elements */
 }
 
 .header-inner {
@@ -1181,8 +1201,8 @@ a:hover {
 /* 6-column template grid */
 .template-selector-6 {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-bottom: 24px;
 }
 
@@ -1216,6 +1236,50 @@ a:hover {
   font-size: 1.1rem;
   max-width: 500px;
   margin: 0 auto;
+}
+
+/* ── Hero Background Glow (3D Tubes) ── */
+.hero-bg-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.hero-bg-glow::before {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  background-image: url('../assets/hero-bg.png');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.12;
+  filter: blur(2px) saturate(1.2);
+  animation: heroGlowPulse 8s ease-in-out infinite alternate;
+}
+
+.hero-bg-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center,
+      transparent 30%,
+      var(--bg-primary) 85%);
+  z-index: 1;
+}
+
+@keyframes heroGlowPulse {
+  0% {
+    opacity: 0.08;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0.15;
+    transform: scale(1.03);
+  }
 }
 
 /* ── Connected Wallet Chip ── */
@@ -1338,7 +1402,7 @@ a:hover {
 }
 
 .footer-inner {
-  max-width: 1200px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 48px 24px 24px;
 }
@@ -1733,5 +1797,38 @@ a:hover {
 
   50% {
     opacity: 0.4;
+  }
+}
+
+/* Telemetry Timeline */
+.telemetry-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0);
+  }
+}
+
+/* Live Activity Feed Animations */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }

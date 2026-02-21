@@ -1,24 +1,61 @@
 // XCron Protocol — Frontend Configuration
+// Network is read from VITE_NETWORK env var (defaults to "devnet")
 
-export const NETWORK = {
-    name: "devnet",
-    apiUrl: "https://devnet-api.multiversx.com",
-    gatewayUrl: "https://devnet-gateway.multiversx.com",
-    explorerUrl: "https://devnet-explorer.multiversx.com",
-    walletUrl: "https://devnet-wallet.multiversx.com",
-    chainId: "D",
+type NetworkId = 'devnet' | 'mainnet';
+
+const NETWORK_ID = (import.meta.env.VITE_NETWORK as NetworkId) || 'devnet';
+
+// ── Network URLs & Config ──
+const NETWORKS: Record<NetworkId, {
+    name: string;
+    apiUrl: string;
+    gatewayUrl: string;
+    explorerUrl: string;
+    walletUrl: string;
+    chainId: string;
+}> = {
+    devnet: {
+        name: 'devnet',
+        apiUrl: 'https://devnet-api.multiversx.com',
+        gatewayUrl: 'https://devnet-gateway.multiversx.com',
+        explorerUrl: 'https://devnet-explorer.multiversx.com',
+        walletUrl: 'https://devnet-wallet.multiversx.com',
+        chainId: 'D',
+    },
+    mainnet: {
+        name: 'mainnet',
+        apiUrl: 'https://api.multiversx.com',
+        gatewayUrl: 'https://gateway.multiversx.com',
+        explorerUrl: 'https://explorer.multiversx.com',
+        walletUrl: 'https://wallet.multiversx.com',
+        chainId: '1',
+    },
 };
 
-export const CONTRACTS = {
-    scheduler:
-        "erd1qqqqqqqqqqqqqpgqr5qa968a8wluwshh4k7ua06z0w4t9wnu7k8sefuv72",
-    keeperRegistry:
-        "erd1qqqqqqqqqqqqqpgq9anru5s7hw4pxxf4jjdx0n883mcy85hx7k8s34ldyd",
-    rewards:
-        "erd1qqqqqqqqqqqqqpgqzfp45vdryaqpl6agrc2qyz3h8hsx277x7k8syfss43",
-    ping:
-        "erd1qqqqqqqqqqqqqpgq5nywkk07w37j8579v3uhayp6n78ppq8q7k8s2grq2r",
+// ── Contract Addresses (per network) ──
+const CONTRACT_ADDRESSES: Record<NetworkId, {
+    scheduler: string;
+    keeperRegistry: string;
+    rewards: string;
+    ping: string;
+}> = {
+    devnet: {
+        scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqr5qa968a8wluwshh4k7ua06z0w4t9wnu7k8sefuv72',
+        keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || 'erd1qqqqqqqqqqqqqpgqdeyw8mmzkza4tlndeztty0f6hgng5z4s7k8suagqha',
+        rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgqtjjy56pj7gmqyaa9hagzvx4y5mkdll977k8sxcw2vd',
+        ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgq5nywkk07w37j8579v3uhayp6n78ppq8q7k8s2grq2r',
+    },
+    mainnet: {
+        scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || '',
+        keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || '',
+        rewards: import.meta.env.VITE_REWARDS_ADDRESS || '',
+        ping: import.meta.env.VITE_PING_ADDRESS || '',
+    },
 };
+
+// ── Exports ──
+export const NETWORK = NETWORKS[NETWORK_ID];
+export const CONTRACTS = CONTRACT_ADDRESSES[NETWORK_ID];
 
 export const EXPLORER_TX = (hash: string) =>
     `${NETWORK.explorerUrl}/transactions/${hash}`;
@@ -26,8 +63,10 @@ export const EXPLORER_TX = (hash: string) =>
 export const EXPLORER_ACCOUNT = (addr: string) =>
     `${NETWORK.explorerUrl}/accounts/${addr}`;
 
-// Min deposit (0.1 EGLD)
-export const MIN_DEPOSIT = "100000000000000000";
+// Min deposit (0.01 EGLD for devnet, 0.1 EGLD for mainnet)
+export const MIN_DEPOSIT = NETWORK_ID === 'mainnet'
+    ? '100000000000000000'
+    : '10000000000000000';
 
 // Gas limits
 export const GAS_SCHEDULE_TASK = 30_000_000;
@@ -39,6 +78,6 @@ export const GAS_WITHDRAW_STAKE = 10_000_000;
 
 // WalletConnect (xPortal)
 export const WALLETCONNECT = {
-    projectId: '9b36b2703c75eb57d9680e44b74c4df9',
+    projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '9b36b2703c75eb57d9680e44b74c4df9',
     relayUrl: 'wss://relay.walletconnect.com',
 };

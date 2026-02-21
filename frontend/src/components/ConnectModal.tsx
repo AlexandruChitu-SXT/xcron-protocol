@@ -121,7 +121,8 @@ export function ConnectModal() {
     const handleQuickConnect = async () => {
         setLoading('quick');
         try {
-            await connect('erd135zkexfnzryv7z04vppm28uajdsxfvnel2n3kdw2spv3jk0j7k8stpwpgu');
+            // Generic demo address — NOT the deployer wallet
+            await connect('erd1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6gq4hu');
         } catch (err: any) {
             setError(err.message || 'Quick connect failed');
         } finally {
@@ -353,7 +354,7 @@ export function ConnectModal() {
                         {loading === 'webwallet' && <span className="loading-spinner" />}
                     </button>
 
-                    {/* Devnet Quick Connect — clearly labeled */}
+                    {/* Devnet Quick Connect — generic demo wallet */}
                     <div style={{
                         borderTop: '1px solid rgba(255,255,255,0.06)',
                         paddingTop: 8, marginTop: 4,
@@ -363,7 +364,7 @@ export function ConnectModal() {
                             color: 'rgba(232,245,240,0.3)', textTransform: 'uppercase',
                             marginBottom: 6, paddingLeft: 4,
                         }}>
-                            Devnet Testing Only
+                            Quick Access
                         </div>
                         <button
                             style={{
@@ -387,15 +388,16 @@ export function ConnectModal() {
                             </div>
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fbbf24' }}>
-                                    Quick Connect (Read-Only)
+                                    Quick Connect (Demo)
                                 </div>
                                 <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.4)', marginTop: 2 }}>
-                                    View deployer dashboard — no signing
+                                    Explore the dashboard — read-only preview
                                 </div>
                             </div>
                             {loading === 'quick' && <span className="loading-spinner" />}
                         </button>
                     </div>
+
 
                     {/* WalletConnect QR Code */}
                     {qrUri && (

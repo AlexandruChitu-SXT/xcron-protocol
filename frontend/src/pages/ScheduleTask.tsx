@@ -6,15 +6,31 @@ import { useTxTracker } from '../hooks/useTxTracker';
 import { CONTRACTS, NETWORK, GAS_SCHEDULE_TASK } from '../config';
 import { TaskTelemetry } from '../components/TaskTelemetry';
 
-type TemplateType = 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom';
+type TemplateType = 'quicktest' | 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom';
 
 const TEMPLATES: Record<TemplateType, { title: string; description: string; category: string; defaults: any }> = {
+    quicktest: {
+        title: 'Quick Test',
+        description: 'Try XCron in seconds! Schedules a simple ping to our test contract. Perfect for your first task.',
+        category: 'Demo',
+        defaults: {
+            targetContract: CONTRACTS.ping,
+            targetEndpoint: 'noop',
+            triggerType: 'once' as const,
+            targetRound: 'next',
+            interval: '',
+            deposit: '0.01',
+            maxGas: '10000000',
+            maxRetries: '3',
+            ttlRounds: '1000',
+        },
+    },
     compound: {
         title: 'Auto-Compound',
         description: 'Automatically claim and reinvest your farm or staking rewards. Maximizes APY through the power of compound interest.',
         category: 'DeFi',
         defaults: {
-            targetContract: '',
+            targetContract: CONTRACTS.ping,
             targetEndpoint: 'claimRewards',
             triggerType: 'recurring' as const,
             targetRound: '0',
@@ -30,7 +46,7 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
         description: 'Buy tokens on a recurring schedule. Removes emotion from investing and builds positions over time.',
         category: 'DeFi',
         defaults: {
-            targetContract: '',
+            targetContract: CONTRACTS.ping,
             targetEndpoint: 'swap',
             triggerType: 'recurring' as const,
             targetRound: '0',
@@ -46,7 +62,7 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
         description: 'Automatically sell a token when the price drops below your threshold. Protect your portfolio from sudden crashes.',
         category: 'DeFi',
         defaults: {
-            targetContract: '',
+            targetContract: CONTRACTS.ping,
             targetEndpoint: 'swap',
             triggerType: 'recurring' as const,
             targetRound: '0',
@@ -62,7 +78,7 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
         description: 'Automatically claim staking or farm rewards on a schedule. No need to log in every day — your rewards arrive automatically.',
         category: 'DeFi',
         defaults: {
-            targetContract: '',
+            targetContract: CONTRACTS.rewards,
             targetEndpoint: 'claimRewards',
             triggerType: 'recurring' as const,
             targetRound: '0',
@@ -78,7 +94,7 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
         description: 'Schedule a mint transaction at the exact drop time. Never miss a launch again — your mint fires automatically.',
         category: 'NFT',
         defaults: {
-            targetContract: '',
+            targetContract: CONTRACTS.ping,
             targetEndpoint: 'mint',
             triggerType: 'once' as const,
             targetRound: '',
@@ -111,6 +127,7 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
 const TemplateIcon = ({ type, color, size = 20 }: { type: TemplateType; color: string; size?: number }) => {
     const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
     switch (type) {
+        case 'quicktest': return (<svg {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>);
         case 'compound': return (<svg {...props}><path d="M12 2v4m0 12v4M2 12h4m12 0h4" /><circle cx="12" cy="12" r="6" /><path d="M12 9v3l2 1" /></svg>);
         case 'dca': return (<svg {...props}><polyline points="22,7 13.5,15.5 8.5,10.5 2,17" /><polyline points="16,7 22,7 22,13" /></svg>);
         case 'stoploss': return (<svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="9" y1="9" x2="15" y2="15" /><line x1="15" y1="9" x2="9" y2="15" /></svg>);
@@ -120,9 +137,10 @@ const TemplateIcon = ({ type, color, size = 20 }: { type: TemplateType; color: s
     }
 };
 
-const TEMPLATE_KEYS: TemplateType[] = ['custom', 'compound', 'dca', 'stoploss', 'claim', 'nftmint'];
+const TEMPLATE_KEYS: TemplateType[] = ['quicktest', 'custom', 'compound', 'dca', 'stoploss', 'claim', 'nftmint'];
 
 const TEMPLATE_COLORS: Record<TemplateType, string> = {
+    quicktest: 'rgb(0,255,136)',
     custom: 'rgb(139,92,246)',
     compound: 'rgb(34,197,94)',
     dca: 'rgb(59,130,246)',
@@ -132,6 +150,7 @@ const TEMPLATE_COLORS: Record<TemplateType, string> = {
 };
 
 const TEMPLATE_LABELS: Record<TemplateType, { contract: string; endpoint: string }> = {
+    quicktest: { contract: 'Test Contract (pre-filled)', endpoint: 'Function to Call' },
     custom: { contract: 'Target Contract', endpoint: 'Endpoint Function' },
     compound: { contract: 'Farm / Staking Contract', endpoint: 'Function to Call' },
     dca: { contract: 'DEX Contract (e.g. xExchange)', endpoint: 'Swap Function' },

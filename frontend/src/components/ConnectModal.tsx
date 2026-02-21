@@ -61,10 +61,10 @@ export function ConnectModal() {
                     }
                 },
                 onClientLogout: () => {
-                    console.log('WalletConnect logged out');
+                    // WalletConnect session ended
                 },
-                onClientEvent: (event: any) => {
-                    console.log('WalletConnect event:', event);
+                onClientEvent: (_event: any) => {
+                    // WalletConnect event received
                 },
             };
 

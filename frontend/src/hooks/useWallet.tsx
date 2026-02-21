@@ -269,7 +269,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             params.set('callbackUrl', callbackUrl);
 
             const webWalletUrl = `${NETWORK.walletUrl}/hook/transaction?${params.toString()}`;
-            console.log('Web Wallet URL:', webWalletUrl);
+
 
             // Use anchor element to bypass popup blocker in async contexts
             const link = document.createElement('a');

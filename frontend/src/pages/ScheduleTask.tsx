@@ -447,8 +447,7 @@ export function ScheduleTask() {
 
                         <form onSubmit={handleSubmit}>
                             {/* Section: Target Details */}
-                            <div className="form-section" style={{ marginBottom: 24 }}>
-                                <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 12 }}>Target Details</div>
+                            <div className="form-section" style={{ marginBottom: 14 }}>
 
                                 <div className="form-group">
                                     <label>{labels.contract}</label>
@@ -530,8 +529,8 @@ export function ScheduleTask() {
                             </div>
 
                             {/* Section: Schedule */}
-                            <div className="form-section" style={{ marginBottom: 24, padding: 20, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)' }}>
-                                <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 12 }}>Schedule</div>
+                            <div className="form-section" style={{ marginBottom: 14, padding: 14, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)' }}>
+                                <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 8 }}>Schedule</div>
 
                                 <div className="form-group">
                                     <label>Trigger Type</label>
@@ -586,8 +585,8 @@ export function ScheduleTask() {
                             </div>
 
                             {/* Section: Budget */}
-                            <div className="form-section" style={{ marginBottom: 24 }}>
-                                <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 12 }}>Budget</div>
+                            <div className="form-section" style={{ marginBottom: 14 }}>
+                                <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 8 }}>Budget</div>
 
                                 <div className="form-group">
                                     <label>EGLD to Deposit</label>
@@ -656,7 +655,7 @@ export function ScheduleTask() {
                                 </div>
                             )}
 
-                            <button className="btn btn-primary" style={{ width: '100%', padding: 16, fontSize: '1rem' }} disabled={loading}>
+                            <button className="btn btn-primary" style={{ width: '100%', padding: 12, fontSize: '0.95rem' }} disabled={loading}>
                                 {loading ? <span className="loading-spinner" /> : wallet.connected ? `Schedule ${tmpl.title}` : 'Connect Wallet to Schedule'}
                             </button>
                         </form>

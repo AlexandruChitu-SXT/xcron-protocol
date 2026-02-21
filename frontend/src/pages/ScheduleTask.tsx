@@ -447,7 +447,7 @@ export function ScheduleTask() {
 
                         <form onSubmit={handleSubmit}>
                             {/* Section: Target Details */}
-                            <div className="form-section" style={{ marginBottom: 14 }}>
+                            <div className="form-section" style={{ marginBottom: 8 }}>
 
                                 <div className="form-group">
                                     <label>{labels.contract}</label>
@@ -468,19 +468,14 @@ export function ScheduleTask() {
 
                                 {template === 'custom' && (
                                     <>
-                                        {/* Popular Protocols Helper */}
+                                        {/* Popular Protocols — compact inline helper */}
                                         <div style={{
-                                            marginTop: 8, marginBottom: 16, padding: '12px 14px',
-                                            background: 'rgba(6,182,212,0.04)', borderRadius: 'var(--radius-md)',
-                                            border: '1px solid rgba(6,182,212,0.12)',
+                                            marginTop: 4, marginBottom: 10, padding: '8px 10px',
+                                            background: 'rgba(6,182,212,0.04)', borderRadius: 6,
+                                            border: '1px solid rgba(6,182,212,0.10)',
                                         }}>
-                                            <div style={{
-                                                fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-light)',
-                                                textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10,
-                                            }}>
-                                                Popular Protocols
-                                            </div>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>Protocols</span>
                                                 {[
                                                     { name: 'xExchange', endpoints: ['claimRewards', 'swapTokensFixedInput', 'addLiquidity'], color: '#22c55e' },
                                                     { name: 'Hatom', endpoints: ['claimRewards', 'supply', 'withdraw'], color: '#6366f1' },
@@ -491,39 +486,35 @@ export function ScheduleTask() {
                                                     <div key={proto.name} style={{ position: 'relative' }}>
                                                         <details style={{ position: 'relative' }}>
                                                             <summary style={{
-                                                                cursor: 'pointer', padding: '5px 10px',
-                                                                borderRadius: 6, fontSize: '0.74rem', fontWeight: 600,
-                                                                background: `${proto.color}15`, color: proto.color,
-                                                                border: `1px solid ${proto.color}30`,
+                                                                cursor: 'pointer', padding: '3px 8px',
+                                                                borderRadius: 4, fontSize: '0.68rem', fontWeight: 600,
+                                                                background: `${proto.color}12`, color: proto.color,
+                                                                border: `1px solid ${proto.color}25`,
                                                                 listStyle: 'none', userSelect: 'none',
                                                                 transition: 'all 0.15s',
                                                             }}>
                                                                 {proto.name}
                                                             </summary>
                                                             <div style={{
-                                                                position: 'absolute', top: 'calc(100% + 4px)', left: 0,
-                                                                zIndex: 30, minWidth: 180,
-                                                                background: 'var(--bg-secondary)', borderRadius: 8,
+                                                                position: 'absolute', top: 'calc(100% + 3px)', left: 0,
+                                                                zIndex: 30, minWidth: 170,
+                                                                background: 'var(--bg-secondary)', borderRadius: 6,
                                                                 border: '1px solid var(--border-primary)',
-                                                                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                                                                boxShadow: '0 6px 18px rgba(0,0,0,0.5)',
                                                                 overflow: 'hidden',
                                                             }}>
-                                                                <div style={{ padding: '8px 10px', fontSize: '0.68rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-primary)' }}>
-                                                                    Select endpoint to auto-fill
-                                                                </div>
                                                                 {proto.endpoints.map((ep) => (
                                                                     <div
                                                                         key={ep}
                                                                         onClick={() => {
                                                                             update('targetEndpoint', ep);
-                                                                            // Close the details element
                                                                             const details = document.querySelectorAll('.form-section details[open]');
                                                                             details.forEach(d => (d as HTMLDetailsElement).open = false);
-                                                                            addToast(`Endpoint set to ${ep} — paste the ${proto.name} contract address above`, 'info');
+                                                                            addToast(`Endpoint: ${ep} — now paste the ${proto.name} address above`, 'info');
                                                                         }}
                                                                         style={{
-                                                                            padding: '8px 12px', cursor: 'pointer',
-                                                                            fontSize: '0.78rem', fontFamily: 'monospace',
+                                                                            padding: '6px 10px', cursor: 'pointer',
+                                                                            fontSize: '0.72rem', fontFamily: 'monospace',
                                                                             color: 'var(--text-secondary)',
                                                                             transition: 'background 0.15s',
                                                                         }}
@@ -543,12 +534,6 @@ export function ScheduleTask() {
                                                         </details>
                                                     </div>
                                                 ))}
-                                            </div>
-                                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 8 }}>
-                                                Click a protocol to see its common endpoints. Find the contract address on{' '}
-                                                <a href={`${NETWORK.explorerUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-light)', textDecoration: 'none' }}>
-                                                    MultiversX Explorer
-                                                </a>
                                             </div>
                                         </div>
 

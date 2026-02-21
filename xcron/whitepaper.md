@@ -104,9 +104,8 @@ No single entity controls execution. No central server. No trust required.
 ```mermaid
 graph TB
     subgraph "Pillar 1: Smart Contracts"
-        A["Scheduler<br/>Stores tasks, manages execution"]
-        B["KeeperRegistry<br/>Manages operator deposits"]
-        C["Rewards<br/>Distributes payments"]
+        A["Scheduler<br/>Stores tasks, executes, pays keepers"]
+        B["KeeperRegistry<br/>Manages operator bonds & slashing"]
     end
 
     subgraph "Pillar 2: Keeper Network"
@@ -120,9 +119,8 @@ graph TB
     E -- "Register tasks" --> A
     A -- "Emit events" --> D
     D -- "Execute tasks" --> A
-    A -- "Report results" --> C
-    C -- "Pay keepers" --> D
-    D -- "Deposit stake" --> B
+    A -- "85% reward" --> D
+    D -- "Deposit bond" --> B
 ```
 
 ---
@@ -258,45 +256,49 @@ XCron keepers will register as **MX-8004 compliant agents**, giving them:
 
 ## 6. Economic Model
 
-### 6.1 How XCron Makes Money
+### 6.1 Revenue Model
 
-XCron generates revenue from **three sources** — none of which require a native token:
+XCron operates like a **decentralized validator network** — keepers stake, execute, and earn. The economic model is deliberately simple, with no native token or complex fee distribution:
 
 ```mermaid
 graph LR
-    subgraph "Revenue Sources"
-        A["1. Protocol Fee<br/>15% of each task's budget"]
-        B["2. Gas Royalties<br/>30% of all gas spent<br/>on XCron contracts"]
-        C["3. Slashed Stakes<br/>Penalties from<br/>misbehaving keepers"]
-    end
+    A["Task Creator<br/>deposits EGLD"] --> B["Scheduler Contract"]
+    B -->|"85% of deposit"| C["Keeper<br/>(execution reward)"]
+    B -->|"15% of deposit"| D["Protocol Owner<br/>(protocol fee)"]
 
-    subgraph "Where It Goes"
-        D["80% → Keeper Rewards"]
-        E["15% → Protocol Treasury"]
-        F["5% → Insurance Fund"]
-    end
-
-    A --> D
-    A --> E
-    B --> E
-    C --> F
+    E["Keeper Bond"] -->|"10% slashed on failure"| F["Penalty Pool"]
 ```
 
-**The 30% Gas Royalty** is a unique feature of MultiversX: every time someone interacts with an XCron smart contract, MultiversX automatically sends 30% of the gas fee to the contract developer. This creates **passive revenue that grows with usage**.
+| Flow | % | Recipient | Description |
+|---|---|---|---|
+| **Execution Reward** | **85%** | Keeper | Direct payment for successfully executing a task |
+| **Protocol Fee** | **15%** | Protocol Owner | Revenue for operating and maintaining the protocol |
+| **Slashing Penalty** | **10% of bond** | Penalty | Deducted from keeper's staked bond on repeated failures |
 
-### 6.2 How Keepers Earn Money
+Additionally, MultiversX's **30% Gas Royalty** sends 30% of all gas spent on XCron contracts directly to the contract developer — creating **passive revenue that grows with usage**, independent of the protocol fee.
 
-For every task they execute successfully:
+### 6.2 How Keepers Earn
 
-```
-Keeper Earnings = Gas Reimbursement (115%) + Execution Bonus
+A keeper earns **85% of the task deposit** for every successful execution. The economics are straightforward:
 
-Where:
-  Gas Reimbursement = actual cost + 15% profit margin
-  Execution Bonus   = 0.0005 EGLD base (scales with reputation)
-```
+- **Task creator** deposits EGLD when scheduling a task (e.g., 0.1 EGLD)
+- **Keeper** executes the task on-chain, paying gas (~0.005 EGLD)
+- **Keeper receives** 85% of the deposit (0.085 EGLD) — net profit after gas: ~0.08 EGLD
+- **Protocol receives** 15% (0.015 EGLD) — direct to owner wallet
 
-**Example:** A keeper executing 100 tasks per day earns approximately **2.3 EGLD/month** (~$92 at current prices), with minimal operational costs.
+**Example:** A keeper executing 100 tasks per day with an average deposit of 0.1 EGLD earns approximately **8.5 EGLD/day** gross, minus gas costs.
+
+#### Volume Discount Tiers
+
+To ensure fairness for high-volume protocols and larger task budgets, the protocol fee scales down progressively with deposit size:
+
+| Task Deposit | Protocol Fee | Keeper Reward | Rationale |
+|---|---|---|---|
+| Up to 5 EGLD | **15%** | **85%** | Standard rate — covers the vast majority of tasks |
+| 5 – 25 EGLD | **12%** | **88%** | Volume discount for high-budget DeFi operations |
+| Above 25 EGLD | **10%** | **90%** | Enterprise rate for large-scale protocol integrations |
+
+This ensures that XCron remains cost-effective as protocols scale their automation budgets, while keeping the standard rate sustainable for the protocol's operations.
 
 ### 6.3 Why No Native Token?
 

@@ -16,6 +16,8 @@ members = [
     "rewards/meta",
     "ping",
     "ping/meta",
+    "noop",
+    "noop/wasm",
 ]
 
 [workspace.dependencies]

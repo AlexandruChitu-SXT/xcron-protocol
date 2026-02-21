@@ -104,15 +104,46 @@ export function KeeperPanel() {
                         }
                     }
 
-                    // Query pending rewards separately
+                    // Query pending rewards and real execution stats from on-chain transactions
                     if (keeperInfoParsed) {
                         try {
-                            const rewardsRes = await query(CONTRACTS.rewards, 'getPendingRewards', [addrHex]);
-                            if (rewardsRes.length > 0) {
-                                setStats(prev => prev ? { ...prev, pendingRewards: bufferToBigInt(rewardsRes[0]) } : prev);
+                            // Get real execution data: fetch this keeper's executeTask transactions
+                            const txRes = await fetch(
+                                `${NETWORK.apiUrl}/accounts/${wallet.address}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&size=50&fields=status,value,txHash`
+                            );
+                            const txData = await txRes.json();
+                            if (Array.isArray(txData) && txData.length > 0) {
+                                const successful = txData.filter((t: any) => t.status === 'success').length;
+                                const failed = txData.filter((t: any) => t.status === 'fail').length;
+
+                                // Calculate earned EGLD from SC results (transfers back to keeper)
+                                let totalEarned = BigInt(0);
+                                try {
+                                    const detailedRes = await fetch(
+                                        `${NETWORK.apiUrl}/accounts/${wallet.address}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success&size=50&withScResults=true`
+                                    );
+                                    const detailedTxs = await detailedRes.json();
+                                    for (const tx of detailedTxs) {
+                                        if (tx.results) {
+                                            for (const r of tx.results) {
+                                                if (r.receiver === wallet.address && r.value && BigInt(r.value) > 0) {
+                                                    totalEarned += BigInt(r.value);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch { /* ignore detailed fetch errors */ }
+
+                                setStats(prev => prev ? {
+                                    ...prev,
+                                    totalExecs: successful + failed,
+                                    successfulExecs: successful,
+                                    failedExecs: failed,
+                                    pendingRewards: totalEarned.toString(),
+                                } : prev);
                             }
                         } catch (err) {
-                            console.warn('getPendingRewards failed:', err);
+                            console.warn('Real execution stats fetch failed:', err);
                         }
                     }
 
@@ -246,11 +277,11 @@ export function KeeperPanel() {
                                 <div className="stat-sub">EGLD deposited</div>
                             </div>
                             <div className="stat-card" style={{ background: 'rgba(236,72,153,0.08)', borderColor: 'rgba(236,72,153,0.2)' }}>
-                                <div className="stat-label" style={{ color: 'rgb(236,72,153)' }}>Pending Rewards</div>
+                                <div className="stat-label" style={{ color: 'rgb(236,72,153)' }}>Total Earned</div>
                                 <div className="stat-value" style={{ color: 'var(--success)' }}>
                                     {formatEgld(stats.pendingRewards, 4)}
                                 </div>
-                                <div className="stat-sub">EGLD claimable</div>
+                                <div className="stat-sub">EGLD from executions</div>
                             </div>
                         </>
                     )}
@@ -310,7 +341,7 @@ export function KeeperPanel() {
                                 marginBottom: 16,
                             }}>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>
-                                    AVAILABLE TO CLAIM
+                                    TOTAL EARNED FROM EXECUTIONS
                                 </div>
                                 <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
                                     {formatEgld(stats.pendingRewards, 4)} EGLD

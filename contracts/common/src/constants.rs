@@ -25,8 +25,21 @@ pub const DEFAULT_COOLDOWN_ROUNDS: u64 = 600;
 /// Default slash percentage: 10% (1,000 BPS)
 pub const DEFAULT_SLASH_PCT_BPS: u64 = 1_000;
 
-/// Default treasury split from rewards: 20% (2,000 BPS)
-pub const DEFAULT_TREASURY_SPLIT_BPS: u64 = 2_000;
+/// ═══ Progressive Fee Tiers ═══
+/// Tier thresholds defined in whole EGLD units (multiplied by 10^18 at runtime)
+/// Tier 1: deposits up to 5 EGLD → 15% protocol fee (1,500 BPS)
+pub const TIER1_EGLD: u64 = 5;
+pub const TIER1_FEE_BPS: u64 = 1_500;
+
+/// Tier 2: deposits 5–25 EGLD → 12% protocol fee (1,200 BPS)
+pub const TIER2_EGLD: u64 = 25;
+pub const TIER2_FEE_BPS: u64 = 1_200;
+
+/// Tier 3: deposits above 25 EGLD → 10% protocol fee (1,000 BPS)
+pub const TIER3_FEE_BPS: u64 = 1_000;
+
+/// 1 EGLD = 10^18 denomination units
+pub const EGLD_DECIMALS: u64 = 1_000_000_000_000_000_000;
 
 /// Gas reserved for callback execution
 pub const CALLBACK_GAS_RESERVE: u64 = 10_000_000;

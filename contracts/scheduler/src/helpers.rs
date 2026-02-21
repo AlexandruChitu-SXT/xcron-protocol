@@ -5,28 +5,44 @@ multiversx_sc::imports!();
 /// Contains reward calculations, index management, and task rescheduling.
 #[multiversx_sc::module]
 pub trait HelpersModule: crate::storage::StorageModule {
+    /// Determine the applicable protocol fee BPS based on deposit size (progressive tiers).
+    ///
+    /// Tier 1: deposit ≤ 5 EGLD  → 15% (1,500 BPS)
+    /// Tier 2: 5 < deposit ≤ 25 EGLD → 12% (1,200 BPS)
+    /// Tier 3: deposit > 25 EGLD → 10% (1,000 BPS)
+    fn get_tiered_fee_bps(&self, deposit: &BigUint) -> u64 {
+        let decimals = BigUint::from(common::constants::EGLD_DECIMALS);
+        let tier1 = BigUint::from(common::constants::TIER1_EGLD) * &decimals;
+        let tier2 = BigUint::from(common::constants::TIER2_EGLD) * &decimals;
+
+        if *deposit <= tier1 {
+            common::constants::TIER1_FEE_BPS
+        } else if *deposit <= tier2 {
+            common::constants::TIER2_FEE_BPS
+        } else {
+            common::constants::TIER3_FEE_BPS
+        }
+    }
+
     /// Calculate keeper reward for a successful execution.
     ///
-    /// Formula: base_reward = deposit × keeper_margin_bps / BPS
-    /// Phase 1: simplified fixed reward from deposit.
+    /// Keeper gets: deposit - protocol_fee (exact split, no rounding loss).
     fn calculate_keeper_reward(
         &self,
         task: &common::types::Task<Self::Api>,
     ) -> BigUint {
-        // Keeper gets: deposit × (100% - protocol_fee%) × keeper_margin
-        let fee_bps = self.protocol_fee_bps().get();
-        let keeper_share_bps = common::constants::BPS_DENOMINATOR - fee_bps;
-        &task.deposit * keeper_share_bps / common::constants::BPS_DENOMINATOR
+        let protocol_fee = self.calculate_protocol_fee(task);
+        &task.deposit - &protocol_fee
     }
 
-    /// Calculate protocol fee from task deposit.
+    /// Calculate protocol fee from task deposit using progressive tiers.
     ///
-    /// Formula: deposit × protocol_fee_bps / BPS_DENOMINATOR
+    /// Formula: deposit × tiered_fee_bps / BPS_DENOMINATOR
     fn calculate_protocol_fee(
         &self,
         task: &common::types::Task<Self::Api>,
     ) -> BigUint {
-        let fee_bps = self.protocol_fee_bps().get();
+        let fee_bps = self.get_tiered_fee_bps(&task.deposit);
         &task.deposit * fee_bps / common::constants::BPS_DENOMINATOR
     }
 

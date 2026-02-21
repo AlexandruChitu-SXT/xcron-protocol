@@ -75,15 +75,23 @@ export function ConnectModal() {
                 WALLETCONNECT.projectId
             );
 
-            await provider.init();
+            // Timeout: if init takes > 10s, the projectId is likely invalid
+            const initTimeout = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('WalletConnect timed out. The xPortal connection is not available yet — use Web Wallet or Quick Connect instead.')), 10000)
+            );
+
+            await Promise.race([provider.init(), initTimeout]);
             const { uri, approval } = await provider.connect();
 
             if (uri) {
                 setQrUri(uri);
             }
 
-            // Wait for approval
-            await approval();
+            // Wait for approval with timeout
+            const approvalTimeout = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Connection timed out. Please try scanning the QR code again.')), 60000)
+            );
+            await Promise.race([approval(), approvalTimeout]);
             const address = await provider.getAddress();
             if (address) {
                 localStorage.setItem('xcron_wallet_provider', 'walletconnect');
@@ -92,7 +100,12 @@ export function ConnectModal() {
             }
         } catch (err: any) {
             console.error('xPortal login failed:', err);
-            setError(err.message || 'xPortal connection failed');
+            const msg = err?.message || 'xPortal connection failed';
+            if (msg.includes('Project not found') || msg.includes('timed out')) {
+                setError('xPortal connection is not available in this version. Please use Web Wallet or Quick Connect.');
+            } else {
+                setError(msg);
+            }
             setQrUri('');
         } finally {
             setLoading('');
@@ -108,7 +121,7 @@ export function ConnectModal() {
     const handleQuickConnect = async () => {
         setLoading('quick');
         try {
-            await connect('erd1yakg9yvumdf67y6klp2yxy9yv4rw8rmrk6xw8462wdy0nk78dv4qkspvp9');
+            await connect('erd135zkexfnzryv7z04vppm28uajdsxfvnel2n3kdw2spv3jk0j7k8stpwpgu');
         } catch (err: any) {
             setError(err.message || 'Quick connect failed');
         } finally {
@@ -228,6 +241,25 @@ export function ConnectModal() {
                         <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.5)', lineHeight: 1.4, marginTop: 2 }}>
                             XCron never requests or stores your private keys. All transactions
                             are signed securely through your wallet provider.
+                        </div>
+                    </div>
+                </div>
+
+                {/* Devnet Warning */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 14px', borderRadius: 10, marginBottom: 14,
+                    background: 'rgba(251,191,36,0.08)',
+                    border: '1px solid rgba(251,191,36,0.25)',
+                }}>
+                    <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                    <div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fbbf24' }}>
+                            Devnet Environment
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.7)', lineHeight: 1.4, marginTop: 2 }}>
+                            This is a test network. Do NOT use your mainnet wallet with real EGLD.
+                            Use a devnet wallet or Quick Connect for testing.
                         </div>
                     </div>
                 </div>

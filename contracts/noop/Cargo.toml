@@ -1,0 +1,14 @@
+[package]
+name = "noop"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+multiversx-sc = "0.54.6"
+
+[dev-dependencies.multiversx-sc-scenario]
+version = "0.54.6"

@@ -59,10 +59,10 @@ export function MyTasks() {
         const intervalId = setInterval(() => {
             loadTasks(true);
             loadExecHistory();
-        }, 10000);
+        }, 15000);
 
         return () => clearInterval(intervalId);
-    }, [wallet.connected]);
+    }, [wallet.connected, filter]);
 
     async function loadTasks(silent = false) {
         if (!silent) setLoading(true);
@@ -86,7 +86,7 @@ export function MyTasks() {
                         console.error(`Task ${taskId} failed to decode:`, err);
                     }
                 }
-                setTasks(taskList);
+                setTasks(taskList.sort((a, b) => b.id - a.id));
             } else {
                 const nonceRes = await query(CONTRACTS.scheduler, 'getTaskNonce');
                 const totalTasks = nonceRes.length > 0 ? bufferToNumber(nonceRes[0]) : 0;
@@ -104,7 +104,7 @@ export function MyTasks() {
                         console.error(`Task ${i} failed to decode:`, err);
                     }
                 }
-                setTasks(taskList);
+                setTasks(taskList.sort((a, b) => b.id - a.id));
             }
         } catch (err) {
             console.error('Failed to load tasks:', err);

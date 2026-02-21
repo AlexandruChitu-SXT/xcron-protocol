@@ -455,7 +455,7 @@ export function LiveActivityFeed() {
                 background: 'var(--bg-glass)',
             }}>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                    Auto-refresh: {DEMO_MODE ? '3000' : '6000'}ms • {events.length} tracked events
+                    Auto-refresh: {DEMO_MODE ? '3000' : '6000'}ms • Showing last {events.length} transactions
                 </span>
                 <a
                     href={`https://devnet-explorer.multiversx.com/accounts/${CONTRACTS.scheduler}`}

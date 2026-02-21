@@ -594,26 +594,40 @@ export function ScheduleTask() {
                                 </div>
 
                                 {template === 'custom' && (
-                                    <div className="grid-2" style={{ gap: 12 }}>
-                                        <div className="form-group">
-                                            <label>Max Gas</label>
-                                            <input
-                                                type="number"
-                                                value={form.maxGas}
-                                                onChange={(e) => update('maxGas', e.target.value)}
-                                            />
+                                    <details style={{ marginTop: 8 }}>
+                                        <summary style={{
+                                            cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)',
+                                            padding: '6px 0', userSelect: 'none',
+                                        }}>
+                                            ⚙️ Advanced Settings (optional)
+                                        </summary>
+                                        <div className="grid-2" style={{ gap: 12, marginTop: 8 }}>
+                                            <div className="form-group">
+                                                <label style={{ fontSize: '0.78rem' }}>Gas Limit</label>
+                                                <input
+                                                    type="number"
+                                                    value={form.maxGas}
+                                                    onChange={(e) => update('maxGas', e.target.value)}
+                                                />
+                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
+                                                    Default: 10,000,000 (works for most calls)
+                                                </small>
+                                            </div>
+                                            <div className="form-group">
+                                                <label style={{ fontSize: '0.78rem' }}>Max Retries</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="10"
+                                                    value={form.maxRetries}
+                                                    onChange={(e) => update('maxRetries', e.target.value)}
+                                                />
+                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
+                                                    How many times to retry if execution fails
+                                                </small>
+                                            </div>
                                         </div>
-                                        <div className="form-group">
-                                            <label>Max Retries</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="10"
-                                                value={form.maxRetries}
-                                                onChange={(e) => update('maxRetries', e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                    </details>
                                 )}
                             </div>
 

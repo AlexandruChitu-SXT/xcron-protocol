@@ -15,7 +15,7 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
         category: 'Demo',
         defaults: {
             targetContract: CONTRACTS.ping,
-            targetEndpoint: 'noop',
+            targetEndpoint: 'ping',
             triggerType: 'once' as const,
             targetRound: 'next',
             interval: '',

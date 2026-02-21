@@ -274,8 +274,14 @@ export function LiveActivityFeed() {
                         }} />
                     ))}
 
-                    {/* Bars for each recent event (top 4) */}
-                    {events.slice(0, 4).map((ev, idx) => {
+                    {/* Bars for each recent event (top 4, preferring successful) */}
+                    {(() => {
+                        const successes = events.filter(e => e.status === 'success');
+                        const pipelineEvents = successes.length >= 4
+                            ? successes.slice(0, 4)
+                            : [...successes, ...events.filter(e => e.status !== 'success')].slice(0, 4);
+                        return pipelineEvents;
+                    })().map((ev, idx) => {
                         const schedW = ((ev.scheduledMs || 30) / PIPELINE_W) * 78;
                         const confW = ((ev.confirmedMs || 60) / PIPELINE_W) * 78;
                         const execW = ((ev.executedMs || 120) / PIPELINE_W) * 78;

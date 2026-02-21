@@ -1,0 +1,141 @@
+{
+    "name": "target-self-blocked",
+    "comment": "C-2: Verify that tasks cannot target the scheduler contract itself or protocol contracts",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ],
+            "currentBlockInfo": {
+                "blockRound": "100"
+            }
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "comment": "Deploy Scheduler",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "target-self",
+            "comment": "C-2: Attempt to target the scheduler contract itself — should fail",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "sc:scheduler",
+                    "str:pause",
+                    "0x00000000",
+                    "0x0000000000000000c8",
+                    "10,000,000",
+                    "3",
+                    "1000"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Cannot target self"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "target-registry",
+            "comment": "C-2: Attempt to target the keeper registry — should fail",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:keeper_registry",
+                    "str:slash",
+                    "0x00000000",
+                    "0x0000000000000000c8",
+                    "10,000,000",
+                    "3",
+                    "1000"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Cannot target registry"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "target-rewards",
+            "comment": "C-2: Attempt to target the rewards contract — should fail",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:rewards",
+                    "str:withdraw",
+                    "0x00000000",
+                    "0x0000000000000000c8",
+                    "10,000,000",
+                    "3",
+                    "1000"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Cannot target rewards"
+            }
+        }
+    ]
+}

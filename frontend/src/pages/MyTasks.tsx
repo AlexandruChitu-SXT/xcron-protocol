@@ -68,7 +68,7 @@ export function MyTasks() {
         if (!silent) setLoading(true);
         try {
             // Use getOwnerTasks for 'mine' filter (efficient) or iterate for 'all'
-            if (filter === 'mine' && wallet.connected) {
+            if (filter === 'mine' && wallet.connected && !wallet.isDemo) {
                 const addrHex = Address.newFromBech32(wallet.address).toHex();
                 const ownerRes = await query(CONTRACTS.scheduler, 'getOwnerTasks', [addrHex]);
                 const taskList: TaskInfo[] = [];

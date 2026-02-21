@@ -41,6 +41,7 @@ pub trait SchedulerContract:
         self.paused().set(false);
         self.executing_guard().set(false);
         self.version().set(1u32);
+        self.max_reward_per_exec().set(BigUint::from(common::constants::DEFAULT_MAX_REWARD_PER_EXEC));
     }
 
     /// Safe upgrade — preserves storage, bumps version.
@@ -162,6 +163,11 @@ pub trait SchedulerContract:
     // ═══════════════════════════════════════════════════════════
 
     /// Execute a ripe task. Phase 1: keeper calls directly (synchronous).
+    ///
+    /// **Phase 1 limitation:** Uses `transfer_execute` (fire-and-forget).
+    /// The target contract call may fail silently after the keeper reward
+    /// has been sent. Phase 2 will migrate to async calls with callbacks
+    /// to confirm target execution before finalizing rewards.
     #[endpoint(executeTask)]
     fn execute_task(&self, task_id: u64) {
         self.require_not_paused();

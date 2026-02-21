@@ -46,3 +46,8 @@ pub const CALLBACK_GAS_RESERVE: u64 = 10_000_000;
 
 /// Maximum tasks processed per batch in expire_stale_tasks
 pub const MAX_EXPIRE_BATCH: usize = 50;
+
+/// Default max keeper reward per execution: 0.5 EGLD (in denomination units)
+/// Prevents disproportionate rewards for large deposits.
+/// Owner can adjust via setMaxRewardPerExec.
+pub const DEFAULT_MAX_REWARD_PER_EXEC: u64 = 500_000_000_000_000_000; // 0.5 EGLD

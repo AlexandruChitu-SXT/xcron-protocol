@@ -1,0 +1,173 @@
+{
+    "name": "schedule-while-paused",
+    "comment": "Verify that scheduleTask fails when the contract is paused",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:target_contract": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ],
+            "currentBlockInfo": {
+                "blockRound": "100"
+            }
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "pause",
+            "comment": "Owner pauses the contract",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "pause",
+                "arguments": [],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "schedule-while-paused",
+            "comment": "User tries to schedule while paused — should fail",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:ping",
+                    "0x00000000",
+                    "0x0000000000000000c8",
+                    "10,000,000",
+                    "3",
+                    "1000"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Contract is paused"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "cancel-while-paused",
+            "comment": "Cancel also blocked while paused (no tasks exist but tests the guard)",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "cancelTask",
+                "arguments": [
+                    "1"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Contract is paused"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "unpause",
+            "comment": "Owner unpauses the contract",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "unpause",
+                "arguments": [],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "schedule-after-unpause",
+            "comment": "After unpause, scheduling works again",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:ping",
+                    "0x00000000",
+                    "0x0000000000000000c8",
+                    "10,000,000",
+                    "3",
+                    "1000"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [
+                    "1"
+                ],
+                "status": "0"
+            }
+        }
+    ]
+}

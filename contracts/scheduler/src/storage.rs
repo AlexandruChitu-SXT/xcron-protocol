@@ -52,6 +52,11 @@ pub trait StorageModule {
     #[storage_mapper("whitelistedKeepers")]
     fn whitelisted_keepers(&self) -> UnorderedSetMapper<ManagedAddress>;
 
+    /// Max reward a keeper can earn per single execution.
+    /// Prevents disproportionate rewards on large deposits.
+    #[storage_mapper("maxRewardPerExec")]
+    fn max_reward_per_exec(&self) -> SingleValueMapper<BigUint>;
+
     // ── Protocol safety ─────────────────────────────────────
     /// Circuit breaker — pauses all user-facing endpoints.
     #[storage_mapper("paused")]

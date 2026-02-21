@@ -8,7 +8,7 @@ import { NETWORK, WALLETCONNECT } from '../config';
  * MultiversX Web Wallet (redirect), and Devnet Quick Connect (testing only)
  */
 export function ConnectModal() {
-    const { showConnectModal, setShowConnectModal, connect } = useWallet();
+    const { showConnectModal, setShowConnectModal, connect, connectDemo } = useWallet();
     const [loading, setLoading] = useState('');
     const [qrUri, setQrUri] = useState('');
     const [error, setError] = useState('');
@@ -118,16 +118,10 @@ export function ConnectModal() {
         window.location.href = `${NETWORK.walletUrl}/hook/login?callbackUrl=${callbackUrl}`;
     };
 
-    const handleQuickConnect = async () => {
+    const handleQuickConnect = () => {
         setLoading('quick');
-        try {
-            // Generic demo address — NOT the deployer wallet
-            await connect('erd1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6gq4hu');
-        } catch (err: any) {
-            setError(err.message || 'Quick connect failed');
-        } finally {
-            setLoading('');
-        }
+        connectDemo();
+        setLoading('');
     };
 
     const onClose = () => {
@@ -388,10 +382,10 @@ export function ConnectModal() {
                             </div>
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fbbf24' }}>
-                                    Quick Connect (Demo)
+                                    Explore Demo
                                 </div>
                                 <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.4)', marginTop: 2 }}>
-                                    Explore the dashboard — read-only preview
+                                    Preview the dashboard — read-only, no wallet needed
                                 </div>
                             </div>
                             {loading === 'quick' && <span className="loading-spinner" />}

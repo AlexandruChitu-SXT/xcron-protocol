@@ -1,0 +1,169 @@
+{
+    "name": "config-owner-only",
+    "comment": "Verify that only the owner can call config endpoints",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:attacker": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "attacker-pause",
+            "comment": "Non-owner tries to pause — should fail",
+            "tx": {
+                "from": "address:attacker",
+                "to": "sc:scheduler",
+                "function": "pause",
+                "arguments": [],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Endpoint can only be called by owner"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "attacker-set-fee",
+            "comment": "Non-owner tries to change protocol fee — should fail",
+            "tx": {
+                "from": "address:attacker",
+                "to": "sc:scheduler",
+                "function": "setProtocolFeeBps",
+                "arguments": [
+                    "0"
+                ],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Endpoint can only be called by owner"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "attacker-add-keeper",
+            "comment": "Non-owner tries to whitelist themselves as keeper — should fail",
+            "tx": {
+                "from": "address:attacker",
+                "to": "sc:scheduler",
+                "function": "addWhitelistedKeeper",
+                "arguments": [
+                    "address:attacker"
+                ],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Endpoint can only be called by owner"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "attacker-set-max-reward",
+            "comment": "Non-owner tries to change max reward cap — should fail",
+            "tx": {
+                "from": "address:attacker",
+                "to": "sc:scheduler",
+                "function": "setMaxRewardPerExec",
+                "arguments": [
+                    "0"
+                ],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Endpoint can only be called by owner"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "owner-set-fee-ok",
+            "comment": "Owner can change protocol fee — should succeed",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "setProtocolFeeBps",
+                "arguments": [
+                    "1000"
+                ],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "verify-fee-changed",
+            "comment": "Verify fee was updated to 1000 BPS (10%)",
+            "tx": {
+                "to": "sc:scheduler",
+                "function": "getProtocolFeeBps",
+                "arguments": []
+            },
+            "expect": {
+                "out": [
+                    "1000"
+                ],
+                "status": "0"
+            }
+        }
+    ]
+}

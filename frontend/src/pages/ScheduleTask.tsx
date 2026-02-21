@@ -468,6 +468,90 @@ export function ScheduleTask() {
 
                                 {template === 'custom' && (
                                     <>
+                                        {/* Popular Protocols Helper */}
+                                        <div style={{
+                                            marginTop: 8, marginBottom: 16, padding: '12px 14px',
+                                            background: 'rgba(6,182,212,0.04)', borderRadius: 'var(--radius-md)',
+                                            border: '1px solid rgba(6,182,212,0.12)',
+                                        }}>
+                                            <div style={{
+                                                fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-light)',
+                                                textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10,
+                                            }}>
+                                                Popular Protocols
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                {[
+                                                    { name: 'xExchange', endpoints: ['claimRewards', 'swapTokensFixedInput', 'addLiquidity'], color: '#22c55e' },
+                                                    { name: 'Hatom', endpoints: ['claimRewards', 'supply', 'withdraw'], color: '#6366f1' },
+                                                    { name: 'AshSwap', endpoints: ['exchange', 'addLiquidity'], color: '#f43f5e' },
+                                                    { name: 'OneDex', endpoints: ['swap', 'addLiquidity', 'removeLiquidity'], color: '#f59e0b' },
+                                                    { name: 'JewelSwap', endpoints: ['claimRewards', 'stake'], color: '#06b6d4' },
+                                                ].map((proto) => (
+                                                    <div key={proto.name} style={{ position: 'relative' }}>
+                                                        <details style={{ position: 'relative' }}>
+                                                            <summary style={{
+                                                                cursor: 'pointer', padding: '5px 10px',
+                                                                borderRadius: 6, fontSize: '0.74rem', fontWeight: 600,
+                                                                background: `${proto.color}15`, color: proto.color,
+                                                                border: `1px solid ${proto.color}30`,
+                                                                listStyle: 'none', userSelect: 'none',
+                                                                transition: 'all 0.15s',
+                                                            }}>
+                                                                {proto.name}
+                                                            </summary>
+                                                            <div style={{
+                                                                position: 'absolute', top: 'calc(100% + 4px)', left: 0,
+                                                                zIndex: 30, minWidth: 180,
+                                                                background: 'var(--bg-secondary)', borderRadius: 8,
+                                                                border: '1px solid var(--border-primary)',
+                                                                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                                                                overflow: 'hidden',
+                                                            }}>
+                                                                <div style={{ padding: '8px 10px', fontSize: '0.68rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-primary)' }}>
+                                                                    Select endpoint to auto-fill
+                                                                </div>
+                                                                {proto.endpoints.map((ep) => (
+                                                                    <div
+                                                                        key={ep}
+                                                                        onClick={() => {
+                                                                            update('targetEndpoint', ep);
+                                                                            // Close the details element
+                                                                            const details = document.querySelectorAll('.form-section details[open]');
+                                                                            details.forEach(d => (d as HTMLDetailsElement).open = false);
+                                                                            addToast(`Endpoint set to ${ep} — paste the ${proto.name} contract address above`, 'info');
+                                                                        }}
+                                                                        style={{
+                                                                            padding: '8px 12px', cursor: 'pointer',
+                                                                            fontSize: '0.78rem', fontFamily: 'monospace',
+                                                                            color: 'var(--text-secondary)',
+                                                                            transition: 'background 0.15s',
+                                                                        }}
+                                                                        onMouseEnter={(e) => {
+                                                                            e.currentTarget.style.background = `${proto.color}15`;
+                                                                            e.currentTarget.style.color = proto.color;
+                                                                        }}
+                                                                        onMouseLeave={(e) => {
+                                                                            e.currentTarget.style.background = 'transparent';
+                                                                            e.currentTarget.style.color = 'var(--text-secondary)';
+                                                                        }}
+                                                                    >
+                                                                        {ep}()
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </details>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 8 }}>
+                                                Click a protocol to see its common endpoints. Find the contract address on{' '}
+                                                <a href={`${NETWORK.explorerUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-light)', textDecoration: 'none' }}>
+                                                    MultiversX Explorer
+                                                </a>
+                                            </div>
+                                        </div>
+
                                         <div className="form-group">
                                             <label>{labels.endpoint}</label>
                                             <input

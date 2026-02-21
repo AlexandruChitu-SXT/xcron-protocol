@@ -1,0 +1,91 @@
+{
+    "name": "fee-exceeds-100-percent",
+    "comment": "Verify that setProtocolFeeBps rejects fees above 100% (10000 BPS)",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "fee-too-high",
+            "comment": "Set fee to 15000 BPS (150%) — should fail",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "setProtocolFeeBps",
+                "arguments": [
+                    "15000"
+                ],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "4",
+                "message": "str:Fee exceeds 100%"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "fee-at-max",
+            "comment": "Set fee to 10000 BPS (exactly 100%) — should succeed (edge case)",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "setProtocolFeeBps",
+                "arguments": [
+                    "10000"
+                ],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        }
+    ]
+}

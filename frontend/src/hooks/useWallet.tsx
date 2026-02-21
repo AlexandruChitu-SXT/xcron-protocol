@@ -7,6 +7,7 @@ export interface WalletState {
     address: string;
     balance: string;
     connected: boolean;
+    isDemo: boolean;
 }
 
 export interface TransactionPayload {
@@ -26,6 +27,7 @@ export interface Toast {
 interface WalletContextType {
     wallet: WalletState;
     connect: (address: string) => Promise<void>;
+    connectDemo: () => void;
     disconnect: () => void;
     showConnectModal: boolean;
     setShowConnectModal: (v: boolean) => void;
@@ -38,10 +40,11 @@ interface WalletContextType {
 
 /* ──────────────── Context ──────────────── */
 
-const defaultWallet: WalletState = { address: '', balance: '0', connected: false };
+const defaultWallet: WalletState = { address: '', balance: '0', connected: false, isDemo: false };
 const WalletContext = createContext<WalletContextType>({
     wallet: defaultWallet,
     connect: async () => { },
+    connectDemo: () => { },
     disconnect: () => { },
     showConnectModal: false,
     setShowConnectModal: () => { },
@@ -85,6 +88,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 address,
                 balance: account.balance || '0',
                 connected: true,
+                isDemo: false,
             });
             setShowConnectModal(false);
             localStorage.setItem('xcron_wallet', address);
@@ -94,6 +98,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             console.error('Failed to connect:', err);
         }
+    }, []);
+
+    /* ── Demo Mode Connect — no real wallet, transparent preview ── */
+    const connectDemo = useCallback(() => {
+        setWallet({
+            address: 'demo',
+            balance: '0',
+            connected: true,
+            isDemo: true,
+        });
+        setShowConnectModal(false);
+        localStorage.setItem('xcron_wallet', 'demo');
+        localStorage.setItem('xcron_wallet_provider', 'demo');
     }, []);
 
     /* ── Disconnect ── */
@@ -121,6 +138,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     /* ── Sign & Send Transaction ── */
     const signAndSendTransaction = useCallback(async (tx: TransactionPayload): Promise<string | null> => {
         if (!wallet.connected) return null;
+        if (wallet.isDemo) {
+            addToast('Demo mode — connect a real wallet to submit transactions', 'info');
+            return null;
+        }
 
         const provider = localStorage.getItem('xcron_wallet_provider');
 
@@ -353,7 +374,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return (
         <WalletContext.Provider
             value={{
-                wallet, connect, disconnect,
+                wallet, connect, connectDemo, disconnect,
                 showConnectModal, setShowConnectModal,
                 signAndSendTransaction,
                 toasts, addToast, removeToast,

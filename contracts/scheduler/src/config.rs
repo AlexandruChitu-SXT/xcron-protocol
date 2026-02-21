@@ -56,4 +56,12 @@ pub trait ConfigModule: crate::storage::StorageModule {
     fn remove_whitelisted_keeper(&self, keeper: ManagedAddress) {
         self.whitelisted_keepers().swap_remove(&keeper);
     }
+
+    /// Set the maximum reward a keeper can earn per execution.
+    /// Excess deposit is refunded to the task owner.
+    #[only_owner]
+    #[endpoint(setMaxRewardPerExec)]
+    fn set_max_reward_per_exec(&self, value: BigUint) {
+        self.max_reward_per_exec().set(&value);
+    }
 }

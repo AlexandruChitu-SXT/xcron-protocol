@@ -26,13 +26,22 @@ pub trait HelpersModule: crate::storage::StorageModule {
 
     /// Calculate keeper reward for a successful execution.
     ///
-    /// Keeper gets: deposit - protocol_fee (exact split, no rounding loss).
+    /// Keeper gets: min(deposit - protocol_fee, max_reward_per_exec).
+    /// This prevents disproportionate rewards on large deposits.
+    /// Excess is refunded to the task owner via remaining_deposit.
     fn calculate_keeper_reward(
         &self,
         task: &common::types::Task<Self::Api>,
     ) -> BigUint {
         let protocol_fee = self.calculate_protocol_fee(task);
-        &task.deposit - &protocol_fee
+        let uncapped_reward = &task.deposit - &protocol_fee;
+
+        let max_reward = self.max_reward_per_exec().get();
+        if max_reward > BigUint::zero() && uncapped_reward > max_reward {
+            max_reward
+        } else {
+            uncapped_reward
+        }
     }
 
     /// Calculate protocol fee from task deposit using progressive tiers.

@@ -4,9 +4,21 @@
 
 XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions (token swaps, DeFi harvests, governance votes, NFT mints) by posting tasks to a smart contract. A decentralized keeper network — incentivized with EGLD rewards and secured by slashable bonds — competes to execute those tasks on time.
 
-> **Status:** Live on MultiversX Devnet · Protocol Fee: 15% · 2 Active Keepers
+> **Status:** Live on MultiversX Devnet · Phase 1 Complete · Protocol Fee: 15%
 
 ---
+
+## Current Status — Phase 1 Complete ✅
+
+| Milestone | Status |
+|-----------|--------|
+| **E2E Task Execution** | `scheduleTask` → Keeper detects → `executeTask` on-chain → Rewards distributed |
+| **Reward Distribution** | 85% keeper / 15% protocol — verified on-chain |
+| **Intelligent Keeper** | Exponential backoff, error classification (PERMANENT vs TRANSIENT), SCResult parsing |
+| **Frontend** | Schedule tasks, My Tasks (status badges, cancel), Wallet connection (Web Wallet, Extension, xPortal) |
+| **Code Quality** | 0 TypeScript errors, 0 console.logs, security scan clean |
+
+**Phase 2 (in progress):** Testnet deployment, recurring tasks E2E, multi-keeper competition, dashboard stats
 
 ## Architecture
 
@@ -127,7 +139,7 @@ npx ts-node src/index.ts
 ## Key Features
 
 - **Time-based scheduling** — Execute at a specific round or recurring intervals
-- **Condition-based triggers** — Execute when on-chain conditions are met (Phase 2+)
+- **Intelligent keeper bot** — Exponential backoff, permanent error detection, SCResult event parsing
 - **Keeper bond system** — Deposit EGLD as security, earn rewards, get slashed for failures
 - **Commit-reveal anti-MEV** — Prevents front-running of keeper executions (Phase 2+)
 - **Full lifecycle management** — Schedule, monitor, cancel, and track task history

@@ -114,8 +114,8 @@ export function LiveActivityFeed() {
             }
 
             const [sRes, rRes] = await Promise.all([
-                fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=15&withScResults=true&withOperations=true`),
-                fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.keeperRegistry}/transactions?size=5&withScResults=true&withOperations=true`),
+                fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=15&status=success&withScResults=true&withOperations=true`),
+                fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.keeperRegistry}/transactions?size=5&status=success&withScResults=true&withOperations=true`),
             ]);
             const sTx = await sRes.json();
             const rTx = await rRes.json();

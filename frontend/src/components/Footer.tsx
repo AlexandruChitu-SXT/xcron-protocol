@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { NETWORK } from '../config';
 
 export function Footer() {
     return (
@@ -38,7 +39,7 @@ export function Footer() {
                         <h4 className="footer-heading">Resources</h4>
                         <div className="footer-links">
                             <a href="https://github.com/AlexandruChitu-SXT/xcron-protocol_v2_hackathon" target="_blank" rel="noopener noreferrer">GitHub</a>
-                            <a href="https://devnet-explorer.multiversx.com" target="_blank" rel="noopener noreferrer">Explorer</a>
+                            <a href={NETWORK.explorerUrl} target="_blank" rel="noopener noreferrer">Explorer</a>
                             <a href="https://docs.multiversx.com" target="_blank" rel="noopener noreferrer">MultiversX Docs</a>
                         </div>
                     </div>
@@ -59,7 +60,7 @@ export function Footer() {
                     <div className="footer-bottom-links">
                         <span className="footer-status">
                             <span className="footer-status-dot" />
-                            Devnet Live
+                            {NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1)} Live
                         </span>
                     </div>
                 </div>

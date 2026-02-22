@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { shortenAddress, formatEgld } from '../hooks/useContractQuery';
+import { NETWORK } from '../config';
 
 export function Header() {
     const { wallet, disconnect, setShowConnectModal, addToast } = useWallet();
@@ -54,7 +55,7 @@ export function Header() {
                     <NavLink to="/" className="header-logo">
                         <canvas ref={logoCanvasRef} className="logo-icon" style={{ width: 64, height: 64 }} />
                         <span style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '-0.5px', fontSize: '1.4em' }}>XCron</span>
-                        <span className="logo-badge">Devnet</span>
+                        <span className="logo-badge">{NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1)}</span>
                     </NavLink>
 
                     <nav className="header-nav">

@@ -1,18 +1,18 @@
 import { NETWORK } from '../config';
 
 /**
- * Fixed badge showing which network (Devnet/Mainnet) the dApp is connected to.
- * Includes a pulsing dot to indicate live connection.
+ * Fixed badge showing which network the dApp is connected to.
+ * Supports devnet, testnet, and mainnet.
  */
 export function NetworkBadge() {
-    const isDevnet = NETWORK.apiUrl.includes('devnet');
-    const label = isDevnet ? 'Devnet' : 'Mainnet';
-    const className = isDevnet ? 'network-badge network-badge--devnet' : 'network-badge network-badge--mainnet';
+    const networkName = NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1);
+    const isMainnet = NETWORK.name === 'mainnet';
+    const className = isMainnet ? 'network-badge network-badge--mainnet' : 'network-badge network-badge--devnet';
 
     return (
         <div className={className}>
             <span className="network-badge-dot" />
-            {label}
+            {networkName}
         </div>
     );
 }

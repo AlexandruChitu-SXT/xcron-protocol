@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useContractQuery, bufferToNumber } from '../hooks/useContractQuery';
-import { CONTRACTS } from '../config';
+import { CONTRACTS, NETWORK } from '../config';
 
 interface TaskTelemetryProps {
     txHash: string | null;
@@ -59,7 +59,7 @@ export function TaskTelemetry({ txHash, txStatus, txLoading }: TaskTelemetryProp
         {
             id: 'finalize',
             title: 'Block Finalized',
-            desc: txStatus === 'success' ? 'Persisted on Devnet' : 'Awaiting blockchain consensus...',
+            desc: txStatus === 'success' ? `Persisted on ${NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1)}` : 'Awaiting blockchain consensus...',
             active: txStatus === 'pending' || txStatus === 'success',
             completed: txStatus === 'success',
             error: txStatus === 'fail',
@@ -89,7 +89,7 @@ export function TaskTelemetry({ txHash, txStatus, txLoading }: TaskTelemetryProp
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: txStatus === 'fail' ? 'var(--error)' : keeperStatus === 'executed' ? 'var(--success)' : 'var(--accent)', boxShadow: `0 0 10px ${txStatus === 'fail' ? 'var(--error)' : 'var(--accent)'}`, animation: (txLoading || keeperStatus === 'listening') ? 'pulse 2s infinite' : 'none' }} />
                     <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>Live Telemetry</h3>
                     {txHash !== 'pending-web-wallet' && (
-                        <a href={`https://devnet-explorer.multiversx.com/transactions/${txHash}`} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none' }}>
+                        <a href={`${NETWORK.explorerUrl}/transactions/${txHash}`} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none' }}>
                             {txHash.slice(0, 8)}...{txHash.slice(-6)} ↗
                         </a>
                     )}

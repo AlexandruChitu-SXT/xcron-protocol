@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useEffect, useState } from 'react';
+import { NETWORK } from '../config';
 
 export function Navigation() {
     const { wallet, setShowConnectModal, disconnect } = useWallet();
@@ -35,11 +36,11 @@ export function Navigation() {
                         <NavLink to="/keeper" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Keeper Panel <span>[1] Nodes</span></NavLink>
                     </div>
                 </div>
-                
+
                 <div className="nav-right">
                     <div className="network-badge">
                         <span className="network-dot"></span>
-                        Devnet
+                        {NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1)}
                     </div>
                     {wallet.connected ? (
                         <div className="wallet-connected" onClick={disconnect}>

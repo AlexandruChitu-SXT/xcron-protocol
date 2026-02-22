@@ -372,7 +372,7 @@ export function LiveActivityFeed() {
                     return (
                         <a
                             key={ev.hash}
-                            href={`https://devnet-explorer.multiversx.com/transactions/${ev.hash}`}
+                            href={`${NETWORK.explorerUrl}/transactions/${ev.hash}`}
                             target="_blank"
                             rel="noreferrer"
                             className="telemetry-row"
@@ -464,7 +464,7 @@ export function LiveActivityFeed() {
                     Auto-refresh: {DEMO_MODE ? '3000' : '6000'}ms • Showing last {events.length} transactions
                 </span>
                 <a
-                    href={`https://devnet-explorer.multiversx.com/accounts/${CONTRACTS.scheduler}`}
+                    href={`${NETWORK.explorerUrl}/accounts/${CONTRACTS.scheduler}`}
                     target="_blank" rel="noreferrer"
                     style={{ fontSize: '0.65rem', color: 'var(--accent-light)', textDecoration: 'none', fontFamily: 'monospace' }}
                 >

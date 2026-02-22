@@ -1,7 +1,7 @@
 // XCron Protocol — Frontend Configuration
 // Network is read from VITE_NETWORK env var (defaults to "devnet")
 
-type NetworkId = 'devnet' | 'mainnet';
+type NetworkId = 'devnet' | 'testnet' | 'mainnet';
 
 const NETWORK_ID = (import.meta.env.VITE_NETWORK as NetworkId) || 'devnet';
 
@@ -21,6 +21,14 @@ const NETWORKS: Record<NetworkId, {
         explorerUrl: 'https://devnet-explorer.multiversx.com',
         walletUrl: 'https://devnet-wallet.multiversx.com',
         chainId: 'D',
+    },
+    testnet: {
+        name: 'testnet',
+        apiUrl: 'https://testnet-api.multiversx.com',
+        gatewayUrl: 'https://testnet-gateway.multiversx.com',
+        explorerUrl: 'https://testnet-explorer.multiversx.com',
+        walletUrl: 'https://testnet-wallet.multiversx.com',
+        chainId: 'T',
     },
     mainnet: {
         name: 'mainnet',
@@ -45,6 +53,12 @@ const CONTRACT_ADDRESSES: Record<NetworkId, {
         rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgqtjjy56pj7gmqyaa9hagzvx4y5mkdll977k8sxcw2vd',
         ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgq5nywkk07w37j8579v3uhayp6n78ppq8q7k8s2grq2r',
     },
+    testnet: {
+        scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqg49x0pq93549gt0nvds7fjaxslxc9lpt7k8sc6d263',
+        keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || 'erd1qqqqqqqqqqqqqpgq53ffcxnes943y6s27nhynxt6y9a787f07k8se4t2ka',
+        rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgq6t7um2uxapc9tk0mv4z5k68yd20a33vp7k8slmnpta',
+        ping: import.meta.env.VITE_PING_ADDRESS || '',
+    },
     mainnet: {
         scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || '',
         keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || '',
@@ -63,7 +77,7 @@ export const EXPLORER_TX = (hash: string) =>
 export const EXPLORER_ACCOUNT = (addr: string) =>
     `${NETWORK.explorerUrl}/accounts/${addr}`;
 
-// Min deposit (0.01 EGLD for devnet, 0.1 EGLD for mainnet)
+// Min deposit (0.01 EGLD for devnet/testnet, 0.1 EGLD for mainnet)
 export const MIN_DEPOSIT = NETWORK_ID === 'mainnet'
     ? '100000000000000000'
     : '10000000000000000';

@@ -292,6 +292,9 @@ export function ConnectModal() {
                             <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
                                 Browser extension — instant & secure
                             </div>
+                            <div style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
+                                ⚠ Devnet: may conflict with DeFi Wallet desktop app
+                            </div>
                         </div>
                         {loading === 'extension' && <span className="loading-spinner" />}
                     </button>
@@ -318,6 +321,9 @@ export function ConnectModal() {
                             <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
                                 Scan QR code — WalletConnect v2
                             </div>
+                            <div style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
+                                ⚠ Devnet: requires developer mode enabled in xPortal
+                            </div>
                         </div>
                         {loading === 'xportal' && <span className="loading-spinner" />}
                     </button>
@@ -340,9 +346,9 @@ export function ConnectModal() {
                             <GlobeIcon />
                         </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Web Wallet</div>
+                            <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Web Wallet <span style={{ fontSize: '0.6rem', color: '#00ff88', fontWeight: 400, marginLeft: 6, padding: '1px 6px', background: 'rgba(0,255,136,0.1)', borderRadius: 4 }}>RECOMMENDED</span></div>
                             <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
-                                Official MultiversX web wallet
+                                Official MultiversX web wallet — works on all networks
                             </div>
                         </div>
                         {loading === 'webwallet' && <span className="loading-spinner" />}

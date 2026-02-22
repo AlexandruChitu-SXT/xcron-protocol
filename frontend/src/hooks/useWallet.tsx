@@ -268,17 +268,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             params.set('data', tx.data);
             params.set('callbackUrl', callbackUrl);
 
-            const webWalletUrl = `${NETWORK.walletUrl}/hook/transaction?${params.toString()}`;
+            const webWalletUrl = `${NETWORK.walletUrl}/hook/sign?${params.toString()}`;
 
-
-            // Use anchor element to bypass popup blocker in async contexts
-            const link = document.createElement('a');
-            link.href = webWalletUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Redirect in same window — new tabs lose context on testnet wallet
+            window.location.href = webWalletUrl;
 
             return 'pending-web-wallet';
         } catch (err: any) {

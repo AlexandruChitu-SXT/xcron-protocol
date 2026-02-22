@@ -1,0 +1,17 @@
+{
+    "network": "testnet",
+    "chainId": "T",
+    "scheduler": "erd1qqqqqqqqqqqqqpgqg49x0pq93549gt0nvds7fjaxslxc9lpt7k8sc6d263",
+    "keeperRegistry": "erd1qqqqqqqqqqqqqpgq53ffcxnes943y6s27nhynxt6y9a787f07k8se4t2ka",
+    "rewards": "erd1qqqqqqqqqqqqqpgq6t7um2uxapc9tk0mv4z5k68yd20a33vp7k8slmnpta",
+    "deployer": "erd135zkexfnzryv7z04vppm28uajdsxfvnel2n3kdw2spv3jk0j7k8stpwpgu",
+    "deployedAt": "2026-02-22T02:50:00Z",
+    "transactions": {
+        "deployKeeperRegistry": "e60a5e5f0387e4d0bc821fba5c8d74156023399dc3a691ab98ad0fd01de3ed50",
+        "deployRewards": "ff5ec822a3e761c54fbc04fb6b5970ec558da5a29b26e188646052b1276403af",
+        "deployScheduler": "46aec0a371229794ea4003bd57a4a2ff2cb0250accd9456ff7e5d5f7854642e0",
+        "wireAuthorizedCaller": "f5ea9e684190bf490b6f52bd6ed548c503a7dda6864673581367f2ef3bf0f446",
+        "wireAuthorizedScheduler": "09335788e3f95d6296683781fda0fb4caf408e8f4967aec0c82bc8b0a97a6ced",
+        "whitelistKeeper": "a6529e98bb3e605d176d02488a70a32d2c1717b2b712c1ecbe2af53d38bf6d4b"
+    }
+}

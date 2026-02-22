@@ -57,7 +57,7 @@ const CONTRACT_ADDRESSES: Record<NetworkId, {
         scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqg49x0pq93549gt0nvds7fjaxslxc9lpt7k8sc6d263',
         keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || 'erd1qqqqqqqqqqqqqpgq53ffcxnes943y6s27nhynxt6y9a787f07k8se4t2ka',
         rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgq6t7um2uxapc9tk0mv4z5k68yd20a33vp7k8slmnpta',
-        ping: import.meta.env.VITE_PING_ADDRESS || '',
+        ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgq5wrd06df84pmjzx3v4uf94f975jmkg6t7k8s6dct0l',
     },
     mainnet: {
         scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || '',

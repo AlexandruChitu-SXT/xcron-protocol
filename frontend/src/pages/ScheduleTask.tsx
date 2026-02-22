@@ -343,6 +343,23 @@ export function ScheduleTask() {
         setLoading(true);
         setError('');
 
+        // Custom validation (replaces native browser tooltips)
+        if (!form.targetContract.trim()) {
+            setError('Target contract address is required');
+            setLoading(false);
+            return;
+        }
+        if (!form.targetEndpoint.trim()) {
+            setError('Endpoint name is required');
+            setLoading(false);
+            return;
+        }
+        if (!form.deposit || parseFloat(form.deposit.replace(/,/g, '.')) <= 0) {
+            setError('EGLD deposit must be greater than 0');
+            setLoading(false);
+            return;
+        }
+
         try {
             const targetAddrHex = addressToHex(form.targetContract);
             const endpointHex = stringToHex(form.targetEndpoint);
@@ -445,7 +462,7 @@ export function ScheduleTask() {
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><TemplateIcon type={template} color={color} size={16} /> <strong>{tmpl.title}</strong></span> — {tmpl.description}
                         </div>
 
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleSubmit} noValidate>
                             {/* Section: Target Details */}
                             <div className="form-section" style={{ marginBottom: 8 }}>
 

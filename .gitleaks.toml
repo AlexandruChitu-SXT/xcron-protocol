@@ -1,0 +1,6 @@
+[allowlist]
+  description = "Allowlist for XCron Protocol"
+  paths = [
+    '''scripts/generate-keepers\.js''',
+    '''keeper/generate-keepers\.js''',
+  ]

@@ -92,7 +92,7 @@ jobs:
           sudo mv gitleaks /usr/local/bin/
 
       - name: Scan for secrets
-        run: gitleaks detect --source . --verbose --no-banner
+        run: gitleaks detect --source . --verbose --no-banner --config .gitleaks.toml
 
   # ────────────────────────────────
   # 4. Sensitive Data Pattern Check
@@ -109,8 +109,8 @@ jobs:
           echo "🔍 Scanning for sensitive patterns..."
           FOUND=0
 
-          # PEM private key headers
-          if grep -rn "BEGIN PRIVATE KEY\|BEGIN EC PRIVATE KEY\|BEGIN RSA PRIVATE KEY" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.rs" --include="*.json" --include="*.env" . 2>/dev/null; then
+          # PEM private key headers (exclude generator scripts)
+          if grep -rn "BEGIN PRIVATE KEY\|BEGIN EC PRIVATE KEY\|BEGIN RSA PRIVATE KEY" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.rs" --include="*.json" --include="*.env" . 2>/dev/null | grep -v node_modules | grep -v generate-keepers; then
             echo "❌ FOUND: Private key headers in source files!"
             FOUND=1
           fi

@@ -4,6 +4,7 @@ import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '..
 import { CONTRACTS, NETWORK } from '../config';
 import { NavLink } from 'react-router-dom';
 import { LiveActivityFeed } from '../components/LiveActivityFeed';
+import { PriceTicker } from '../components/PriceTicker';
 import SlicedLogo3D from '../components/SlicedLogo3D';
 import { AnimatedCounter } from '../components/AnimatedCounter';
 
@@ -132,6 +133,11 @@ export function Dashboard() {
                 {/* Live Protocol Activity Feed */}
                 <div style={{ marginTop: 32 }}>
                     <LiveActivityFeed />
+                </div>
+
+                {/* Live Ecosystem Prices */}
+                <div style={{ marginTop: 24 }}>
+                    <PriceTicker />
                 </div>
 
                 {/* How It Works */}

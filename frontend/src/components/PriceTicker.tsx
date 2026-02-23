@@ -3,30 +3,32 @@ import { useState, useEffect } from 'react';
 /**
  * PriceTicker — Live price dashboard for MultiversX ecosystem tokens.
  * 
- * Fetches real prices from CoinGecko (free API, no key needed).
+ * Primary: Binance (fast, reliable, no rate limits for public API)
+ * Fallback: CoinGecko for tokens not on Binance
  * Auto-refreshes every 30 seconds.
  */
 
 interface TokenPrice {
-    id: string;
     symbol: string;
     name: string;
     price: number;
     change24h: number;
 }
 
-const ECOSYSTEM_TOKENS = [
-    { id: 'elrond-erd-2', symbol: 'EGLD', name: 'MultiversX' },
-    { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' },
-    { id: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
-    { id: 'utrust', symbol: 'UTK', name: 'xMoney' },
-    { id: 'hatom', symbol: 'HTM', name: 'Hatom' },
-    { id: 'ash-token', symbol: 'ASH', name: 'AshSwap' },
-    { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin' },
-    { id: 'tether', symbol: 'USDT', name: 'Tether' },
+// Binance symbols (append USDT)
+const BINANCE_TOKENS = [
+    { symbol: 'EGLD', name: 'MultiversX', binance: 'EGLDUSDT' },
+    { symbol: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT' },
+    { symbol: 'ETH', name: 'Ethereum', binance: 'ETHUSDT' },
+    { symbol: 'USDC', name: 'USD Coin', binance: 'USDCUSDT' },
 ];
 
-const COINGECKO_IDS = ECOSYSTEM_TOKENS.map(t => t.id).join(',');
+// CoinGecko-only tokens (not on Binance)
+const COINGECKO_TOKENS = [
+    { symbol: 'UTK', name: 'xMoney', geckoId: 'utrust' },
+    { symbol: 'HTM', name: 'Hatom', geckoId: 'hatom' },
+    { symbol: 'ASH', name: 'AshSwap', geckoId: 'ash-token' },
+];
 
 export function PriceTicker() {
     const [prices, setPrices] = useState<TokenPrice[]>([]);
@@ -36,21 +38,59 @@ export function PriceTicker() {
 
     const fetchPrices = async () => {
         try {
-            const resp = await fetch(
-                `https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_IDS}&vs_currencies=usd&include_24hr_change=true`
+            const results: TokenPrice[] = [];
+
+            // 1. Binance batch — fast, reliable
+            const binanceSymbols = BINANCE_TOKENS.map(t => `"${t.binance}"`).join(',');
+            const binanceResp = await fetch(
+                `https://api.binance.com/api/v3/ticker/24hr?symbols=[${binanceSymbols}]`
             );
-            if (!resp.ok) throw new Error('API error');
-            const data = await resp.json();
+            if (binanceResp.ok) {
+                const binanceData = await binanceResp.json();
+                for (const token of BINANCE_TOKENS) {
+                    const ticker = binanceData.find((t: any) => t.symbol === token.binance);
+                    if (ticker) {
+                        results.push({
+                            symbol: token.symbol,
+                            name: token.name,
+                            price: parseFloat(ticker.lastPrice),
+                            change24h: parseFloat(ticker.priceChangePercent),
+                        });
+                    }
+                }
+            }
 
-            const updated: TokenPrice[] = ECOSYSTEM_TOKENS.map(token => ({
-                ...token,
-                price: data[token.id]?.usd ?? 0,
-                change24h: data[token.id]?.usd_24h_change ?? 0,
-            })).filter(t => t.price > 0);
+            // 2. CoinGecko for ecosystem tokens not on Binance
+            try {
+                const geckoIds = COINGECKO_TOKENS.map(t => t.geckoId).join(',');
+                const geckoResp = await fetch(
+                    `https://api.coingecko.com/api/v3/simple/price?ids=${geckoIds}&vs_currencies=usd&include_24hr_change=true`
+                );
+                if (geckoResp.ok) {
+                    const geckoData = await geckoResp.json();
+                    for (const token of COINGECKO_TOKENS) {
+                        const data = geckoData[token.geckoId];
+                        if (data?.usd) {
+                            results.push({
+                                symbol: token.symbol,
+                                name: token.name,
+                                price: data.usd,
+                                change24h: data.usd_24h_change ?? 0,
+                            });
+                        }
+                    }
+                }
+            } catch {
+                // CoinGecko failed — just show Binance tokens
+            }
 
-            setPrices(updated);
-            setLastUpdate(new Date());
-            setError('');
+            if (results.length > 0) {
+                setPrices(results);
+                setLastUpdate(new Date());
+                setError('');
+            } else {
+                setError('Price feed unavailable');
+            }
         } catch (err: any) {
             setError('Price feed unavailable');
         } finally {
@@ -60,14 +100,15 @@ export function PriceTicker() {
 
     useEffect(() => {
         fetchPrices();
-        const interval = setInterval(fetchPrices, 30000); // 30s refresh
+        const interval = setInterval(fetchPrices, 30000);
         return () => clearInterval(interval);
     }, []);
 
     const formatPrice = (price: number): string => {
         if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
         if (price >= 1) return `$${price.toFixed(2)}`;
-        return `$${price.toFixed(4)}`;
+        if (price >= 0.01) return `$${price.toFixed(4)}`;
+        return `$${price.toFixed(6)}`;
     };
 
     const formatChange = (change: number): string => {
@@ -122,10 +163,8 @@ export function PriceTicker() {
                 {prices.map((token) => (
                     <div key={token.symbol} style={styles.card}>
                         <div style={styles.cardTop}>
-                            <div>
-                                <div style={styles.symbol}>{token.symbol}</div>
-                                <div style={styles.name}>{token.name}</div>
-                            </div>
+                            <div style={styles.symbol}>{token.symbol}</div>
+                            <div style={styles.name}>{token.name}</div>
                         </div>
                         <div style={styles.cardBottom}>
                             <span style={styles.price}>{formatPrice(token.price)}</span>
@@ -142,7 +181,7 @@ export function PriceTicker() {
             </div>
 
             <div style={styles.footer}>
-                <span>Powered by CoinGecko • Auto-refresh 30s</span>
+                <span>Binance + CoinGecko • Auto-refresh 30s</span>
                 <span>Used by XCron Keeper for hybrid price checks</span>
             </div>
         </div>
@@ -172,8 +211,8 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: '0.55rem',
         padding: '2px 6px',
         borderRadius: 4,
-        background: 'rgba(6,182,212,0.12)',
-        color: 'rgb(6,182,212)',
+        background: 'rgba(232,146,124,0.15)',
+        color: 'rgb(232,146,124)',
         fontWeight: 700,
         textTransform: 'uppercase' as const,
         letterSpacing: '0.5px',
@@ -210,17 +249,13 @@ const styles: Record<string, React.CSSProperties> = {
         cursor: 'default',
     },
     cardTop: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
         marginBottom: 8,
     },
-
     symbol: {
-        fontSize: '0.8rem',
+        fontSize: '0.85rem',
         fontWeight: 700,
         color: 'var(--text-primary)',
-        lineHeight: 1.2,
+        lineHeight: 1.3,
     },
     name: {
         fontSize: '0.6rem',

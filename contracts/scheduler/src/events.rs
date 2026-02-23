@@ -11,7 +11,7 @@ pub trait EventsModule {
         #[indexed] task_id: u64,
         #[indexed] owner: &ManagedAddress,
         #[indexed] target: &ManagedAddress,
-        round: u64,
+        timestamp: u64,
     );
 
     #[event("taskCancelled")]

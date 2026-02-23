@@ -367,7 +367,8 @@ export function LiveActivityFeed() {
                     </div>
                 ) : events.map((ev, i) => {
                     const meta = getMeta(ev.function);
-                    const egld = ev.value !== '0' ? (Number(BigInt(ev.value)) / 1e18).toFixed(2) : null;
+                    const egldNum = ev.value !== '0' ? Number(BigInt(ev.value)) / 1e18 : 0;
+                    const egld = egldNum > 0 ? (egldNum < 0.01 ? egldNum.toFixed(4).replace(/0+$/, '').replace(/\.$/, '') : egldNum.toFixed(2)) : null;
 
                     return (
                         <a

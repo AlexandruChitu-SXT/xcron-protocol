@@ -24,12 +24,12 @@ pub trait KeeperRegistryContract:
         &self,
         min_stake: BigUint,
         slash_pct_bps: u64,
-        cooldown_rounds: u64,
+        cooldown_seconds: u64,
         treasury_addr: ManagedAddress,
     ) {
         self.min_stake().set(&min_stake);
         self.slash_pct_bps().set(slash_pct_bps);
-        self.cooldown_rounds().set(cooldown_rounds);
+        self.cooldown_seconds().set(cooldown_seconds);
         self.treasury_addr().set(&treasury_addr);
         self.paused().set(false);
         self.version().set(1u32);
@@ -77,7 +77,7 @@ pub trait KeeperRegistryContract:
         let info = common::types::KeeperInfo {
             addr: caller.clone(),
             stake,
-            registered_round: self.blockchain().get_block_round(),
+            registered_at: self.blockchain().get_block_timestamp(),
             total_executions: 0,
             successful_execs: 0,
             failed_execs: 0,
@@ -121,8 +121,8 @@ pub trait KeeperRegistryContract:
         info.active = false;
         self.keepers(&caller).set(&info);
         self.active_keeper_set().swap_remove(&caller);
-        self.unstake_request_round(&caller)
-            .set(self.blockchain().get_block_round());
+        self.unstake_request_time(&caller)
+            .set(self.blockchain().get_block_timestamp());
     }
 
     /// Withdraw stake after cooldown period has elapsed.
@@ -133,16 +133,16 @@ pub trait KeeperRegistryContract:
 
         require!(!info.active, "Must request unstake first");
 
-        let request_round = self.unstake_request_round(&caller).get();
-        let current = self.blockchain().get_block_round();
+        let request_time = self.unstake_request_time(&caller).get();
+        let current = self.blockchain().get_block_timestamp();
         require!(
-            current >= request_round + self.cooldown_rounds().get(),
+            current >= request_time + self.cooldown_seconds().get(),
             "Cooldown not elapsed"
         );
 
         let amount = info.stake.clone();
         self.keepers(&caller).clear();
-        self.unstake_request_round(&caller).clear();
+        self.unstake_request_time(&caller).clear();
 
         self.send().direct_egld(&caller, &amount);
         self.keeper_unregistered_event(&caller);

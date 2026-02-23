@@ -35,7 +35,8 @@ pub trait SchedulerContract:
         self.rewards_addr().set(&rewards_addr);
         self.min_deposit().set(&min_deposit);
         self.protocol_fee_bps().set(protocol_fee_bps);
-        self.reveal_window().set(common::constants::DEFAULT_REVEAL_WINDOW);
+        self.reveal_window()
+            .set(common::constants::DEFAULT_REVEAL_WINDOW_SECONDS);
         self.commit_bond().set(BigUint::zero());
         self.task_nonce().set(0u64);
         self.paused().set(false);
@@ -85,7 +86,7 @@ pub trait SchedulerContract:
         trigger: common::types::Trigger<Self::Api>,
         max_gas: u64,
         max_retries: u8,
-        ttl_rounds: u64,
+        ttl_seconds: u64,
     ) -> u64 {
         self.require_not_paused();
         let deposit = self.call_value().egld_value().clone_value();
@@ -93,7 +94,7 @@ pub trait SchedulerContract:
         // Checks
         require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
         require!(max_gas >= common::constants::MIN_GAS_LIMIT, "max_gas too low");
-        require!(ttl_rounds >= common::constants::MIN_TTL_ROUNDS, "TTL too short");
+        require!(ttl_seconds >= common::constants::MIN_TTL_SECONDS, "TTL too short");
 
         // C-2: Block targeting protocol contracts (prevents call injection)
         let sc_self = self.blockchain().get_sc_address();
@@ -105,7 +106,7 @@ pub trait SchedulerContract:
         let task_id = self.task_nonce().get() + 1;
         self.task_nonce().set(task_id);
 
-        let current_round = self.blockchain().get_block_round();
+        let current_time = self.blockchain().get_block_timestamp();
 
         let task = common::types::Task {
             id: task_id,
@@ -118,8 +119,8 @@ pub trait SchedulerContract:
             deposit,
             max_retries,
             retry_count: 0,
-            ttl_rounds,
-            created_round: current_round,
+            ttl_seconds,
+            created_at: current_time,
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
         };
@@ -131,7 +132,7 @@ pub trait SchedulerContract:
         self.index_task(task_id, &trigger);
 
         // Emit event
-        self.task_scheduled_event(task_id, &task.owner, &task.target_contract, current_round);
+        self.task_scheduled_event(task_id, &task.owner, &task.target_contract, current_time);
         task_id
     }
 
@@ -156,6 +157,23 @@ pub trait SchedulerContract:
         self.send().direct_egld(&caller, &task.deposit);
 
         self.task_cancelled_event(task_id);
+    }
+
+    /// Set metadata for a task (hybrid oracle conditions).
+    ///
+    /// The metadata is a JSON-encoded buffer evaluated off-chain by the keeper.
+    /// Example: `{"price":{"token":"EGLD","condition":"above","threshold":50}}`
+    /// Only the task owner can set metadata, and only on Pending tasks.
+    #[endpoint(setTaskMetadata)]
+    fn set_task_metadata(&self, task_id: u64, metadata: ManagedBuffer) {
+        let task = self.tasks(task_id).get();
+        let caller = self.blockchain().get_caller();
+
+        require!(task.owner == caller, "Not task owner");
+        require!(task.status == common::types::TaskStatus::Pending, "Can only set metadata on Pending tasks");
+        require!(metadata.len() <= 512, "Metadata too large (max 512 bytes)");
+
+        self.task_metadata(task_id).set(&metadata);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -185,6 +203,7 @@ pub trait SchedulerContract:
         self.require_task_ripe(task_id, &task);
 
         // C-3: Validate gas budget for all calls
+        // reschedule: ~5M, receiveExecutionFee: 5M, target: max_gas, overhead: 5M
         let min_gas_needed = 5_000_000u64 + 5_000_000u64 + task.max_gas + 5_000_000u64;
         require!(
             self.blockchain().get_gas_left() >= min_gas_needed,
@@ -215,44 +234,11 @@ pub trait SchedulerContract:
             BigUint::zero()
         };
 
-        // Send protocol fee to Rewards contract
-        let rewards_addr = self.rewards_addr().get();
-        if protocol_fee > BigUint::zero() {
-            self.tx()
-                .to(&rewards_addr)
-                .raw_call("receiveExecutionFee")
-                .argument(&keeper)
-                .argument(&task_id)
-                .egld(&protocol_fee)
-                .gas(5_000_000u64)
-                .transfer_execute();
-        }
-
-        // Record execution on KeeperRegistry
-        let registry_addr = self.keeper_registry_addr().get();
-        self.tx()
-            .to(&registry_addr)
-            .raw_call("recordExecution")
-            .argument(&keeper)
-            .argument(&true)
-            .gas(5_000_000u64)
-            .transfer_execute();
-
-        // Call the target contract (fire-and-forget)
-        // Phase 1: no callback. Phase 2+: use async call with callback.
-        self.tx()
-            .to(&task.target_contract)
-            .raw_call(task.target_endpoint.clone())
-            .arguments_raw(task.target_args.clone().into())
-            .gas(task.max_gas)
-            .transfer_execute();
-
         // ═══════════════════════════════════════════════════════════
-        //  RECURRING TASK RESCHEDULING
+        //  RECURRING TASK RESCHEDULING (before external calls)
         // ═══════════════════════════════════════════════════════════
-        // Only reschedule if:
-        //  1. Task is recurring with remaining executions
-        //  2. Remaining deposit covers at least min_deposit
+        // Reschedule BEFORE transfer_execute calls because those consume
+        // all remaining gas. Storage operations here are cheap (~5M gas).
         if let common::types::Trigger::TimeRecurring {
             interval,
             remaining_execs,
@@ -272,6 +258,38 @@ pub trait SchedulerContract:
                 self.send().direct_egld(&task.owner, &remaining_deposit);
             }
         }
+
+        // Send protocol fee to Rewards contract (5M gas — just a storage write)
+        let rewards_addr = self.rewards_addr().get();
+        if protocol_fee > BigUint::zero() {
+            self.tx()
+                .to(&rewards_addr)
+                .raw_call("receiveExecutionFee")
+                .argument(&keeper)
+                .argument(&task_id)
+                .egld(&protocol_fee)
+                .gas(5_000_000u64)
+                .transfer_execute();
+        }
+
+        // NOTE: KeeperRegistry stats tracked via task_executed_event (saves 15M gas)
+        // Off-chain indexer reads events to update keeper performance metrics.
+
+        // Call the target contract (fire-and-forget)
+        // Phase 1: no callback. Phase 2+: use async call with callback.
+        let mut clean_args = ManagedVec::new();
+        for arg in task.target_args.into_iter() {
+            if !arg.is_empty() {
+                clean_args.push(arg);
+            }
+        }
+
+        self.tx()
+            .to(&task.target_contract)
+            .raw_call(task.target_endpoint.clone())
+            .arguments_raw(clean_args.into())
+            .gas(task.max_gas)
+            .transfer_execute();
 
         self.task_executed_event(task_id, &keeper, true);
 
@@ -295,7 +313,7 @@ pub trait SchedulerContract:
             "Not authorized to expire tasks"
         );
 
-        let current_round = self.blockchain().get_block_round();
+        let current_time = self.blockchain().get_block_timestamp();
         let mut processed: usize = 0;
         for task_id in task_ids {
             if processed >= common::constants::MAX_EXPIRE_BATCH {
@@ -305,7 +323,7 @@ pub trait SchedulerContract:
             if task.status != common::types::TaskStatus::Pending {
                 continue;
             }
-            if current_round > task.created_round + task.ttl_rounds {
+            if current_time > task.created_at + task.ttl_seconds {
                 task.status = common::types::TaskStatus::Expired;
                 self.tasks(task_id).set(&task);
                 self.remove_from_indices(task_id, &task);

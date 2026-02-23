@@ -9,8 +9,8 @@ pub trait StorageModule {
     #[storage_mapper("activeKeeperSet")]
     fn active_keeper_set(&self) -> UnorderedSetMapper<ManagedAddress>;
 
-    #[storage_mapper("unstakeRequestRound")]
-    fn unstake_request_round(&self, addr: &ManagedAddress) -> SingleValueMapper<u64>;
+    #[storage_mapper("unstakeRequestTime")]
+    fn unstake_request_time(&self, addr: &ManagedAddress) -> SingleValueMapper<u64>;
 
     #[storage_mapper("minStake")]
     fn min_stake(&self) -> SingleValueMapper<BigUint>;
@@ -18,8 +18,8 @@ pub trait StorageModule {
     #[storage_mapper("slashPctBps")]
     fn slash_pct_bps(&self) -> SingleValueMapper<u64>;
 
-    #[storage_mapper("cooldownRounds")]
-    fn cooldown_rounds(&self) -> SingleValueMapper<u64>;
+    #[storage_mapper("cooldownSeconds")]
+    fn cooldown_seconds(&self) -> SingleValueMapper<u64>;
 
     #[storage_mapper("treasuryAddr")]
     fn treasury_addr(&self) -> SingleValueMapper<ManagedAddress>;

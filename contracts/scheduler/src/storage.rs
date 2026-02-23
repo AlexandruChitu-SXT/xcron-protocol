@@ -13,9 +13,9 @@ pub trait StorageModule {
     #[storage_mapper("tasks")]
     fn tasks(&self, task_id: u64) -> SingleValueMapper<common::types::Task<Self::Api>>;
 
-    // ── Time-based index: round → set of task IDs ───────────
-    #[storage_mapper("roundIndex")]
-    fn round_index(&self, round: u64) -> UnorderedSetMapper<u64>;
+    // ── Time-based index: time → set of task IDs ───────────
+    #[storage_mapper("timeIndex")]
+    fn time_index(&self, timestamp: u64) -> UnorderedSetMapper<u64>;
 
     // ── Condition-based pending set ──────────────────────────
     #[storage_mapper("conditionTasks")]
@@ -24,6 +24,12 @@ pub trait StorageModule {
     // ── Owner → tasks mapping ────────────────────────────────
     #[storage_mapper("ownerTasks")]
     fn owner_tasks(&self, owner: &ManagedAddress) -> UnorderedSetMapper<u64>;
+
+    // ── Task metadata (hybrid oracle conditions) ────────────
+    // Stores JSON-encoded conditions evaluated off-chain by the keeper.
+    // Example: {"price":{"token":"EGLD","condition":"above","threshold":50}}
+    #[storage_mapper("taskMetadata")]
+    fn task_metadata(&self, task_id: u64) -> SingleValueMapper<ManagedBuffer>;
 
     // ── Commit-reveal store (Phase 3+) ──────────────────────
     #[storage_mapper("commits")]

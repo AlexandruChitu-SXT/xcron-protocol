@@ -54,10 +54,10 @@ const CONTRACT_ADDRESSES: Record<NetworkId, {
         ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgq5nywkk07w37j8579v3uhayp6n78ppq8q7k8s2grq2r',
     },
     testnet: {
-        scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqg49x0pq93549gt0nvds7fjaxslxc9lpt7k8sc6d263',
-        keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || 'erd1qqqqqqqqqqqqqpgq53ffcxnes943y6s27nhynxt6y9a787f07k8se4t2ka',
-        rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgq6t7um2uxapc9tk0mv4z5k68yd20a33vp7k8slmnpta',
-        ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgq5wrd06df84pmjzx3v4uf94f975jmkg6t7k8s6dct0l',
+        scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqkchuk2w2nsmsrdqkd4s2t7z4m7wq6st27k8sqwqdju',
+        keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || 'erd1qqqqqqqqqqqqqpgqhxvdt2c5y0c4g4aj8fsaar4f9v2ejque7k8ss6c2xs',
+        rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgqwk66v5rfvafvat9gye7hj5zzuy3aj82a7k8sjuytfd',
+        ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgqurq9m4acsgv43d256c6crhj200tn9sj57k8sp7szmx',
     },
     mainnet: {
         scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || '',
@@ -77,10 +77,8 @@ export const EXPLORER_TX = (hash: string) =>
 export const EXPLORER_ACCOUNT = (addr: string) =>
     `${NETWORK.explorerUrl}/accounts/${addr}`;
 
-// Min deposit (0.01 EGLD for devnet/testnet, 0.1 EGLD for mainnet)
-export const MIN_DEPOSIT = NETWORK_ID === 'mainnet'
-    ? '100000000000000000'
-    : '10000000000000000';
+// Min deposit (0.001 EGLD — matches on-chain Scheduler config)
+export const MIN_DEPOSIT = '1000000000000000';
 
 // Gas limits
 export const GAS_SCHEDULE_TASK = 30_000_000;

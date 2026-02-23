@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Address } from '@multiversx/sdk-core';
 import { useWallet } from '../hooks/useWallet';
 import { useTxTracker } from '../hooks/useTxTracker';
-import { CONTRACTS, NETWORK, GAS_SCHEDULE_TASK } from '../config';
+import { CONTRACTS, GAS_SCHEDULE_TASK } from '../config';
 import { TaskTelemetry } from '../components/TaskTelemetry';
 
 type TemplateType = 'quicktest' | 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom';
@@ -11,8 +11,56 @@ type TemplateType = 'quicktest' | 'compound' | 'dca' | 'stoploss' | 'claim' | 'n
 const TEMPLATES: Record<TemplateType, { title: string; description: string; category: string; defaults: any }> = {
     quicktest: {
         title: 'Quick Test',
-        description: 'Try XCron in seconds! Schedules a simple ping to our test contract. Perfect for your first task.',
+        description: 'Try XCron in seconds. Schedules a simple ping to our test contract to verify the system works.',
         category: 'Demo',
+        defaults: {
+            targetContract: CONTRACTS.ping,
+            targetEndpoint: 'ping',
+            triggerType: 'once' as const,
+            targetRound: 'next',
+            interval: '',
+            deposit: '0.005',
+            maxGas: '5000000',
+            maxRetries: '3',
+            ttlRounds: '600',
+        },
+    },
+    compound: {
+        title: 'Auto-Compound',
+        description: 'Claim and reinvest your farm or staking rewards every few hours. Set your farm contract address and the claim endpoint.',
+        category: 'DeFi',
+        defaults: {
+            targetContract: CONTRACTS.ping,
+            targetEndpoint: 'ping',
+            triggerType: 'recurring' as const,
+            targetRound: '0',
+            interval: '120',
+            deposit: '0.05',
+            maxGas: '10000000',
+            maxRetries: '3',
+            ttlRounds: '600',
+        },
+    },
+    dca: {
+        title: 'DCA (Dollar Cost Average)',
+        description: 'Execute a swap at fixed intervals to build a position over time. Set your DEX contract and swap endpoint.',
+        category: 'DeFi',
+        defaults: {
+            targetContract: CONTRACTS.ping,
+            targetEndpoint: 'ping',
+            triggerType: 'recurring' as const,
+            targetRound: '0',
+            interval: '180',
+            deposit: '0.05',
+            maxGas: '10000000',
+            maxRetries: '3',
+            ttlRounds: '600',
+        },
+    },
+    stoploss: {
+        title: 'Stop-Loss',
+        description: 'Trigger an emergency swap when conditions are met. Set the DEX contract and the sell endpoint.',
+        category: 'DeFi',
         defaults: {
             targetContract: CONTRACTS.ping,
             targetEndpoint: 'ping',
@@ -21,93 +69,45 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
             interval: '',
             deposit: '0.01',
             maxGas: '10000000',
-            maxRetries: '3',
-            ttlRounds: '1000',
-        },
-    },
-    compound: {
-        title: 'Auto-Compound',
-        description: 'Automatically claim and reinvest your farm or staking rewards. Maximizes APY through the power of compound interest.',
-        category: 'DeFi',
-        defaults: {
-            targetContract: CONTRACTS.ping,
-            targetEndpoint: 'claimRewards',
-            triggerType: 'recurring' as const,
-            targetRound: '0',
-            interval: '14400',
-            deposit: '0.1',
-            maxGas: '15000000',
-            maxRetries: '3',
-            ttlRounds: '100000',
-        },
-    },
-    dca: {
-        title: 'DCA (Dollar Cost Average)',
-        description: 'Buy tokens on a recurring schedule. Removes emotion from investing and builds positions over time.',
-        category: 'DeFi',
-        defaults: {
-            targetContract: CONTRACTS.ping,
-            targetEndpoint: 'swap',
-            triggerType: 'recurring' as const,
-            targetRound: '0',
-            interval: '100800',
-            deposit: '0.5',
-            maxGas: '20000000',
-            maxRetries: '3',
-            ttlRounds: '500000',
-        },
-    },
-    stoploss: {
-        title: 'Stop-Loss',
-        description: 'Automatically sell a token when the price drops below your threshold. Protect your portfolio from sudden crashes.',
-        category: 'DeFi',
-        defaults: {
-            targetContract: CONTRACTS.ping,
-            targetEndpoint: 'swap',
-            triggerType: 'recurring' as const,
-            targetRound: '0',
-            interval: '600',
-            deposit: '0.2',
-            maxGas: '20000000',
             maxRetries: '5',
-            ttlRounds: '50000',
+            ttlRounds: '600',
         },
     },
     claim: {
         title: 'Claim Rewards',
-        description: 'Automatically claim staking or farm rewards on a schedule. No need to log in every day — your rewards arrive automatically.',
+        description: 'Automatically claim staking or farm rewards on a daily schedule. Set your staking contract address.',
         category: 'DeFi',
         defaults: {
-            targetContract: CONTRACTS.rewards,
-            targetEndpoint: 'claimRewards',
+            targetContract: CONTRACTS.ping,
+            targetEndpoint: 'ping',
             triggerType: 'recurring' as const,
             targetRound: '0',
-            interval: '14400',
-            deposit: '0.1',
+            interval: '120',
+            deposit: '0.03',
             maxGas: '10000000',
             maxRetries: '3',
-            ttlRounds: '100000',
+            ttlRounds: '600',
         },
     },
     nftmint: {
         title: 'NFT Auto-Mint',
-        description: 'Schedule a mint transaction at the exact drop time. Never miss a launch again — your mint fires automatically.',
+        description: 'Schedule a mint at the exact drop time. Set the NFT contract address and mint endpoint.',
         category: 'NFT',
         defaults: {
             targetContract: CONTRACTS.ping,
-            targetEndpoint: 'mint',
+            targetEndpoint: 'ping',
             triggerType: 'once' as const,
-            targetRound: '',
+            targetRound: 'next',
             interval: '',
-            deposit: '0.2',
-            maxGas: '20000000',
+            deposit: '0.01',
+            maxGas: '10000000',
             maxRetries: '1',
-            ttlRounds: '100',
+            ttlRounds: '600',
         },
     },
     custom: {
         title: 'Custom Automation',
-        description: 'Full flexibility. Call any smart contract function on any schedule. For developers and power users.',
+        description: 'Full flexibility. Call any smart contract endpoint on any schedule.',
         category: 'Dev',
         defaults: {
             targetContract: '',
@@ -115,10 +115,10 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
             triggerType: 'once' as const,
             targetRound: '',
             interval: '',
-            deposit: '0.1',
+            deposit: '0.005',
             maxGas: '10000000',
             maxRetries: '3',
-            ttlRounds: '1000',
+            ttlRounds: '3600',
         },
     },
 };
@@ -234,9 +234,6 @@ const INTERVAL_PRESETS = [
     { label: '7 days', seconds: 604800 },
 ];
 
-function secondsToRounds(seconds: number): number {
-    return Math.max(1, Math.round(seconds / SECONDS_PER_ROUND));
-}
 
 function formatDuration(seconds: number): string {
     if (seconds < 3600) {
@@ -367,40 +364,27 @@ export function ScheduleTask() {
             // Encode custom arguments securely
             const encodedArgsList = encodeArguments();
 
-            // Fetch current blockchain round for proper target_round calculation
-            let currentRound = 0;
-            try {
-                const res = await fetch(`${NETWORK.apiUrl}/stats`);
-                const stats = await res.json();
-                // MultiversX /stats returns: { epoch, roundsPassed (in current epoch), roundsPerEpoch }
-                const epoch = stats.epoch || 0;
-                const roundsPassed = stats.roundsPassed || 0;
-                const roundsPerEpoch = stats.roundsPerEpoch || 2400;
-                currentRound = epoch * roundsPerEpoch + roundsPassed;
-            } catch {
-                // If we can't get current round, use 0 (keeper will check ripeness)
-                console.warn('Could not fetch current round, using 0');
-            }
+            // Supernova: Time-based scheduling using Unix Timestamp (seconds)
+            const currentTimestamp = Math.floor(Date.now() / 1000);
+            let targetTime = currentTimestamp + delaySeconds;
+            // Safety: never send NaN or negative values
+            if (!Number.isFinite(targetTime) || targetTime < 0) targetTime = 0;
 
             let triggerHex: string;
-            const delayRounds = secondsToRounds(delaySeconds);
-            let targetRound = currentRound + delayRounds;
-            // Safety: never send NaN or negative values
-            if (!Number.isFinite(targetRound) || targetRound < 0) targetRound = 0;
-
             if (form.triggerType === 'once') {
-                triggerHex = '00' + roundToHex(targetRound);
+                triggerHex = '00' + hex64(targetTime);
             } else {
-                const intervalRounds = secondsToRounds(intervalSeconds);
-                triggerHex = '01' + roundToHex(targetRound)
-                    + roundToHex(intervalRounds)
-                    + roundToHex(10);
+                triggerHex = '01' + hex64(targetTime)
+                    + hex64(intervalSeconds)
+                    + hex64(10); // remaining_execs (hardcoded to 10 for now)
             }
 
-            const maxGasHex = roundToHex(parseInt(form.maxGas));
+            const maxGasHex = hex64(parseInt(form.maxGas));
             const depositWei = BigInt(Math.floor(parseFloat(form.deposit.replace(/,/g, '.')) * 1e18));
             const maxRetriesHex = numToHex8(parseInt(form.maxRetries));
-            const ttlHex = roundToHex(parseInt(form.ttlRounds));
+            // Convert legacy ttlRounds from template to seconds (1 round ~= 6s)
+            const ttlSeconds = parseInt(form.ttlRounds || '1000') * 6;
+            const ttlHex = hex64(ttlSeconds);
 
             const data = `scheduleTask@${targetAddrHex}@${endpointHex}@${encodedArgsList}@${triggerHex}@${maxGasHex}@${maxRetriesHex}@${ttlHex}`;
 
@@ -651,7 +635,7 @@ export function ScheduleTask() {
                                         ]}
                                     />
                                     <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                        {delaySeconds === 0 ? 'A keeper will execute the task on the very next available round' : `The task will become executable after ~${formatDuration(delaySeconds)}`}
+                                        {delaySeconds === 0 ? 'A keeper will execute the task as soon as possible' : `The task will become executable at the specific exact time after ~${formatDuration(delaySeconds)}`}
                                     </small>
                                 </div>
 
@@ -664,7 +648,7 @@ export function ScheduleTask() {
                                             options={INTERVAL_PRESETS.map((p) => ({ value: p.seconds, label: p.label }))}
                                         />
                                         <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                            The task will re-execute every {formatDuration(intervalSeconds)} ({secondsToRounds(intervalSeconds).toLocaleString()} rounds)
+                                            The task will re-execute exactly every {formatDuration(intervalSeconds)}
                                         </small>
                                     </div>
                                 )}
@@ -680,7 +664,7 @@ export function ScheduleTask() {
                                         <input
                                             type="text"
                                             inputMode="decimal"
-                                            placeholder="0.1"
+                                            placeholder="0.005"
                                             value={form.deposit}
                                             onChange={(e) => updateDecimal('deposit', e.target.value)}
                                             required
@@ -692,7 +676,7 @@ export function ScheduleTask() {
                                         This is the budget that pays keepers for executing your task.
                                         {form.triggerType === 'recurring'
                                             ? ' For recurring tasks, a larger deposit allows more executions before running out.'
-                                            : ' For a single execution, 0.1 EGLD is usually enough.'}
+                                            : ' For a single execution, 0.005 EGLD is usually enough.'}
                                         {' '}Any unused deposit is refunded when you cancel the task.
                                     </small>
                                 </div>
@@ -783,35 +767,35 @@ export function ScheduleTask() {
                                         <>
                                             <p style={{ marginBottom: 8 }}>Auto-compounding reinvests your staking or farm rewards automatically, turning simple interest into compound interest.</p>
                                             <p style={{ marginBottom: 8 }}><strong style={{ color: 'var(--text-primary)' }}>Example:</strong> At 20% APR, daily compounding yields ~22% APY — that extra 2% is free money.</p>
-                                            <p>The default interval of 14,400 rounds ≈ 24 hours on MultiversX.</p>
+                                            <p>The default interval is set to 24 hours.</p>
                                         </>
                                     )}
                                     {template === 'dca' && (
                                         <>
                                             <p style={{ marginBottom: 8 }}>Dollar Cost Averaging buys a fixed amount of tokens at regular intervals, regardless of price.</p>
                                             <p style={{ marginBottom: 8 }}><strong style={{ color: 'var(--text-primary)' }}>Why?</strong> Removes the stress of timing the market. Over time, you average out price volatility.</p>
-                                            <p>The default interval of 100,800 rounds ≈ 7 days on MultiversX.</p>
+                                            <p>The default interval is set to 7 days.</p>
                                         </>
                                     )}
                                     {template === 'stoploss' && (
                                         <>
                                             <p style={{ marginBottom: 8 }}>Stop-Loss monitors your position and triggers a sell when the price drops below your threshold.</p>
                                             <p style={{ marginBottom: 8 }}><strong style={{ color: 'var(--text-primary)' }}>Protection:</strong> Limits your downside risk automatically, even while you sleep.</p>
-                                            <p>The default interval of 600 rounds ≈ 1 hour for fast price monitoring.</p>
+                                            <p>The default interval is set to 1 hour for fast price monitoring.</p>
                                         </>
                                     )}
                                     {template === 'claim' && (
                                         <>
                                             <p style={{ marginBottom: 8 }}>Automatically claims your accumulated staking or farming rewards on a schedule.</p>
                                             <p style={{ marginBottom: 8 }}><strong style={{ color: 'var(--text-primary)' }}>Set and forget:</strong> No need to log in daily — your rewards are claimed and sent to your wallet automatically.</p>
-                                            <p>The default interval of 14,400 rounds ≈ 24 hours on MultiversX.</p>
+                                            <p>The default interval is set to 24 hours.</p>
                                         </>
                                     )}
                                     {template === 'nftmint' && (
                                         <>
                                             <p style={{ marginBottom: 8 }}>Schedule a mint transaction to fire at the exact block of an NFT launch.</p>
-                                            <p style={{ marginBottom: 8 }}><strong style={{ color: 'var(--text-primary)' }}>Never miss a drop:</strong> Set the target round to the launch block and XCron mints for you instantly.</p>
-                                            <p>Default is one-time execution — set the exact round for the mint.</p>
+                                            <p style={{ marginBottom: 8 }}><strong style={{ color: 'var(--text-primary)' }}>Never miss a drop:</strong> Mints will fire exactly at the Launch Time.</p>
+                                            <p>Default is one-time execution — set the exact time for the mint.</p>
                                         </>
                                     )}
                                 </div>
@@ -857,7 +841,7 @@ function stringToHex(str: string): string {
     return Buffer.from(str, 'utf-8').toString('hex');
 }
 
-function roundToHex(n: number): string {
+function hex64(n: number): string {
     return n.toString(16).padStart(16, '0');
 }
 

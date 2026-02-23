@@ -1,0 +1,44 @@
+const { ProxyNetworkProvider } = require('@multiversx/sdk-network-providers');
+const { Address, Transaction, TransactionPayload, Interaction, SmartContract, ContractFunction, TokenPayment } = require('@multiversx/sdk-core');
+const fs = require('fs');
+const { UserSigner } = require('@multiversx/sdk-wallet');
+
+async function main() {
+    console.log("Starting Simulation...");
+    const provider = new ProxyNetworkProvider("https://testnet-api.multiversx.com");
+
+    // Config
+    const pemText = fs.readFileSync('../.secrets/deployer.pem', { encoding: 'utf8' });
+    const signer = UserSigner.fromPem(pemText);
+    const callerAddress = signer.getAddress();
+
+    const schedulerAddress = Address.fromBech32("erd1qqqqqqqqqqqqqpgqkchuk2w2nsmsrdqkd4s2t7z4m7wq6st27k8sqwqdju");
+
+    console.log("Caller:", callerAddress.bech32());
+    console.log("Scheduler:", schedulerAddress.bech32());
+
+    const account = await provider.getAccount(callerAddress);
+    console.log("Nonce:", account.nonce);
+
+    const tx = new Transaction({
+        nonce: account.nonce,
+        receiver: schedulerAddress,
+        value: "0",
+        gasLimit: 300_000_000,
+        data: new TransactionPayload("executeTask@02"),
+        chainID: "T"
+    });
+
+    const serializedTx = tx.toSendable();
+
+    try {
+        console.log("Simulating...");
+        const simResult = await provider.simulateTransaction(tx);
+        console.dir(simResult, { depth: null });
+    } catch (e) {
+        console.error("Sim error:", e.message);
+        if (e.response) console.log(e.response.data);
+    }
+}
+
+main();

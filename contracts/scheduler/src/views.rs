@@ -20,10 +20,10 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.task_nonce().get()
     }
 
-    #[view(getPendingTasksForRound)]
-    fn get_pending_tasks_for_round(&self, round: u64) -> MultiValueEncoded<u64> {
+    #[view(getPendingTasksForTime)]
+    fn get_pending_tasks_for_time(&self, timestamp: u64) -> MultiValueEncoded<u64> {
         let mut result = MultiValueEncoded::new();
-        for task_id in self.round_index(round).iter() {
+        for task_id in self.time_index(timestamp).iter() {
             result.push(task_id);
         }
         result
@@ -55,5 +55,15 @@ pub trait ViewsModule: crate::storage::StorageModule {
     #[view(getProtocolFeeBps)]
     fn get_protocol_fee_bps(&self) -> u64 {
         self.protocol_fee_bps().get()
+    }
+
+    /// Returns the metadata JSON for a task (used by keeper for hybrid price conditions).
+    #[view(getTaskMetadata)]
+    fn get_task_metadata(&self, task_id: u64) -> ManagedBuffer {
+        if self.task_metadata(task_id).is_empty() {
+            ManagedBuffer::new()
+        } else {
+            self.task_metadata(task_id).get()
+        }
     }
 }

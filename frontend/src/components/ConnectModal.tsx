@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { NETWORK, WALLETCONNECT } from '../config';
 
@@ -8,10 +8,11 @@ import { NETWORK, WALLETCONNECT } from '../config';
  * MultiversX Web Wallet (redirect), and Devnet Quick Connect (testing only)
  */
 export function ConnectModal() {
-    const { showConnectModal, setShowConnectModal, connect, connectDemo } = useWallet();
+    const { showConnectModal, setShowConnectModal, connect, connectPem, connectDemo } = useWallet();
     const [loading, setLoading] = useState('');
     const [qrUri, setQrUri] = useState('');
     const [error, setError] = useState('');
+    const pemInputRef = useRef<HTMLInputElement>(null);
 
     if (!showConnectModal) return null;
 
@@ -124,6 +125,27 @@ export function ConnectModal() {
         setLoading('');
     };
 
+    const handlePemImport = () => {
+        pemInputRef.current?.click();
+    };
+
+    const handlePemFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setLoading('pem');
+        setError('');
+        try {
+            const text = await file.text();
+            await connectPem(text);
+        } catch (err: any) {
+            setError(err.message || 'PEM import failed');
+        } finally {
+            setLoading('');
+            // Reset input so same file can be selected again
+            if (pemInputRef.current) pemInputRef.current.value = '';
+        }
+    };
+
     const onClose = () => {
         setShowConnectModal(false);
         setQrUri('');
@@ -164,6 +186,12 @@ export function ConnectModal() {
     const TestIcon = () => (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+    );
+
+    const KeyIcon = () => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
         </svg>
     );
 
@@ -240,24 +268,26 @@ export function ConnectModal() {
                     </div>
                 </div>
 
-                {/* Devnet Warning */}
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 14px', borderRadius: 10, marginBottom: 14,
-                    background: 'rgba(251,191,36,0.08)',
-                    border: '1px solid rgba(251,191,36,0.25)',
-                }}>
-                    <span style={{ fontSize: '1.2rem' }}>⚠️</span>
-                    <div>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fbbf24' }}>
-                            Devnet Environment
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.7)', lineHeight: 1.4, marginTop: 2 }}>
-                            This is a test network. Do NOT use your mainnet wallet with real EGLD.
-                            Use a devnet wallet or Quick Connect for testing.
+                {/* Network Warning (devnet/testnet) */}
+                {NETWORK.name !== 'mainnet' && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 10, marginBottom: 14,
+                        background: 'rgba(251,191,36,0.08)',
+                        border: '1px solid rgba(251,191,36,0.25)',
+                    }}>
+                        <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                        <div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fbbf24' }}>
+                                {NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1)} Environment
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.7)', lineHeight: 1.4, marginTop: 2 }}>
+                                This is a test network. Do NOT use your mainnet wallet with real EGLD.
+                                Use a {NETWORK.name} wallet or Quick Connect for testing.
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {error && (
                     <div style={{
@@ -293,7 +323,7 @@ export function ConnectModal() {
                                 Browser extension — instant & secure
                             </div>
                             <div style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
-                                ⚠ Devnet: may conflict with DeFi Wallet desktop app
+                                ⚠ {NETWORK.name}: may conflict with DeFi Wallet desktop app
                             </div>
                         </div>
                         {loading === 'extension' && <span className="loading-spinner" />}
@@ -322,7 +352,7 @@ export function ConnectModal() {
                                 Scan QR code — WalletConnect v2
                             </div>
                             <div style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
-                                ⚠ Devnet: requires developer mode enabled in xPortal
+                                ⚠ {NETWORK.name}: requires developer mode enabled in xPortal
                             </div>
                         </div>
                         {loading === 'xportal' && <span className="loading-spinner" />}
@@ -397,6 +427,58 @@ export function ConnectModal() {
                             {loading === 'quick' && <span className="loading-spinner" />}
                         </button>
                     </div>
+
+                    {/* PEM Import — devnet/testnet only */}
+                    {NETWORK.name !== 'mainnet' && (
+                        <div style={{
+                            borderTop: '1px solid rgba(255,255,255,0.06)',
+                            paddingTop: 8, marginTop: 4,
+                        }}>
+                            <div style={{
+                                fontSize: '0.62rem', fontWeight: 600, letterSpacing: '1px',
+                                color: 'rgba(232,245,240,0.3)', textTransform: 'uppercase',
+                                marginBottom: 6, paddingLeft: 4,
+                            }}>
+                                Developer Tools
+                            </div>
+                            <input
+                                type="file"
+                                ref={pemInputRef}
+                                accept=".pem"
+                                style={{ display: 'none' }}
+                                onChange={handlePemFileSelected}
+                            />
+                            <button
+                                style={{
+                                    ...S.option,
+                                    border: '1px dashed rgba(249,115,22,0.25)',
+                                }}
+                                onClick={handlePemImport}
+                                disabled={!!loading}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.background = 'rgba(249,115,22,0.08)';
+                                    e.currentTarget.style.borderColor = 'rgba(249,115,22,0.4)';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                                    e.currentTarget.style.borderColor = 'rgba(249,115,22,0.25)';
+                                }}
+                            >
+                                <div style={{ ...S.iconBox, background: 'rgba(249,115,22,0.1)' }}>
+                                    <KeyIcon />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#f97316' }}>
+                                        Import PEM File
+                                    </div>
+                                    <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.4)', marginTop: 2 }}>
+                                        Sign transactions locally — {NETWORK.name} only, key stays in memory
+                                    </div>
+                                </div>
+                                {loading === 'pem' && <span className="loading-spinner" />}
+                            </button>
+                        </div>
+                    )}
 
 
                     {/* WalletConnect QR Code */}

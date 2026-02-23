@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { NETWORK, WALLETCONNECT } from '../config';
 
+// PEM signing imports (lazy loaded for tree-shaking)
+
 /* ──────────────── Types ──────────────── */
 
 export interface WalletState {
@@ -27,6 +29,7 @@ export interface Toast {
 interface WalletContextType {
     wallet: WalletState;
     connect: (address: string) => Promise<void>;
+    connectPem: (pemText: string) => Promise<void>;
     connectDemo: () => void;
     disconnect: () => void;
     showConnectModal: boolean;
@@ -44,6 +47,7 @@ const defaultWallet: WalletState = { address: '', balance: '0', connected: false
 const WalletContext = createContext<WalletContextType>({
     wallet: defaultWallet,
     connect: async () => { },
+    connectPem: async () => { },
     connectDemo: () => { },
     disconnect: () => { },
     showConnectModal: false,
@@ -64,6 +68,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const [showConnectModal, setShowConnectModal] = useState(false);
     const [toasts, setToasts] = useState<Toast[]>([]);
     const toastIdRef = useRef(0);
+
+    // PEM helpers: sessionStorage so it survives page refreshes
+    // but is cleared when the tab/browser closes (secure for testnet)
+    const getPemContent = () => sessionStorage.getItem('xcron_pem_session') || '';
+    const setPemContent = (pem: string) => sessionStorage.setItem('xcron_pem_session', pem);
+    const clearPemContent = () => sessionStorage.removeItem('xcron_pem_session');
 
     /* ── Toast helpers ── */
     const addToast = useCallback((message: string, type: ToastType) => {
@@ -113,9 +123,43 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('xcron_wallet_provider', 'demo');
     }, []);
 
+    /* ── Connect via PEM — devnet/testnet only, key in memory ── */
+    const connectPem = useCallback(async (pemText: string) => {
+        try {
+            if (NETWORK.name === 'mainnet') {
+                throw new Error('PEM signing is not allowed on mainnet for security');
+            }
+            const { UserSigner } = await import('@multiversx/sdk-wallet');
+            const signer = UserSigner.fromPem(pemText);
+            const address = signer.getAddress().bech32();
+
+            // Store PEM in sessionStorage (survives refreshes, cleared on tab close)
+            setPemContent(pemText);
+
+            const resp = await fetch(`${NETWORK.apiUrl}/accounts/${address}`);
+            if (!resp.ok) throw new Error(`Account not found: ${resp.status}`);
+            const account = await resp.json();
+
+            setWallet({
+                address,
+                balance: account.balance || '0',
+                connected: true,
+                isDemo: false,
+            });
+            setShowConnectModal(false);
+            localStorage.setItem('xcron_wallet', address);
+            localStorage.setItem('xcron_wallet_provider', 'pem');
+            addToast(`Connected via PEM: ${address.slice(0, 8)}...${address.slice(-4)}`, 'success');
+        } catch (err: any) {
+            console.error('PEM connect failed:', err);
+            addToast(`PEM error: ${err.message}`, 'error');
+        }
+    }, [addToast]);
+
     /* ── Disconnect ── */
     const disconnect = useCallback(() => {
         setWallet(defaultWallet);
+        clearPemContent(); // Clear PEM from session
         localStorage.removeItem('xcron_wallet');
         localStorage.removeItem('xcron_wallet_provider');
         addToast('Wallet disconnected', 'info');
@@ -144,6 +188,66 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
 
         const provider = localStorage.getItem('xcron_wallet_provider');
+
+        // ── PEM signing (devnet/testnet only) ──
+        if (provider === 'pem') {
+            try {
+                if (!getPemContent()) {
+                    addToast('PEM session expired — please reconnect with your PEM file', 'error');
+                    return null;
+                }
+                addToast('Signing with PEM wallet...', 'info');
+
+                const { UserSigner } = await import('@multiversx/sdk-wallet');
+                const { Transaction, TransactionComputer, Address } = await import('@multiversx/sdk-core');
+
+                const signer = UserSigner.fromPem(getPemContent());
+
+                // Get fresh nonce
+                const accountResp = await fetch(`${NETWORK.apiUrl}/accounts/${wallet.address}`);
+                const accountData = await accountResp.json();
+
+                const transaction = new Transaction({
+                    nonce: BigInt(accountData.nonce),
+                    value: BigInt(tx.value),
+                    receiver: Address.newFromBech32(tx.receiver),
+                    sender: Address.newFromBech32(wallet.address),
+                    gasLimit: BigInt(tx.gasLimit),
+                    gasPrice: BigInt(1000000000),
+                    data: new TextEncoder().encode(tx.data),
+                    chainID: NETWORK.chainId,
+                    version: 1,
+                });
+
+                // Serialize and sign
+                const computer = new TransactionComputer();
+                const bytesForSigning = computer.computeBytesForSigning(transaction);
+                const signature = await signer.sign(bytesForSigning);
+                transaction.signature = new Uint8Array(signature);
+
+                // Broadcast via API
+                addToast('Broadcasting transaction...', 'info');
+                const sendable = transaction.toSendable();
+                const broadcastResp = await fetch(`${NETWORK.apiUrl}/transactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sendable),
+                });
+
+                if (!broadcastResp.ok) {
+                    const errText = await broadcastResp.text();
+                    throw new Error(`Broadcast failed: ${errText}`);
+                }
+                const result = await broadcastResp.json();
+                addToast(`✅ Transaction sent! ${result.txHash?.slice(0, 12)}...`, 'success');
+                setTimeout(() => refreshBalance(), 6000);
+                return result.txHash || null;
+            } catch (err: any) {
+                console.error('PEM sign failed:', err);
+                addToast(`PEM sign error: ${err.message}`, 'error');
+                return null;
+            }
+        }
 
         if (provider === 'extension') {
             try {
@@ -260,18 +364,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     const signViaWebWallet = async (tx: TransactionPayload): Promise<string | null> => {
         try {
-            const callbackUrl = `${window.location.origin}${window.location.pathname}`;
-            const params = new URLSearchParams();
-            params.set('receiver', tx.receiver);
-            params.set('value', tx.value);
-            params.set('gasLimit', tx.gasLimit.toString());
-            params.set('data', tx.data);
-            params.set('callbackUrl', callbackUrl);
+            const { WalletProvider } = await import('@multiversx/sdk-web-wallet-provider');
+            const { Transaction, Address } = await import('@multiversx/sdk-core');
 
-            const webWalletUrl = `${NETWORK.walletUrl}/hook/sign?${params.toString()}`;
+            const provider = new WalletProvider(NETWORK.walletUrl);
 
-            // Redirect in same window — new tabs lose context on testnet wallet
-            window.location.href = webWalletUrl;
+            // Need fresh nonce for the account to ensure transaction builds correctly
+            const accountResp = await fetch(`${NETWORK.apiUrl}/accounts/${wallet.address}`);
+            const accountData = await accountResp.json();
+
+            const transaction = new Transaction({
+                nonce: BigInt(accountData.nonce),
+                value: BigInt(tx.value),
+                receiver: Address.newFromBech32(tx.receiver),
+                sender: Address.newFromBech32(wallet.address),
+                gasLimit: BigInt(tx.gasLimit),
+                gasPrice: BigInt(1000000000),
+                data: new TextEncoder().encode(tx.data),
+                chainID: NETWORK.chainId,
+                version: 1,
+            });
+
+            // Redirects to web wallet
+            await provider.signTransaction(transaction, {
+                callbackUrl: `${window.location.origin}${window.location.pathname}`,
+            });
 
             return 'pending-web-wallet';
         } catch (err: any) {
@@ -382,7 +499,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return (
         <WalletContext.Provider
             value={{
-                wallet, connect, connectDemo, disconnect,
+                wallet, connect, connectPem, connectDemo, disconnect,
                 showConnectModal, setShowConnectModal,
                 signAndSendTransaction,
                 toasts, addToast, removeToast,

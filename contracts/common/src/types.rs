@@ -20,8 +20,8 @@ pub struct Task<M: ManagedTypeApi> {
     pub deposit: BigUint<M>,
     pub max_retries: u8,
     pub retry_count: u8,
-    pub ttl_rounds: u64,
-    pub created_round: u64,
+    pub ttl_seconds: u64,
+    pub created_at: u64,
     pub status: TaskStatus,
     pub assigned_keeper: Option<ManagedAddress<M>>,
 }
@@ -50,13 +50,13 @@ pub enum TaskStatus {
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub enum Trigger<M: ManagedTypeApi> {
-    /// Execute once at or after a specific round
+    /// Execute once at or after a specific timestamp
     TimeOnce {
-        target_round: u64,
+        target_time: u64,
     },
-    /// Execute repeatedly at fixed intervals
+    /// Execute repeatedly at fixed intervals (in seconds)
     TimeRecurring {
-        start_round: u64,
+        start_time: u64,
         interval: u64,
         remaining_execs: u64,
     },
@@ -91,7 +91,7 @@ pub enum Comparator {
 pub struct CommitInfo<M: ManagedTypeApi> {
     pub keeper: ManagedAddress<M>,
     pub commit_hash: ManagedByteArray<M, 32>,
-    pub commit_round: u64,
+    pub commit_timestamp: u64,
     pub bond: BigUint<M>,
 }
 
@@ -105,7 +105,7 @@ pub struct CommitInfo<M: ManagedTypeApi> {
 pub struct KeeperInfo<M: ManagedTypeApi> {
     pub addr: ManagedAddress<M>,
     pub stake: BigUint<M>,
-    pub registered_round: u64,
+    pub registered_at: u64,
     pub total_executions: u64,
     pub successful_execs: u64,
     pub failed_execs: u64,

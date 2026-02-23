@@ -10,7 +10,7 @@ interface TaskInfo {
     targetContract: string;
     targetEndpoint: string;
     status: string;
-    triggerRound: number;
+    triggerTime: number;
     isOwner: boolean;
 }
 
@@ -156,14 +156,14 @@ export function MyTasks() {
         // 6. trigger: Trigger enum (1 byte discriminant + variant fields)
         const triggerVariant = data[offset];
         offset += 1;
-        let triggerRound = 0;
+        let triggerTime = 0;
         if (triggerVariant === 0) {
-            // TimeOnce { target_round: u64 }
-            triggerRound = Number(data.readBigUInt64BE(offset));
+            // TimeOnce { target_timestamp: u64 }
+            triggerTime = Number(data.readBigUInt64BE(offset));
             offset += 8;
         } else if (triggerVariant === 1) {
-            // TimeRecurring { start_round: u64, interval: u64, remaining_execs: u64 }
-            triggerRound = Number(data.readBigUInt64BE(offset));
+            // TimeRecurring { start_timestamp: u64, interval: u64, remaining_execs: u64 }
+            triggerTime = Number(data.readBigUInt64BE(offset));
             offset += 24; // 3 x u64
         } else if (triggerVariant === 2) {
             // ConditionOnChain — skip oracle fields
@@ -211,7 +211,7 @@ export function MyTasks() {
 
         const isOwner = wallet.connected && owner.toLowerCase() === wallet.address.toLowerCase();
 
-        return { id, owner, targetContract, targetEndpoint, status, triggerRound, isOwner };
+        return { id, owner, targetContract, targetEndpoint, status, triggerTime, isOwner };
     }
 
     const handleCancel = async (taskId: number) => {
@@ -371,9 +371,13 @@ export function MyTasks() {
                                                 Owner: {shortenAddress(task.owner)}
                                             </span>
                                         )}
-                                        {task.triggerRound > 0 && (
-                                            <span style={{ color: 'var(--text-primary)' }}>
-                                                Round {task.triggerRound.toLocaleString()}
+                                        {task.triggerTime > 0 && (
+                                            <span style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                                {new Date(task.triggerTime * 1000).toLocaleString(undefined, {
+                                                    month: 'short', day: 'numeric',
+                                                    hour: '2-digit', minute: '2-digit'
+                                                })}
                                             </span>
                                         )}
                                     </div>

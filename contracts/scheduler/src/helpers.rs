@@ -62,11 +62,11 @@ pub trait HelpersModule: crate::storage::StorageModule {
         trigger: &common::types::Trigger<Self::Api>,
     ) {
         match trigger {
-            common::types::Trigger::TimeOnce { target_round } => {
-                self.round_index(*target_round).insert(task_id);
+            common::types::Trigger::TimeOnce { target_time } => {
+                self.time_index(*target_time).insert(task_id);
             }
-            common::types::Trigger::TimeRecurring { start_round, .. } => {
-                self.round_index(*start_round).insert(task_id);
+            common::types::Trigger::TimeRecurring { start_time, .. } => {
+                self.time_index(*start_time).insert(task_id);
             }
             common::types::Trigger::ConditionOnChain { .. } => {
                 self.condition_tasks().insert(task_id);
@@ -81,11 +81,11 @@ pub trait HelpersModule: crate::storage::StorageModule {
         task: &common::types::Task<Self::Api>,
     ) {
         match &task.trigger {
-            common::types::Trigger::TimeOnce { target_round } => {
-                self.round_index(*target_round).swap_remove(&task_id);
+            common::types::Trigger::TimeOnce { target_time } => {
+                self.time_index(*target_time).swap_remove(&task_id);
             }
-            common::types::Trigger::TimeRecurring { start_round, .. } => {
-                self.round_index(*start_round).swap_remove(&task_id);
+            common::types::Trigger::TimeRecurring { start_time, .. } => {
+                self.time_index(*start_time).swap_remove(&task_id);
             }
             common::types::Trigger::ConditionOnChain { .. } => {
                 self.condition_tasks().swap_remove(&task_id);
@@ -104,9 +104,9 @@ pub trait HelpersModule: crate::storage::StorageModule {
                 self.condition_tasks().insert(task_id);
             }
             _ => {
-                // Time-based: re-index at current round + 1
-                let next_round = self.blockchain().get_block_round() + 1;
-                self.round_index(next_round).insert(task_id);
+                // Time-based: re-index at current time + 10s (grace period for retry)
+                let next_time = self.blockchain().get_block_timestamp() + 10;
+                self.time_index(next_time).insert(task_id);
             }
         }
     }
@@ -122,7 +122,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
         remaining_execs: u64,
         remaining_deposit: BigUint,
     ) {
-        let next_round = self.blockchain().get_block_round() + interval;
+        let next_time = self.blockchain().get_block_timestamp() + interval;
         let new_id = self.task_nonce().get() + 1;
         self.task_nonce().set(new_id);
 
@@ -133,7 +133,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             target_endpoint: original_task.target_endpoint.clone(),
             target_args: original_task.target_args.clone(),
             trigger: common::types::Trigger::TimeRecurring {
-                start_round: next_round,
+                start_time: next_time,
                 interval,
                 remaining_execs,
             },
@@ -141,14 +141,14 @@ pub trait HelpersModule: crate::storage::StorageModule {
             deposit: remaining_deposit,
             max_retries: original_task.max_retries,
             retry_count: 0,
-            ttl_rounds: original_task.ttl_rounds,
-            created_round: self.blockchain().get_block_round(),
+            ttl_seconds: original_task.ttl_seconds,
+            created_at: self.blockchain().get_block_timestamp(),
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
         };
 
         self.tasks(new_id).set(&new_task);
-        self.round_index(next_round).insert(new_id);
+        self.time_index(next_time).insert(new_id);
         self.owner_tasks(&new_task.owner).insert(new_id);
     }
 }

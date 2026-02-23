@@ -20,9 +20,9 @@ pub trait ConfigModule: crate::storage::StorageModule {
     }
 
     #[only_owner]
-    #[endpoint(setCooldownRounds)]
-    fn set_cooldown_rounds(&self, value: u64) {
-        self.cooldown_rounds().set(value);
+    #[endpoint(setCooldownSeconds)]
+    fn set_cooldown_seconds(&self, value: u64) {
+        self.cooldown_seconds().set(value);
     }
 
     #[only_owner]

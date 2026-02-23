@@ -13,14 +13,14 @@ pub const DEFAULT_KEEPER_MARGIN_BPS: u64 = 1_500;
 /// Minimum gas limit for task execution (5 million)
 pub const MIN_GAS_LIMIT: u64 = 5_000_000;
 
-/// Minimum TTL in rounds (≈ 1 minute at 6s/round)
-pub const MIN_TTL_ROUNDS: u64 = 10;
+/// Minimum TTL in seconds (1 minute)
+pub const MIN_TTL_SECONDS: u64 = 60;
 
-/// Default reveal window for commit-reveal (in rounds)
-pub const DEFAULT_REVEAL_WINDOW: u64 = 10;
+/// Default reveal window for commit-reveal (in seconds)
+pub const DEFAULT_REVEAL_WINDOW_SECONDS: u64 = 60;
 
-/// Default cooldown period for keeper unstaking (in rounds, ≈ 1 hour)
-pub const DEFAULT_COOLDOWN_ROUNDS: u64 = 600;
+/// Default cooldown period for keeper unstaking (in seconds, 1 hour)
+pub const DEFAULT_COOLDOWN_SECONDS: u64 = 3600;
 
 /// Default slash percentage: 10% (1,000 BPS)
 pub const DEFAULT_SLASH_PCT_BPS: u64 = 1_000;

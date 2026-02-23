@@ -144,7 +144,13 @@ export function PriceTicker() {
         return (
             <div style={styles.container}>
                 <div style={styles.header}>
-                    <span style={styles.title}>📊 Live Prices</span>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ verticalAlign: 'middle', marginRight: 4 }}>
+                        <rect x="1" y="8" width="3" height="6" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.6" />
+                        <rect x="5" y="5" width="3" height="9" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.8" />
+                        <rect x="9" y="2" width="3" height="12" rx="0.5" fill="rgb(0, 255, 136)" />
+                        <rect x="13" y="6" width="2" height="8" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.7" />
+                    </svg>
+                    <span style={styles.title}>Live Prices</span>
                     <span style={styles.badge}>REAL-TIME</span>
                 </div>
                 <div style={{ ...styles.grid, opacity: 0.4 }}>
@@ -163,7 +169,13 @@ export function PriceTicker() {
         <div style={styles.container}>
             <div style={styles.header}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={styles.title}>📊 Live Prices</span>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ verticalAlign: 'middle', marginRight: 4 }}>
+                        <rect x="1" y="8" width="3" height="6" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.6" />
+                        <rect x="5" y="5" width="3" height="9" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.8" />
+                        <rect x="9" y="2" width="3" height="12" rx="0.5" fill="rgb(0, 255, 136)" />
+                        <rect x="13" y="6" width="2" height="8" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.7" />
+                    </svg>
+                    <span style={styles.title}>Live Prices</span>
                     <span style={styles.badge}>REAL-TIME</span>
                     <div style={{
                         width: 6, height: 6, borderRadius: '50%',

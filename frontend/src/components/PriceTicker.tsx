@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
- * PriceTicker — Live price dashboard via Binance API.
- * No CoinGecko, no rate limits. Auto-refreshes every 30 seconds.
+ * PriceTicker — Real-time price dashboard via Binance WebSocket.
+ * 
+ * Uses wss://stream.binance.com for live streaming prices.
+ * Initial load via REST, then real-time updates via WebSocket.
  */
 
 interface TokenPrice {
@@ -12,37 +14,41 @@ interface TokenPrice {
     change24h: number;
 }
 
-// All tokens from Binance only
 const BINANCE_TOKENS = [
-    { symbol: 'EGLD', name: 'MultiversX', binance: 'EGLDUSDT' },
-    { symbol: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT' },
-    { symbol: 'ETH', name: 'Ethereum', binance: 'ETHUSDT' },
-    { symbol: 'BNB', name: 'Binance', binance: 'BNBUSDT' },
-    { symbol: 'SOL', name: 'Solana', binance: 'SOLUSDT' },
-    { symbol: 'XRP', name: 'Ripple', binance: 'XRPUSDT' },
+    { symbol: 'EGLD', name: 'MultiversX', binance: 'EGLDUSDT', stream: 'egldusdt' },
+    { symbol: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT', stream: 'btcusdt' },
+    { symbol: 'ETH', name: 'Ethereum', binance: 'ETHUSDT', stream: 'ethusdt' },
+    { symbol: 'BNB', name: 'Binance', binance: 'BNBUSDT', stream: 'bnbusdt' },
+    { symbol: 'SOL', name: 'Solana', binance: 'SOLUSDT', stream: 'solusdt' },
+    { symbol: 'XRP', name: 'Ripple', binance: 'XRPUSDT', stream: 'xrpusdt' },
 ];
 
+// Build combined stream URL
+const STREAMS = BINANCE_TOKENS.map(t => `${t.stream}@miniTicker`).join('/');
+const WS_URL = `wss://stream.binance.com:9443/stream?streams=${STREAMS}`;
+
 export function PriceTicker() {
-    const [prices, setPrices] = useState<TokenPrice[]>([]);
+    const [prices, setPrices] = useState<Map<string, TokenPrice>>(new Map());
     const [loading, setLoading] = useState(true);
-    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-    const [error, setError] = useState('');
+    const [connected, setConnected] = useState(false);
+    const [lastTick, setLastTick] = useState<Date | null>(null);
+    const wsRef = useRef<WebSocket | null>(null);
+    const reconnectRef = useRef<number>(0);
 
-    const fetchPrices = async () => {
+    // Initial load via REST to get 24h change %
+    const fetchInitial = useCallback(async () => {
         try {
-            const results: TokenPrice[] = [];
-
-            // Binance batch — fast, reliable, no rate limits
-            const binanceSymbols = BINANCE_TOKENS.map(t => `"${t.binance}"`).join(',');
-            const binanceResp = await fetch(
-                `https://api.binance.com/api/v3/ticker/24hr?symbols=[${binanceSymbols}]`
+            const symbols = BINANCE_TOKENS.map(t => `"${t.binance}"`).join(',');
+            const resp = await fetch(
+                `https://api.binance.com/api/v3/ticker/24hr?symbols=[${symbols}]`
             );
-            if (binanceResp.ok) {
-                const binanceData = await binanceResp.json();
+            if (resp.ok) {
+                const data = await resp.json();
+                const map = new Map<string, TokenPrice>();
                 for (const token of BINANCE_TOKENS) {
-                    const ticker = binanceData.find((t: any) => t.symbol === token.binance);
+                    const ticker = data.find((t: any) => t.symbol === token.binance);
                     if (ticker) {
-                        results.push({
+                        map.set(token.binance, {
                             symbol: token.symbol,
                             name: token.name,
                             price: parseFloat(ticker.lastPrice),
@@ -50,27 +56,77 @@ export function PriceTicker() {
                         });
                     }
                 }
+                setPrices(map);
+                setLastTick(new Date());
             }
-
-            if (results.length > 0) {
-                setPrices(results);
-                setLastUpdate(new Date());
-                setError('');
-            } else {
-                setError('Price feed unavailable');
-            }
-        } catch (err: any) {
-            setError('Price feed unavailable');
+        } catch (err) {
+            console.warn('PriceTicker REST fallback error:', err);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    // WebSocket connection
+    const connectWs = useCallback(() => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+        const ws = new WebSocket(WS_URL);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            setConnected(true);
+            reconnectRef.current = 0;
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                const d = msg.data;
+                if (!d || !d.s) return;
+
+                // d.s = symbol (e.g. EGLDUSDT), d.c = close/last price, d.P = 24h change %
+                const binanceSymbol = d.s;
+                const token = BINANCE_TOKENS.find(t => t.binance === binanceSymbol);
+                if (!token) return;
+
+                setPrices(prev => {
+                    const next = new Map(prev);
+                    next.set(binanceSymbol, {
+                        symbol: token.symbol,
+                        name: token.name,
+                        price: parseFloat(d.c),
+                        change24h: parseFloat(d.P),
+                    });
+                    return next;
+                });
+                setLastTick(new Date());
+            } catch { }
+        };
+
+        ws.onclose = () => {
+            setConnected(false);
+            // Auto-reconnect with backoff
+            const delay = Math.min(1000 * Math.pow(2, reconnectRef.current), 30000);
+            reconnectRef.current++;
+            setTimeout(connectWs, delay);
+        };
+
+        ws.onerror = () => {
+            ws.close();
+        };
+    }, []);
 
     useEffect(() => {
-        fetchPrices();
-        const interval = setInterval(fetchPrices, 30000);
-        return () => clearInterval(interval);
-    }, []);
+        fetchInitial();
+        connectWs();
+        return () => {
+            wsRef.current?.close();
+        };
+    }, [fetchInitial, connectWs]);
+
+    const priceList = BINANCE_TOKENS
+        .map(t => prices.get(t.binance))
+        .filter((p): p is TokenPrice => !!p);
 
     const formatPrice = (price: number): string => {
         if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
@@ -81,7 +137,7 @@ export function PriceTicker() {
 
     const formatChange = (change: number): string => {
         const sign = change >= 0 ? '+' : '';
-        return `${sign}${change.toFixed(1)}%`;
+        return `${sign}${change.toFixed(2)}%`;
     };
 
     if (loading) {
@@ -89,10 +145,10 @@ export function PriceTicker() {
             <div style={styles.container}>
                 <div style={styles.header}>
                     <span style={styles.title}>📊 Live Prices</span>
-                    <span style={styles.badge}>ECOSYSTEM</span>
+                    <span style={styles.badge}>REAL-TIME</span>
                 </div>
                 <div style={{ ...styles.grid, opacity: 0.4 }}>
-                    {[1, 2, 3, 4].map(i => (
+                    {[1, 2, 3, 4, 5, 6].map(i => (
                         <div key={i} style={styles.card}>
                             <div style={{ ...styles.skeleton, width: 60, height: 14 }} />
                             <div style={{ ...styles.skeleton, width: 80, height: 20, marginTop: 6 }} />
@@ -108,27 +164,25 @@ export function PriceTicker() {
             <div style={styles.header}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={styles.title}>📊 Live Prices</span>
-                    <span style={styles.badge}>ECOSYSTEM</span>
+                    <span style={styles.badge}>REAL-TIME</span>
+                    <div style={{
+                        width: 6, height: 6, borderRadius: '50%',
+                        background: connected ? 'rgb(0, 255, 136)' : 'rgb(239, 68, 68)',
+                        boxShadow: connected ? '0 0 8px rgb(0, 255, 136)' : '0 0 8px rgb(239, 68, 68)',
+                        animation: connected ? 'pulse 2s infinite' : 'none',
+                    }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {error && <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{error}</span>}
-                    {lastUpdate && (
+                    {lastTick && (
                         <span style={styles.updated}>
-                            Updated {lastUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {lastTick.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </span>
                     )}
-                    <div
-                        onClick={fetchPrices}
-                        style={styles.refreshBtn}
-                        title="Refresh prices"
-                    >
-                        ↻
-                    </div>
                 </div>
             </div>
 
             <div style={styles.grid}>
-                {prices.map((token) => (
+                {priceList.map((token) => (
                     <div key={token.symbol} style={styles.card}>
                         <div style={styles.cardTop}>
                             <div style={styles.symbol}>{token.symbol}</div>
@@ -139,7 +193,7 @@ export function PriceTicker() {
                             <span style={{
                                 ...styles.change,
                                 color: token.change24h >= 0 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
-                                background: token.change24h >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                                background: token.change24h >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
                             }}>
                                 {formatChange(token.change24h)}
                             </span>
@@ -149,7 +203,7 @@ export function PriceTicker() {
             </div>
 
             <div style={styles.footer}>
-                <span>Powered by Binance • Auto-refresh 30s</span>
+                <span>Binance WebSocket • Real-time streaming</span>
                 <span>Used by XCron Keeper for hybrid price checks</span>
             </div>
         </div>
@@ -188,20 +242,7 @@ const styles: Record<string, React.CSSProperties> = {
     updated: {
         fontSize: '0.65rem',
         color: 'var(--text-muted)',
-    },
-    refreshBtn: {
-        width: 24,
-        height: 24,
-        borderRadius: '50%',
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-primary)',
-        color: 'var(--text-secondary)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        fontSize: '0.85rem',
-        transition: 'all 0.2s',
+        fontFamily: "'SF Mono', 'Fira Code', monospace",
     },
     grid: {
         display: 'grid',
@@ -213,7 +254,7 @@ const styles: Record<string, React.CSSProperties> = {
         background: 'rgba(0, 255, 136, 0.06)',
         borderRadius: 'var(--radius-md, 8px)',
         border: '1px solid rgba(0, 255, 136, 0.15)',
-        transition: 'border-color 0.2s, transform 0.15s',
+        transition: 'all 0.15s ease',
         cursor: 'default',
     },
     cardTop: {

@@ -413,19 +413,7 @@ export function ScheduleTask() {
                     // Hybrid: send setTaskMetadata with price condition
                     if (priceEnabled && priceThreshold) {
                         try {
-                            const metadataJson = JSON.stringify({
-                                price: {
-                                    token: priceToken,
-                                    condition: priceCondition,
-                                    threshold: parseFloat(priceThreshold),
-                                }
-                            });
-                            const metadataHex = stringToHex(metadataJson);
-                            // We need the task ID — it's the current nonce + 1
-                            // For now, we use a best-effort approach: send metadata in a separate tx
-                            // The task ID will be parsed from the schedule tx result eventually
                             addToast('Setting price condition on-chain...', 'info');
-
                             // Use a small delay to let the first tx confirm
                             setTimeout(async () => {
                                 try {

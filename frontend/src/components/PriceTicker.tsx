@@ -24,7 +24,7 @@ const BINANCE_TOKENS = [
 ];
 
 // Build combined stream URL
-const STREAMS = BINANCE_TOKENS.map(t => `${t.stream}@miniTicker`).join('/');
+const STREAMS = BINANCE_TOKENS.map(t => `${t.stream}@ticker`).join('/');
 const WS_URL = `wss://stream.binance.com:9443/stream?streams=${STREAMS}`;
 
 export function PriceTicker() {
@@ -95,7 +95,7 @@ export function PriceTicker() {
                         symbol: token.symbol,
                         name: token.name,
                         price: parseFloat(d.c),
-                        change24h: parseFloat(d.P),
+                        change24h: parseFloat(d.P) || prev.get(binanceSymbol)?.change24h || 0,
                     });
                     return next;
                 });

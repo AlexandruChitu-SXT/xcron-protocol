@@ -734,17 +734,17 @@ export function ScheduleTask() {
                                     <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
                                         <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
                                             <label style={{ fontSize: '0.72rem' }}>Token</label>
-                                            <select
-                                                value={priceToken}
-                                                onChange={(e) => setPriceToken(e.target.value)}
-                                                style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none', fontSize: '0.85rem' }}
-                                            >
-                                                <option value="EGLD">EGLD</option>
-                                                <option value="BTC">BTC</option>
-                                                <option value="ETH">ETH</option>
-                                                <option value="USDC">USDC</option>
-                                                <option value="UTK">UTK</option>
-                                            </select>
+                                            <CustomDropdown
+                                                value={['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'].indexOf(priceToken)}
+                                                onChange={(val) => setPriceToken(['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'][val])}
+                                                options={[
+                                                    { value: 0, label: 'EGLD' },
+                                                    { value: 1, label: 'BTC' },
+                                                    { value: 2, label: 'ETH' },
+                                                    { value: 3, label: 'USDC' },
+                                                    { value: 4, label: 'UTK' },
+                                                ]}
+                                            />
                                         </div>
                                         <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
                                             <label style={{ fontSize: '0.72rem' }}>Condition</label>

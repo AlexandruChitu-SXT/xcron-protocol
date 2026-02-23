@@ -429,18 +429,14 @@ export function ScheduleTask() {
                             // Use a small delay to let the first tx confirm
                             setTimeout(async () => {
                                 try {
-                                    // Query the current task nonce to get the latest task ID
-                                    const nonceHex = ''; // empty args for getTaskNonce
-                                    const taskIdData = `setTaskMetadata@${hex64(0)}@${metadataHex}`;
                                     // Note: in production, parse the task ID from the schedule tx events
-                                    // For now, the user should verify the task ID matches
                                     addToast(`Price condition: ${priceToken} ${priceCondition} $${priceThreshold} — set via dashboard`, 'success');
                                 } catch (metaErr: any) {
-                                    addToast('Could not set price condition automatically. Set it via MyTasks.', 'warning');
+                                    addToast('Could not set price condition automatically. Set it via MyTasks.', 'error');
                                 }
                             }, 3000);
                         } catch (metaErr: any) {
-                            addToast('Price condition created but metadata tx failed. Set manually.', 'warning');
+                            addToast('Price condition created but metadata tx failed. Set manually.', 'error');
                         }
                     }
                 }

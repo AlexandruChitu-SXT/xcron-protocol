@@ -13,18 +13,17 @@ interface TokenPrice {
     name: string;
     price: number;
     change24h: number;
-    icon: string;
 }
 
 const ECOSYSTEM_TOKENS = [
-    { id: 'elrond-erd-2', symbol: 'EGLD', name: 'MultiversX', icon: '⬡' },
-    { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', icon: '₿' },
-    { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', icon: 'Ξ' },
-    { id: 'utrust', symbol: 'UTK', name: 'xMoney', icon: '◈' },
-    { id: 'hatom', symbol: 'HTM', name: 'Hatom', icon: '🔬' },
-    { id: 'ash-token', symbol: 'ASH', name: 'AshSwap', icon: '🔥' },
-    { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', icon: '💲' },
-    { id: 'tether', symbol: 'USDT', name: 'Tether', icon: '💵' },
+    { id: 'elrond-erd-2', symbol: 'EGLD', name: 'MultiversX' },
+    { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' },
+    { id: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
+    { id: 'utrust', symbol: 'UTK', name: 'xMoney' },
+    { id: 'hatom', symbol: 'HTM', name: 'Hatom' },
+    { id: 'ash-token', symbol: 'ASH', name: 'AshSwap' },
+    { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin' },
+    { id: 'tether', symbol: 'USDT', name: 'Tether' },
 ];
 
 const COINGECKO_IDS = ECOSYSTEM_TOKENS.map(t => t.id).join(',');
@@ -123,7 +122,6 @@ export function PriceTicker() {
                 {prices.map((token) => (
                     <div key={token.symbol} style={styles.card}>
                         <div style={styles.cardTop}>
-                            <span style={styles.icon}>{token.icon}</span>
                             <div>
                                 <div style={styles.symbol}>{token.symbol}</div>
                                 <div style={styles.name}>{token.name}</div>
@@ -156,7 +154,8 @@ const styles: Record<string, React.CSSProperties> = {
         padding: 20,
         background: 'var(--bg-glass)',
         borderRadius: 'var(--radius-lg, 12px)',
-        border: '1px solid var(--border-primary)',
+        border: '1px solid rgba(232,146,124,0.25)',
+        boxShadow: '0 0 30px rgba(232,146,124,0.12), 0 0 60px rgba(232,146,124,0.06)',
     },
     header: {
         display: 'flex',
@@ -204,9 +203,9 @@ const styles: Record<string, React.CSSProperties> = {
     },
     card: {
         padding: '12px 14px',
-        background: 'var(--bg-secondary)',
+        background: 'rgba(232,146,124,0.08)',
         borderRadius: 'var(--radius-md, 8px)',
-        border: '1px solid var(--border-primary)',
+        border: '1px solid rgba(232,146,124,0.18)',
         transition: 'border-color 0.2s, transform 0.15s',
         cursor: 'default',
     },
@@ -216,16 +215,7 @@ const styles: Record<string, React.CSSProperties> = {
         gap: 8,
         marginBottom: 8,
     },
-    icon: {
-        fontSize: '1.1rem',
-        width: 28,
-        height: 28,
-        borderRadius: 6,
-        background: 'rgba(255,255,255,0.05)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+
     symbol: {
         fontSize: '0.8rem',
         fontWeight: 700,

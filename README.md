@@ -2,23 +2,37 @@
 
 **Decentralized Task Automation on MultiversX**
 
-XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions (token swaps, DeFi harvests, governance votes, NFT mints) by posting tasks to a smart contract. A decentralized keeper network — incentivized with EGLD rewards and secured by slashable bonds — competes to execute those tasks on time.
+XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions — token swaps, DeFi harvests, governance votes, NFT mints — by posting tasks to a smart contract. A decentralized keeper network competes to execute those tasks on time, earning rewards for reliable service.
 
-> **Status:** Live on MultiversX Devnet · Phase 1 Complete · Protocol Fee: 15%
+> **Status:** Live on MultiversX Devnet · Phase 1 Complete · Economics Under Design
+
+---
+
+## What It Does
+
+You tell XCron _what_ to execute and _when_. The protocol handles the rest.
+
+- **"Claim my staking rewards every day"** → XCron does it automatically
+- **"Swap EGLD to USDC if price drops below $3.50"** → Hybrid price triggers
+- **"Auto-compound my DeFi position weekly"** → Set and forget
+
+No servers needed. No cron jobs. Fully on-chain, trustless, and decentralized.
 
 ---
 
 ## Current Status — Phase 1 Complete ✅
 
-| Milestone | Status |
+| Component | Status |
 |-----------|--------|
-| **E2E Task Execution** | `scheduleTask` → Keeper detects → `executeTask` on-chain → Rewards distributed |
-| **Reward Distribution** | 85% keeper / 15% protocol — verified on-chain |
-| **Intelligent Keeper** | Exponential backoff, error classification (PERMANENT vs TRANSIENT), SCResult parsing |
-| **Frontend** | Schedule tasks, My Tasks (status badges, cancel), Wallet connection (Web Wallet, Extension, xPortal) |
-| **Code Quality** | 0 TypeScript errors, 0 console.logs, security scan clean |
+| **Smart Contracts** | Scheduler, KeeperRegistry, Rewards — deployed on devnet |
+| **Keeper Bot** | Intelligent executor with retry logic, error classification, exponential backoff |
+| **Frontend** | Dashboard with real-time prices, task scheduling, wallet connection |
+| **CI/CD** | GitHub Actions — TypeScript build, Rust build, security scanning |
+| **E2E Flow** | `scheduleTask` → Keeper detects → `executeTask` → Rewards distributed ✅ |
 
-**Phase 2 (in progress):** Testnet deployment, recurring tasks E2E, multi-keeper competition, dashboard stats
+**Phase 2 (in progress):** Testnet deployment, recurring tasks, multi-keeper competition, economic model finalization
+
+---
 
 ## Architecture
 
@@ -53,17 +67,48 @@ XCron is a trustless cron-job scheduler that lets anyone automate on-chain actio
 | **KeeperRegistry** | Keeper registration & bonds | `registerKeeper`, `requestUnstake`, `withdrawStake`, `slashKeeper` |
 | **Rewards** | Fee distribution & claiming | `receiveExecutionFee`, `claimRewards` |
 
-All contracts are built with **MultiversX SC Framework v0.54.6** and follow the **Checks-Effects-Interactions (CEI)** pattern.
+All contracts built with **MultiversX SC Framework v0.54.6** following the **Checks-Effects-Interactions (CEI)** pattern.
+
+## Key Features
+
+- **Time-based scheduling** — Execute at a specific round or recurring intervals
+- **Hybrid price triggers** — Combine time schedules with real-time price conditions (Binance WebSocket)
+- **Real-time price dashboard** — Live streaming prices for EGLD, BTC, ETH, BNB, SOL, XRP
+- **Intelligent keeper bot** — Exponential backoff, error classification (PERMANENT vs TRANSIENT), SCResult parsing
+- **Keeper bond system** — Deposit EGLD as security, earn rewards, get slashed for failures
+- **Template library** — Auto-Compound, DCA, Stop-Loss, Claim Rewards, NFT Mint, Custom
+- **Full lifecycle management** — Schedule, monitor, cancel, and track task history
 
 ## Protocol Economics
 
-| Parameter | Value |
-|-----------|-------|
-| **Protocol Fee** | 15% (1,500 BPS) — configurable via `setProtocolFeeBps` |
-| **Gas Royalties** | 30% of gas spent on XCron contracts |
-| **Keeper Bond** | 1 EGLD minimum stake |
-| **Slash Penalty** | 10% of bond on failed executions |
-| **Min Task Deposit** | 0.1 EGLD |
+> ⚠️ **Under Design** — The economic model is being carefully designed to ensure long-term sustainability for all participants: users, keepers, and the protocol.
+
+**What we know:**
+- Fees denominated in USD, paid in EGLD (protects against price volatility)
+- Keepers earn rewards for executing tasks + gas reimbursement
+- No token at launch — fees in EGLD only
+- Economic model details will be published once finalized
+
+**Participants:**
+
+| Role | What they do | How they benefit |
+|------|-------------|-----------------|
+| **Users** | Schedule automated tasks | Save time, never miss DeFi opportunities |
+| **Keepers** | Execute tasks on-chain | Earn execution rewards + gas reimbursement |
+| **Protocol** | Infrastructure & smart contracts | Percentage of execution fees |
+| **Platforms (B2B)** | Integrate XCron for their users | Offer automation as a feature |
+
+## Security Model
+
+| Mechanism | Description |
+|-----------|-------------|
+| **Keeper Bond** | EGLD deposit required to become a keeper |
+| **Slashing** | Bond penalty on failed/malicious executions |
+| **Cooldown Period** | Configurable delay before bond withdrawal |
+| **CEI Pattern** | All contracts follow Checks-Effects-Interactions |
+| **Reentrancy Safe** | Rewards cleared before transfer |
+| **Access Controls** | `only_owner`, `require_authorized_caller`, `require_scheduler_caller` |
+| **CI Security Scan** | Automated secret scanning + sensitive data pattern checks on every push |
 
 ## Project Structure
 
@@ -78,19 +123,12 @@ xcron-protocol/
 │   └── src/
 │       ├── pages/           # Dashboard, ScheduleTask, MyTasks, KeeperPanel
 │       ├── hooks/           # useWallet, useContractQuery
-│       └── components/      # Header, ConnectModal, XCronLogo
+│       └── components/      # PriceTicker, Header, ConnectModal, LiveActivityFeed
 ├── keeper/                  # Keeper bot (TypeScript)
 │   └── src/                 # index, monitor, executor, network, config
 ├── interaction/             # Deploy & interaction scripts
-│   └── snippets.sh          # mxpy deployment commands
 └── xcron/                   # Documentation
-    ├── whitepaper.md         # Full technical whitepaper
-    ├── 01_architecture.md    # System architecture
-    ├── 02_smart_contracts.md # Contract specifications
-    ├── 03_keeper_specification.md # Keeper node docs
-    ├── 04_tokenomics.md      # Revenue model & projections
-    ├── 05_roadmap.md         # Development roadmap
-    └── 06_risk_analysis.md   # Threat model & mitigations
+    └── whitepaper.md        # Technical whitepaper
 ```
 
 ## Quick Start
@@ -107,11 +145,8 @@ Opens at `http://localhost:5173`
 
 ### Smart Contracts
 
-**Build WASMs:**
 ```bash
 cd contracts
-
-# Build each contract
 for contract in scheduler keeper-registry rewards; do
   cd $contract/wasm
   RUSTFLAGS="-C link-arg=-s -C link-arg=-zstack-size=131072" \
@@ -121,13 +156,6 @@ for contract in scheduler keeper-registry rewards; do
 done
 ```
 
-**Deploy to devnet:**
-```bash
-cd interaction
-source snippets.sh
-deploy_all
-```
-
 ### Keeper Bot
 
 ```bash
@@ -135,25 +163,6 @@ cd keeper
 npm install
 npx ts-node src/index.ts
 ```
-
-## Key Features
-
-- **Time-based scheduling** — Execute at a specific round or recurring intervals
-- **Intelligent keeper bot** — Exponential backoff, permanent error detection, SCResult event parsing
-- **Keeper bond system** — Deposit EGLD as security, earn rewards, get slashed for failures
-- **Commit-reveal anti-MEV** — Prevents front-running of keeper executions (Phase 2+)
-- **Full lifecycle management** — Schedule, monitor, cancel, and track task history
-- **Template library** — Auto-Compound, DCA, Stop-Loss, Claim Rewards, NFT Mint, Custom
-
-## Security Model
-
-| Mechanism | Description |
-|-----------|-------------|
-| **Keeper Bond** | 1 EGLD deposit required, slashed (10%) on failures |
-| **Cooldown Period** | Configurable delay before bond withdrawal (prevents hit-and-run) |
-| **CEI Pattern** | All contracts follow Checks-Effects-Interactions |
-| **Reentrancy Safe** | Rewards cleared before transfer in `claimRewards` |
-| **Access Controls** | `only_owner`, `require_authorized_caller`, `require_scheduler_caller` |
 
 ## Devnet Deployment
 
@@ -166,12 +175,6 @@ npx ts-node src/index.ts
 ## Documentation
 
 - [Whitepaper](xcron/whitepaper.md) — Full technical specification
-- [Architecture](xcron/01_architecture.md) — System design & data flow
-- [Smart Contracts](xcron/02_smart_contracts.md) — Contract APIs & storage layout
-- [Keeper Specification](xcron/03_keeper_specification.md) — Keeper node implementation
-- [Tokenomics](xcron/04_tokenomics.md) — Revenue model & financial projections
-- [Roadmap](xcron/05_roadmap.md) — Development phases & milestones
-- [Risk Analysis](xcron/06_risk_analysis.md) — Threat model & mitigations
 
 ## License
 

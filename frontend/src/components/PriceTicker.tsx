@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
 
 /**
- * PriceTicker — Live price dashboard for MultiversX ecosystem tokens.
- * 
- * Primary: Binance (fast, reliable, no rate limits for public API)
- * Fallback: CoinGecko for tokens not on Binance
- * Auto-refreshes every 30 seconds.
+ * PriceTicker — Live price dashboard via Binance API.
+ * No CoinGecko, no rate limits. Auto-refreshes every 30 seconds.
  */
 
 interface TokenPrice {
@@ -15,19 +12,14 @@ interface TokenPrice {
     change24h: number;
 }
 
-// Binance symbols (append USDT)
+// All tokens from Binance only
 const BINANCE_TOKENS = [
     { symbol: 'EGLD', name: 'MultiversX', binance: 'EGLDUSDT' },
     { symbol: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT' },
     { symbol: 'ETH', name: 'Ethereum', binance: 'ETHUSDT' },
-    { symbol: 'USDC', name: 'USD Coin', binance: 'USDCUSDT' },
-];
-
-// CoinGecko-only tokens (not on Binance)
-const COINGECKO_TOKENS = [
-    { symbol: 'UTK', name: 'xMoney', geckoId: 'utrust' },
-    { symbol: 'HTM', name: 'Hatom', geckoId: 'hatom' },
-    { symbol: 'ASH', name: 'AshSwap', geckoId: 'ash-token' },
+    { symbol: 'BNB', name: 'Binance', binance: 'BNBUSDT' },
+    { symbol: 'SOL', name: 'Solana', binance: 'SOLUSDT' },
+    { symbol: 'XRP', name: 'Ripple', binance: 'XRPUSDT' },
 ];
 
 export function PriceTicker() {
@@ -40,7 +32,7 @@ export function PriceTicker() {
         try {
             const results: TokenPrice[] = [];
 
-            // 1. Binance batch — fast, reliable
+            // Binance batch — fast, reliable, no rate limits
             const binanceSymbols = BINANCE_TOKENS.map(t => `"${t.binance}"`).join(',');
             const binanceResp = await fetch(
                 `https://api.binance.com/api/v3/ticker/24hr?symbols=[${binanceSymbols}]`
@@ -58,30 +50,6 @@ export function PriceTicker() {
                         });
                     }
                 }
-            }
-
-            // 2. CoinGecko for ecosystem tokens not on Binance
-            try {
-                const geckoIds = COINGECKO_TOKENS.map(t => t.geckoId).join(',');
-                const geckoResp = await fetch(
-                    `https://api.coingecko.com/api/v3/simple/price?ids=${geckoIds}&vs_currencies=usd&include_24hr_change=true`
-                );
-                if (geckoResp.ok) {
-                    const geckoData = await geckoResp.json();
-                    for (const token of COINGECKO_TOKENS) {
-                        const data = geckoData[token.geckoId];
-                        if (data?.usd) {
-                            results.push({
-                                symbol: token.symbol,
-                                name: token.name,
-                                price: data.usd,
-                                change24h: data.usd_24h_change ?? 0,
-                            });
-                        }
-                    }
-                }
-            } catch {
-                // CoinGecko failed — just show Binance tokens
             }
 
             if (results.length > 0) {
@@ -181,7 +149,7 @@ export function PriceTicker() {
             </div>
 
             <div style={styles.footer}>
-                <span>Binance + CoinGecko • Auto-refresh 30s</span>
+                <span>Powered by Binance • Auto-refresh 30s</span>
                 <span>Used by XCron Keeper for hybrid price checks</span>
             </div>
         </div>
@@ -191,10 +159,10 @@ export function PriceTicker() {
 const styles: Record<string, React.CSSProperties> = {
     container: {
         padding: 20,
-        background: 'var(--bg-glass)',
+        background: 'rgba(0, 255, 136, 0.03)',
         borderRadius: 'var(--radius-lg, 12px)',
-        border: '1px solid rgba(232,146,124,0.25)',
-        boxShadow: '0 0 30px rgba(232,146,124,0.12), 0 0 60px rgba(232,146,124,0.06)',
+        border: '1px solid rgba(0, 255, 136, 0.25)',
+        boxShadow: '0 0 30px rgba(0, 255, 136, 0.10), 0 0 60px rgba(0, 255, 136, 0.05)',
     },
     header: {
         display: 'flex',
@@ -211,8 +179,8 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: '0.55rem',
         padding: '2px 6px',
         borderRadius: 4,
-        background: 'rgba(232,146,124,0.15)',
-        color: 'rgb(232,146,124)',
+        background: 'rgba(0, 255, 136, 0.15)',
+        color: 'rgb(0, 255, 136)',
         fontWeight: 700,
         textTransform: 'uppercase' as const,
         letterSpacing: '0.5px',
@@ -242,9 +210,9 @@ const styles: Record<string, React.CSSProperties> = {
     },
     card: {
         padding: '12px 14px',
-        background: 'rgba(232,146,124,0.08)',
+        background: 'rgba(0, 255, 136, 0.06)',
         borderRadius: 'var(--radius-md, 8px)',
-        border: '1px solid rgba(232,146,124,0.18)',
+        border: '1px solid rgba(0, 255, 136, 0.15)',
         transition: 'border-color 0.2s, transform 0.15s',
         cursor: 'default',
     },

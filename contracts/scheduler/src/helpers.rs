@@ -5,29 +5,9 @@ multiversx_sc::imports!();
 /// Contains reward calculations, index management, and task rescheduling.
 #[multiversx_sc::module]
 pub trait HelpersModule: crate::storage::StorageModule {
-    /// Determine the applicable protocol fee BPS based on deposit size (progressive tiers).
-    ///
-    /// Tier 1: deposit ≤ 5 EGLD  → 15% (1,500 BPS)
-    /// Tier 2: 5 < deposit ≤ 25 EGLD → 12% (1,200 BPS)
-    /// Tier 3: deposit > 25 EGLD → 10% (1,000 BPS)
-    fn get_tiered_fee_bps(&self, deposit: &BigUint) -> u64 {
-        let decimals = BigUint::from(common::constants::EGLD_DECIMALS);
-        let tier1 = BigUint::from(common::constants::TIER1_EGLD) * &decimals;
-        let tier2 = BigUint::from(common::constants::TIER2_EGLD) * &decimals;
-
-        if *deposit <= tier1 {
-            common::constants::TIER1_FEE_BPS
-        } else if *deposit <= tier2 {
-            common::constants::TIER2_FEE_BPS
-        } else {
-            common::constants::TIER3_FEE_BPS
-        }
-    }
-
     /// Calculate keeper reward for a successful execution.
     ///
     /// Keeper gets: min(deposit - protocol_fee, max_reward_per_exec).
-    /// This prevents disproportionate rewards on large deposits.
     /// Excess is refunded to the task owner via remaining_deposit.
     fn calculate_keeper_reward(
         &self,
@@ -44,16 +24,32 @@ pub trait HelpersModule: crate::storage::StorageModule {
         }
     }
 
-    /// Calculate protocol fee from task deposit using progressive tiers.
+    /// Calculate protocol fee for a single execution.
     ///
-    /// Formula: deposit × tiered_fee_bps / BPS_DENOMINATOR
+    /// For recurring tasks: fee is based on deposit/remaining_execs (per-execution share).
+    /// For one-time tasks: fee is based on the full deposit.
+    /// Formula: per_exec_deposit × protocol_fee_bps / BPS_DENOMINATOR
     fn calculate_protocol_fee(
         &self,
         task: &common::types::Task<Self::Api>,
     ) -> BigUint {
-        let fee_bps = self.get_tiered_fee_bps(&task.deposit);
-        &task.deposit * fee_bps / common::constants::BPS_DENOMINATOR
+        let fee_bps = self.protocol_fee_bps().get();
+
+        // For recurring tasks, calculate fee on per-execution deposit
+        let per_exec_deposit = match &task.trigger {
+            common::types::Trigger::TimeRecurring { remaining_execs, .. } => {
+                if *remaining_execs > 0 {
+                    &task.deposit / *remaining_execs
+                } else {
+                    task.deposit.clone()
+                }
+            },
+            _ => task.deposit.clone(),
+        };
+
+        &per_exec_deposit * fee_bps / common::constants::BPS_DENOMINATOR
     }
+
 
     /// Index a task for keeper discovery based on its trigger type.
     fn index_task(

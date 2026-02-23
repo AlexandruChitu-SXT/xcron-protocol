@@ -1,0 +1,34 @@
+{
+    "name": "@xcron-protocol/sdk",
+    "version": "0.1.0",
+    "description": "SDK for integrating with XCron Protocol — Decentralized Task Automation on MultiversX",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "license": "MIT",
+    "scripts": {
+        "build": "tsc",
+        "prepublishOnly": "npm run build"
+    },
+    "peerDependencies": {
+        "@multiversx/sdk-core": ">=13.0.0"
+    },
+    "devDependencies": {
+        "@multiversx/sdk-core": "^13.17.2",
+        "typescript": "^5.9.3"
+    },
+    "files": [
+        "dist/**/*"
+    ],
+    "keywords": [
+        "multiversx",
+        "automation",
+        "cron",
+        "scheduler",
+        "keeper",
+        "smart-contract"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/xcron-protocol/sdk"
+    }
+}

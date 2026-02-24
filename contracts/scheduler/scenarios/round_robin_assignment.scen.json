@@ -1,0 +1,191 @@
+{
+    "name": "round-robin-assignment",
+    "comment": "Non-assigned keeper is blocked during grace period but can execute after 30s",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000"
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "10,000,000,000,000,000,000"
+                },
+                "address:keeper2": {
+                    "nonce": "0",
+                    "balance": "10,000,000,000,000,000,000"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:target_contract": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ],
+            "currentBlockInfo": {
+                "blockTimestamp": "1000"
+            }
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "comment": "Deploy Scheduler",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "add-keeper1",
+            "comment": "Whitelist keeper1",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "addWhitelistedKeeper",
+                "arguments": [
+                    "address:keeper1"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "add-keeper2",
+            "comment": "Whitelist keeper2",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "addWhitelistedKeeper",
+                "arguments": [
+                    "address:keeper2"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "schedule-task",
+            "comment": "User1 schedules a TimeOnce task ripe at timestamp 2000",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:ping",
+                    "0x00000000",
+                    "0x00000000000007d0",
+                    "10,000,000",
+                    "3",
+                    "604800"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [
+                    "1"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "setState",
+            "comment": "Advance timestamp to 2000 — task is ripe",
+            "currentBlockInfo": {
+                "blockTimestamp": "2000"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "non-assigned-keeper-blocked",
+            "comment": "Keeper2 tries to execute during grace period — should be blocked if not assigned",
+            "tx": {
+                "from": "address:keeper2",
+                "to": "sc:scheduler",
+                "function": "executeTask",
+                "arguments": [
+                    "1"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "status": "4",
+                "message": "str:Task assigned to another keeper — wait 30s grace period"
+            }
+        },
+        {
+            "step": "setState",
+            "comment": "Advance timestamp to 2031 — grace period over",
+            "currentBlockInfo": {
+                "blockTimestamp": "2031"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "non-assigned-keeper-after-grace",
+            "comment": "Keeper2 can now execute after grace period",
+            "tx": {
+                "from": "address:keeper2",
+                "to": "sc:scheduler",
+                "function": "executeTask",
+                "arguments": [
+                    "1"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        }
+    ]
+}

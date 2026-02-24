@@ -78,7 +78,7 @@ Returns the contract addresses for this client instance.
 }
 ```
 
-### `ConditionTrigger` (Phase 2)
+### `ConditionTrigger`
 
 ```typescript
 {
@@ -130,5 +130,6 @@ interface KeeperInfo {
     failedExecs: number;
     slashedAmount: string;
     active: boolean;
+    consecutiveFailures: number;  // Resets on success. 3 strikes = expulsion.
 }
 ```

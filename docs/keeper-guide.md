@@ -13,8 +13,8 @@ Run a keeper node to earn EGLD by executing automated tasks on the XCron network
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/xcron-protocol/xcron-protocol.git
-cd xcron-protocol/keeper
+git clone https://github.com/AlexandruChitu-SXT/xcron-keeper.git
+cd xcron-keeper
 npm install
 ```
 
@@ -90,9 +90,17 @@ The bot logs all activity to stdout:
 |-----------|-------|
 | Minimum bond | 1 EGLD |
 | Keeper reward | 70% of execution fee |
-| Slashing per failure | 20% of bond |
-| Max failures | 3 (then deactivated) |
+| Slash — Strike 1 | 5% of bond |
+| Slash — Strike 2 | 15% of bond |
+| Slash — Strike 3 | 20% of bond + auto-expulsion |
 | Unstaking cooldown | 12 hours |
+| Early exit penalty | 5% of bond (if < 30 days) |
+
+## Task Assignment (Round-Robin)
+
+Tasks are assigned to keepers in rotation. Each keeper gets a **30-second exclusive window** to execute their assigned task. If they don't execute in time, the task becomes available to any keeper.
+
+This prevents gas wars and ensures fair distribution across all keepers.
 
 ## Reliability Tips
 

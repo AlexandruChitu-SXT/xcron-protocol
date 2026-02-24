@@ -67,3 +67,6 @@ contracts/*/target/
 contracts/*/wasm/target/
 
 
+
+# ──────── KEEPER BOT (PRIVATE REPO) ────────
+keeper/

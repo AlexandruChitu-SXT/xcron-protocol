@@ -22,7 +22,7 @@ function App() {
         <ConnectModal />
         <ToastContainer />
         <NetworkBadge />
-        <main style={{ flex: 1 }}>
+        <main style={{ flex: 1, position: 'relative', zIndex: 2 }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/schedule" element={<ScheduleTask />} />

@@ -1,5 +1,0 @@
-Contrato de Prueba (Ping):
-erd1qqqqqqqqqqqqqpgq5nywkk07w37j8579v3uhayp6n78ppq8q7k8s2grq2r
-
-Endpoint:
-ping

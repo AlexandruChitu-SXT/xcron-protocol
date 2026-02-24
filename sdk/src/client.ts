@@ -200,10 +200,37 @@ export class XCronClient {
                 this.pushU64(buf, trigger.remainingExecs);
                 break;
 
-            case "ConditionOnChain":
+            case "ConditionOnChain": {
                 buf.push(0x02); // variant index
-                // Complex encoding — requires address + buffer + vec + comparator + bigint
-                throw new Error("ConditionOnChain trigger encoding not yet implemented in SDK");
+
+                // Oracle contract address (32 bytes from bech32)
+                const addrBytes = Address.fromBech32(trigger.oracleContract).pubkey();
+                buf.push(...addrBytes);
+
+                // Query endpoint (u32 length + utf8 bytes)
+                const endpointBytes = new TextEncoder().encode(trigger.queryEndpoint);
+                this.pushU32(buf, endpointBytes.length);
+                buf.push(...endpointBytes);
+
+                // Query args: u32 count, then each arg as u32 length + hex bytes
+                const args = trigger.queryArgs || [];
+                this.pushU32(buf, args.length);
+                for (const arg of args) {
+                    const argBytes = this.hexToBytes(arg);
+                    this.pushU32(buf, argBytes.length);
+                    buf.push(...argBytes);
+                }
+
+                // Comparator enum index (u8)
+                const comparatorIndex = { Gt: 0, Lt: 1, Eq: 2, Gte: 3, Lte: 4 };
+                buf.push(comparatorIndex[trigger.comparator]);
+
+                // Threshold as BigUint (u32 length + big-endian bytes)
+                const thresholdBytes = this.bigIntToBytes(trigger.threshold);
+                this.pushU32(buf, thresholdBytes.length);
+                buf.push(...thresholdBytes);
+                break;
+            }
         }
 
         return BytesValue.fromHex(Buffer.from(buf).toString("hex"));
@@ -214,6 +241,32 @@ export class XCronClient {
         const view = new DataView(bytes);
         view.setBigUint64(0, BigInt(value));
         buf.push(...new Uint8Array(bytes));
+    }
+
+    private pushU32(buf: number[], value: number): void {
+        const bytes = new ArrayBuffer(4);
+        const view = new DataView(bytes);
+        view.setUint32(0, value);
+        buf.push(...new Uint8Array(bytes));
+    }
+
+    private hexToBytes(hex: string): number[] {
+        const result: number[] = [];
+        for (let i = 0; i < hex.length; i += 2) {
+            result.push(parseInt(hex.substring(i, i + 2), 16));
+        }
+        return result;
+    }
+
+    private bigIntToBytes(value: string): number[] {
+        let bi = BigInt(value);
+        if (bi === 0n) return [0];
+        const result: number[] = [];
+        while (bi > 0n) {
+            result.unshift(Number(bi & 0xffn));
+            bi >>= 8n;
+        }
+        return result;
     }
 
     private getChainId(): string {

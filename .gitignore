@@ -59,6 +59,7 @@ mx-ai-skills
 *.resolved.*
 *.metadata.json
 .deployed_addresses.json
+.deployed_testnet.json
 .agent/
 
 # ──────── WASM BUILD ARTIFACTS ────────
@@ -70,3 +71,24 @@ contracts/*/wasm/target/
 
 # ──────── KEEPER BOT (PRIVATE REPO) ────────
 keeper/
+
+# ──────── CLEANED UP — OLD/REDUNDANT ────────
+xcron/
+interaction/
+articulos/
+output/
+contracts/src/
+contracts/wasm/
+hello_deploy.json
+pong_deploy.json
+set_fee.json
+stress_test_output.json
+tweet-*.txt
+article-*.txt
+estudio_economico_*.md
+TARGET_CONTRACT.txt
+ESTADO_Y_PLAN_MAESTRO.md
+XCRON_RELEASE_NOTES_V2.md
+multiversx.json
+build.log
+build2.log

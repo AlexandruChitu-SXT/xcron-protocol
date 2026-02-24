@@ -17,8 +17,8 @@ const ADDRESSES: Record<Network, XCronAddresses> = {
     },
     devnet: {
         scheduler: "erd1qqqqqqqqqqqqqpgqsmmpmp7hh6cqrnng0vp9ywgre70luvus7k8svk7ejh",
-        keeperRegistry: "",
-        rewards: "",
+        keeperRegistry: "erd1qqqqqqqqqqqqqpgq0zlpshzkjr5egtaueyn29a2t9kv8mywp7k8sxexula",
+        rewards: "erd1qqqqqqqqqqqqqpgqzkhxp72uzdq49dmzsng3g0tp98629k8z7k8szas8nt",
     },
 };
 

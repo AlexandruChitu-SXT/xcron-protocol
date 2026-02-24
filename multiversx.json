@@ -1,8 +1,0 @@
-{
-    "projects": [
-        "contracts/scheduler",
-        "contracts/keeper-registry",
-        "contracts/rewards",
-        "contracts/ping"
-    ]
-}

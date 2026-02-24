@@ -83,6 +83,7 @@ pub trait KeeperRegistryContract:
             failed_execs: 0,
             slashed_amount: BigUint::zero(),
             active: true,
+            consecutive_failures: 0,
         };
 
         self.keepers(&caller).set(&info);
@@ -126,6 +127,7 @@ pub trait KeeperRegistryContract:
     }
 
     /// Withdraw stake after cooldown period has elapsed.
+    /// If withdrawing before 30 days since registration: 5% early exit penalty.
     #[endpoint(withdrawStake)]
     fn withdraw_stake(&self) {
         let caller = self.blockchain().get_caller();
@@ -140,7 +142,15 @@ pub trait KeeperRegistryContract:
             "Cooldown not elapsed"
         );
 
-        let amount = info.stake.clone();
+        // Early exit penalty: 5% if withdrawing before 30 days
+        let mut amount = info.stake.clone();
+        if current < info.registered_at + common::constants::MIN_KEEPER_DAYS_SECONDS {
+            let penalty = &amount * common::constants::EARLY_EXIT_PENALTY_BPS / common::constants::BPS_DENOMINATOR;
+            amount -= &penalty;
+            let treasury = self.treasury_addr().get();
+            self.send().direct_egld(&treasury, &penalty);
+        }
+
         self.keepers(&caller).clear();
         self.unstake_request_time(&caller).clear();
 
@@ -184,6 +194,8 @@ pub trait KeeperRegistryContract:
     // ═══════════════════════════════════════════════════════════
 
     /// Record an execution result for a keeper's reputation.
+    /// On success: resets consecutive_failures.
+    /// On failure: progressive slashing — Strike 1: 5%, Strike 2: 15%, Strike 3: 20% + expulsion.
     #[endpoint(recordExecution)]
     fn record_execution(&self, keeper: ManagedAddress, success: bool) {
         self.require_authorized_caller();
@@ -192,8 +204,39 @@ pub trait KeeperRegistryContract:
         info.total_executions += 1;
         if success {
             info.successful_execs += 1;
+            info.consecutive_failures = 0;
         } else {
             info.failed_execs += 1;
+            info.consecutive_failures += 1;
+
+            // Progressive slash based on consecutive failures
+            let slash_bps = match info.consecutive_failures {
+                1 => common::constants::SLASH_STRIKE_1_BPS,    // 5%
+                2 => common::constants::SLASH_STRIKE_2_BPS,    // 15%
+                _ => common::constants::SLASH_STRIKE_3_BPS,    // 20%
+            };
+
+            let slash_amount =
+                &info.stake * slash_bps / common::constants::BPS_DENOMINATOR;
+            info.stake -= &slash_amount;
+            info.slashed_amount += &slash_amount;
+
+            let treasury = self.treasury_addr().get();
+            self.send().direct_egld(&treasury, &slash_amount);
+
+            self.keeper_slashed_event(&keeper, &slash_amount, &ManagedBuffer::from(
+                match info.consecutive_failures {
+                    1 => b"Strike 1 - 5% slash" as &[u8],
+                    2 => b"Strike 2 - 15% slash" as &[u8],
+                    _ => b"Strike 3 - 20% slash + expulsion" as &[u8],
+                }
+            ));
+
+            // Strike 3: auto-expel keeper
+            if info.consecutive_failures >= common::constants::MAX_STRIKES {
+                info.active = false;
+                self.active_keeper_set().swap_remove(&keeper);
+            }
         }
         self.keepers(&keeper).set(&info);
     }

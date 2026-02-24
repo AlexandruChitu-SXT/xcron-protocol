@@ -44,17 +44,37 @@ pub trait ConfigModule: crate::storage::StorageModule {
     }
 
     /// Phase 1: whitelist a keeper by address.
+    /// Also adds to keeper_list for round-robin task assignment.
     #[only_owner]
     #[endpoint(addWhitelistedKeeper)]
     fn add_whitelisted_keeper(&self, keeper: ManagedAddress) {
-        self.whitelisted_keepers().insert(keeper);
+        self.whitelisted_keepers().insert(keeper.clone());
+        self.keeper_list().push(&keeper);
+        // Initialize round-robin counter if first keeper
+        if self.round_robin_counter().is_empty() {
+            self.round_robin_counter().set(0u64);
+        }
     }
 
     /// Phase 1: remove a keeper from the whitelist.
+    /// Also removes from keeper_list for round-robin.
     #[only_owner]
     #[endpoint(removeWhitelistedKeeper)]
     fn remove_whitelisted_keeper(&self, keeper: ManagedAddress) {
         self.whitelisted_keepers().swap_remove(&keeper);
+        // Remove from keeper_list by finding and swapping with last
+        let len = self.keeper_list().len();
+        for i in 1..=len {
+            if self.keeper_list().get(i) == keeper {
+                // Swap with last element and remove
+                if i < len {
+                    let last = self.keeper_list().get(len);
+                    self.keeper_list().set(i, &last);
+                }
+                self.keeper_list().clear_entry(len);
+                break;
+            }
+        }
     }
 
     /// Set the maximum reward a keeper can earn per execution.

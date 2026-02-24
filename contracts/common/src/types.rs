@@ -111,4 +111,6 @@ pub struct KeeperInfo<M: ManagedTypeApi> {
     pub failed_execs: u64,
     pub slashed_amount: BigUint<M>,
     pub active: bool,
+    /// Consecutive failures — resets on success. 3 strikes = auto-expulsion.
+    pub consecutive_failures: u64,
 }

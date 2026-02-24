@@ -65,6 +65,7 @@ export interface KeeperInfo {
     failedExecs: number;
     slashedAmount: string;
     active: boolean;
+    consecutiveFailures: number;
 }
 
 export interface ScheduleTaskParams {

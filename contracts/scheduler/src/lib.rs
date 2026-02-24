@@ -180,12 +180,11 @@ pub trait SchedulerContract:
     //  TASK EXECUTION (Phase 1 — Direct, no commit-reveal)
     // ═══════════════════════════════════════════════════════════
 
-    /// Execute a ripe task. Phase 1: keeper calls directly (synchronous).
+    /// Execute a ripe task. Keeper triggers execution, payment via async callback.
     ///
-    /// **Phase 1 limitation:** Uses `transfer_execute` (fire-and-forget).
-    /// The target contract call may fail silently after the keeper reward
-    /// has been sent. Phase 2 will migrate to async calls with callbacks
-    /// to confirm target execution before finalizing rewards.
+    /// Flow: keeper calls executeTask → target contract called async →
+    /// execution_callback confirms result → keeper paid on success OR
+    /// user refunded on failure.
     #[endpoint(executeTask)]
     fn execute_task(&self, task_id: u64) {
         self.require_not_paused();
@@ -202,81 +201,42 @@ pub trait SchedulerContract:
         self.require_registered_keeper(&keeper);
         self.require_task_ripe(task_id, &task);
 
-        // C-3: Validate gas budget for all calls
-        // reschedule: ~5M, receiveExecutionFee: 5M, target: max_gas, overhead: 5M
-        let min_gas_needed = 5_000_000u64 + 5_000_000u64 + task.max_gas + 5_000_000u64;
+        // Round-robin assignment: fair task distribution among keepers
+        let keeper_count = self.keeper_list().len();
+        if keeper_count > 1 {
+            let assigned_index = ((task_id - 1) % keeper_count as u64) as usize + 1;
+            let assigned_keeper = self.keeper_list().get(assigned_index);
+
+            if keeper != assigned_keeper {
+                let ripe_time = match &task.trigger {
+                    common::types::Trigger::TimeOnce { target_time } => *target_time,
+                    common::types::Trigger::TimeRecurring { start_time, .. } => *start_time,
+                    _ => self.blockchain().get_block_timestamp(),
+                };
+                let current_time = self.blockchain().get_block_timestamp();
+                require!(
+                    current_time >= ripe_time + common::constants::ROUND_ROBIN_GRACE_SECONDS,
+                    "Task assigned to another keeper — wait 30s grace period"
+                );
+            }
+        }
+
+        // C-3: Validate gas budget
+        let callback_gas = common::constants::CALLBACK_GAS_RESERVE;
+        let min_gas_needed = task.max_gas + callback_gas + 10_000_000u64;
         require!(
             self.blockchain().get_gas_left() >= min_gas_needed,
             "Insufficient gas for full execution"
         );
 
-        // CEI — Effects first
-        // Phase 1: mark as Executing (fire-and-forget, no callback to confirm).
-        // Phase 2+: async callback will transition to Completed or Failed.
+        // CEI — Effects: mark as Executing (payment deferred to callback)
         let mut task = task;
         task.status = common::types::TaskStatus::Executing;
         task.assigned_keeper = Some(keeper.clone());
         self.tasks(task_id).set(&task);
         self.remove_from_indices(task_id, &task);
 
-        // Calculate reward
-        let reward = self.calculate_keeper_reward(&task);
-        let protocol_fee = self.calculate_protocol_fee(&task);
-
-        // Pay keeper directly
-        self.send().direct_egld(&keeper, &reward);
-
-        // Calculate remaining deposit after keeper reward + protocol fee
-        let total_spent = &reward + &protocol_fee;
-        let remaining_deposit = if task.deposit > total_spent {
-            &task.deposit - &total_spent
-        } else {
-            BigUint::zero()
-        };
-
-        // ═══════════════════════════════════════════════════════════
-        //  RECURRING TASK RESCHEDULING (before external calls)
-        // ═══════════════════════════════════════════════════════════
-        // Reschedule BEFORE transfer_execute calls because those consume
-        // all remaining gas. Storage operations here are cheap (~5M gas).
-        if let common::types::Trigger::TimeRecurring {
-            interval,
-            remaining_execs,
-            ..
-        } = &task.trigger
-        {
-            let min_dep = self.min_deposit().get();
-            if *remaining_execs > 1 && remaining_deposit >= min_dep {
-                self.reschedule_recurring(&task, *interval, *remaining_execs - 1, remaining_deposit);
-            } else if remaining_deposit > BigUint::zero() {
-                // Not enough for another execution — refund remainder to owner
-                self.send().direct_egld(&task.owner, &remaining_deposit);
-            }
-        } else {
-            // Non-recurring: refund any remaining deposit to owner
-            if remaining_deposit > BigUint::zero() {
-                self.send().direct_egld(&task.owner, &remaining_deposit);
-            }
-        }
-
-        // Send protocol fee to Rewards contract (5M gas — just a storage write)
-        let rewards_addr = self.rewards_addr().get();
-        if protocol_fee > BigUint::zero() {
-            self.tx()
-                .to(&rewards_addr)
-                .raw_call("receiveExecutionFee")
-                .argument(&keeper)
-                .argument(&task_id)
-                .egld(&protocol_fee)
-                .gas(5_000_000u64)
-                .transfer_execute();
-        }
-
-        // NOTE: KeeperRegistry stats tracked via task_executed_event (saves 15M gas)
-        // Off-chain indexer reads events to update keeper performance metrics.
-
-        // Call the target contract (fire-and-forget)
-        // Phase 1: no callback. Phase 2+: use async call with callback.
+        // Build clean args for target call
         let mut clean_args = ManagedVec::new();
         for arg in task.target_args.into_iter() {
             if !arg.is_empty() {
@@ -284,17 +244,130 @@ pub trait SchedulerContract:
             }
         }
 
+        // Async call to target contract WITH callback
+        // Payment to keeper happens ONLY in the callback if target succeeds
         self.tx()
             .to(&task.target_contract)
             .raw_call(task.target_endpoint.clone())
             .arguments_raw(clean_args.into())
             .gas(task.max_gas)
-            .transfer_execute();
-
-        self.task_executed_event(task_id, &keeper, true);
+            .callback(self.callbacks().execution_callback(task_id, keeper))
+            .gas_for_callback(callback_gas)
+            .register_promise();
 
         // H-2: Release reentrancy guard
         self.executing_guard().set(false);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  ASYNC CALLBACK — Execution result handler
+    // ═══════════════════════════════════════════════════════════
+
+    #[promises_callback]
+    fn execution_callback(
+        &self,
+        task_id: u64,
+        keeper: ManagedAddress,
+        #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
+    ) {
+        let mut task = self.tasks(task_id).get();
+
+        match result {
+            ManagedAsyncCallResult::Ok(_) => {
+                // ✅ Target executed successfully — pay keeper and protocol
+                task.status = common::types::TaskStatus::Completed;
+                self.tasks(task_id).set(&task);
+
+                let reward = self.calculate_keeper_reward(&task);
+                let protocol_fee = self.calculate_protocol_fee(&task);
+
+                // Pay keeper
+                self.send().direct_egld(&keeper, &reward);
+
+                // Calculate remaining deposit
+                let total_spent = &reward + &protocol_fee;
+                let remaining_deposit = if task.deposit > total_spent {
+                    &task.deposit - &total_spent
+                } else {
+                    BigUint::zero()
+                };
+
+                // Handle recurring tasks
+                if let common::types::Trigger::TimeRecurring {
+                    interval,
+                    remaining_execs,
+                    ..
+                } = &task.trigger
+                {
+                    let min_dep = self.min_deposit().get();
+                    if *remaining_execs > 1 && remaining_deposit >= min_dep {
+                        self.reschedule_recurring(&task, *interval, *remaining_execs - 1, remaining_deposit);
+                    } else if remaining_deposit > BigUint::zero() {
+                        self.send().direct_egld(&task.owner, &remaining_deposit);
+                    }
+                } else {
+                    if remaining_deposit > BigUint::zero() {
+                        self.send().direct_egld(&task.owner, &remaining_deposit);
+                    }
+                }
+
+                // Send protocol fee to Rewards contract
+                let rewards_addr = self.rewards_addr().get();
+                if protocol_fee > BigUint::zero() {
+                    self.tx()
+                        .to(&rewards_addr)
+                        .raw_call("receiveExecutionFee")
+                        .argument(&keeper)
+                        .argument(&task_id)
+                        .egld(&protocol_fee)
+                        .gas(5_000_000u64)
+                        .transfer_execute();
+                }
+
+                self.task_executed_event(task_id, &keeper, true);
+            }
+            ManagedAsyncCallResult::Err(_) => {
+                // ❌ Target execution failed — refund user, no keeper payment
+                task.status = common::types::TaskStatus::Failed;
+                self.tasks(task_id).set(&task);
+
+                // Refund entire deposit to task owner
+                self.send().direct_egld(&task.owner, &task.deposit);
+
+                self.task_executed_event(task_id, &keeper, false);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  STUCK TASK RECOVERY
+    // ═══════════════════════════════════════════════════════════
+
+    /// Recover tasks stuck in Executing state for over 24 hours.
+    /// This can happen if the async callback fails due to insufficient gas.
+    /// Only callable by owner. Refunds deposit to task owner.
+    #[only_owner]
+    #[endpoint(recoverStuckTask)]
+    fn recover_stuck_task(&self, task_id: u64) {
+        let mut task = self.tasks(task_id).get();
+        require!(
+            task.status == common::types::TaskStatus::Executing,
+            "Task not in Executing state"
+        );
+
+        let current_time = self.blockchain().get_block_timestamp();
+        let stuck_threshold = 24 * 60 * 60; // 24 hours
+        require!(
+            current_time > task.created_at + stuck_threshold,
+            "Task not stuck yet (wait 24h)"
+        );
+
+        task.status = common::types::TaskStatus::Failed;
+        self.tasks(task_id).set(&task);
+
+        // Refund deposit to user
+        self.send().direct_egld(&task.owner, &task.deposit);
+        self.task_expired_event(task_id);
     }
 
     // ═══════════════════════════════════════════════════════════

@@ -75,4 +75,14 @@ pub trait StorageModule {
     /// Contract version for safe upgrades.
     #[storage_mapper("version")]
     fn version(&self) -> SingleValueMapper<u32>;
+
+    // ── Round-robin task assignment ──────────────────────────
+    /// Ordered list of active keepers for round-robin assignment.
+    /// Index 0..n used for deterministic task-to-keeper mapping.
+    #[storage_mapper("keeperList")]
+    fn keeper_list(&self) -> VecMapper<ManagedAddress>;
+
+    /// Counter that rotates through keeper_list for assignment.
+    #[storage_mapper("roundRobinCounter")]
+    fn round_robin_counter(&self) -> SingleValueMapper<u64>;
 }

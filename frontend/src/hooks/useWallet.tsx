@@ -1,3 +1,4 @@
+import { devError, devWarn } from '../utils/devLog';
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { NETWORK, WALLETCONNECT } from '../config';
 
@@ -106,7 +107,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 localStorage.setItem('xcron_wallet_provider', 'manual');
             }
         } catch (err) {
-            console.error('Failed to connect:', err);
+            devError('Failed to connect:', err);
         }
     }, []);
 
@@ -151,7 +152,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             localStorage.setItem('xcron_wallet_provider', 'pem');
             addToast(`Connected via PEM: ${address.slice(0, 8)}...${address.slice(-4)}`, 'success');
         } catch (err: any) {
-            console.error('PEM connect failed:', err);
+            devError('PEM connect failed:', err);
             addToast(`PEM error: ${err.message}`, 'error');
         }
     }, [addToast]);
@@ -175,7 +176,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 setWallet((prev) => ({ ...prev, balance: account.balance || '0' }));
             }
         } catch (err) {
-            console.error('Failed to refresh balance:', err);
+            devError('Failed to refresh balance:', err);
         }
     }, [wallet.address]);
 
@@ -243,7 +244,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 setTimeout(() => refreshBalance(), 6000);
                 return result.txHash || null;
             } catch (err: any) {
-                console.error('PEM sign failed:', err);
+                devError('PEM sign failed:', err);
                 addToast(`PEM sign error: ${err.message}`, 'error');
                 return null;
             }
@@ -292,7 +293,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
                 return result.txHash || null;
             } catch (err: any) {
-                console.error('Extension sign failed:', err);
+                devError('Extension sign failed:', err);
                 addToast(`Extension error: ${err.message}. Opening Web Wallet...`, 'error');
                 return signViaWebWallet(tx);
             }
@@ -351,7 +352,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 setTimeout(() => refreshBalance(), 6000);
                 return result.txHash || null;
             } catch (err: any) {
-                console.error('WalletConnect sign failed:', err);
+                devError('WalletConnect sign failed:', err);
                 addToast(`xPortal error: ${err.message}. Opening Web Wallet...`, 'error');
                 return signViaWebWallet(tx);
             }
@@ -392,7 +393,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
             return 'pending-web-wallet';
         } catch (err: any) {
-            console.error('Failed to build Web Wallet URL:', err);
+            devError('Failed to build Web Wallet URL:', err);
             addToast(`Web Wallet error: ${err.message}`, 'error');
             return null;
         }
@@ -460,7 +461,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 const stillSaved = localStorage.getItem('xcron_wallet');
                 if (stillSaved && !wallet.connected) {
                     connect(stillSaved).catch(() => {
-                        console.warn('Auto-reconnect failed after retry');
+                        devWarn('Auto-reconnect failed after retry');
                     });
                 }
             }, 3000);

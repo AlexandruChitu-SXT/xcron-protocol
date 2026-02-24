@@ -1,3 +1,4 @@
+import { devError, devWarn } from '../utils/devLog';
 import { useEffect, useState } from 'react';
 import { Address } from '@multiversx/sdk-core';
 import { useWallet } from '../hooks/useWallet';
@@ -83,7 +84,7 @@ export function MyTasks() {
                             taskList.push(parseTaskData(taskId, res[0]));
                         }
                     } catch (err) {
-                        console.error(`Task ${taskId} failed to decode:`, err);
+                        devError(`Task ${taskId} failed to decode:`, err);
                     }
                 }
                 setTasks(taskList.sort((a, b) => b.id - a.id));
@@ -101,13 +102,13 @@ export function MyTasks() {
                             taskList.push(parseTaskData(i, res[0]));
                         }
                     } catch (err) {
-                        console.error(`Task ${i} failed to decode:`, err);
+                        devError(`Task ${i} failed to decode:`, err);
                     }
                 }
                 setTasks(taskList.sort((a, b) => b.id - a.id));
             }
         } catch (err) {
-            console.error('Failed to load tasks:', err);
+            devError('Failed to load tasks:', err);
         } finally {
             if (!silent) setLoading(false);
         }
@@ -265,7 +266,7 @@ export function MyTasks() {
                 setExecHistory(logs);
             }
         } catch (err) {
-            console.warn('Failed to load execution history:', err);
+            devWarn('Failed to load execution history:', err);
         }
     }
 

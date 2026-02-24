@@ -1,3 +1,4 @@
+import { devError } from '../utils/devLog';
 import { useState, useRef } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { NETWORK, WALLETCONNECT } from '../config';
@@ -34,7 +35,7 @@ export function ConnectModal() {
                 await connect(address as unknown as string);
             }
         } catch (err: any) {
-            console.error('Extension login failed:', err);
+            devError('Extension login failed:', err);
             if (err?.message?.includes('not installed') || err?.message?.includes('not found')) {
                 setError('MultiversX DeFi Wallet extension not detected. Please install it first.');
                 window.open('https://chrome.google.com/webstore/detail/multiversx-defi-wallet/dngmlblcodfobpdpecaadgfbcggfjfnm', '_blank');
@@ -100,7 +101,7 @@ export function ConnectModal() {
                 setQrUri('');
             }
         } catch (err: any) {
-            console.error('xPortal login failed:', err);
+            devError('xPortal login failed:', err);
             const msg = err?.message || 'xPortal connection failed';
             if (msg.includes('Project not found') || msg.includes('timed out')) {
                 setError('xPortal connection is not available in this version. Please use Web Wallet or Quick Connect.');

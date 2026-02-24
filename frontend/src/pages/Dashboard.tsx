@@ -1,3 +1,4 @@
+import { devError, devWarn } from '../utils/devLog';
 import { useEffect, useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '../hooks/useContractQuery';
@@ -61,11 +62,11 @@ export function Dashboard() {
                 const dailyCount = Number(await dailyRes.text()) || 0;
                 setTxStats({ lifetime: lifetimeCount, daily: dailyCount });
             } catch (err) {
-                console.warn('Could not fetch tx counts:', err);
+                devWarn('Could not fetch tx counts:', err);
             }
 
         } catch (err) {
-            console.error('Failed to load stats:', err);
+            devError('Failed to load stats:', err);
         } finally {
             setLoading(false);
         }

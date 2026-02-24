@@ -1,3 +1,4 @@
+import { devError, devWarn } from '../utils/devLog';
 import { useState, useCallback } from 'react';
 import { NETWORK } from '../config';
 
@@ -32,7 +33,7 @@ export function useContractQuery() {
             const data = await response.json();
 
             if (data.returnCode !== 'ok') {
-                console.warn(`Query ${funcName} returned: ${data.returnCode} - ${data.returnMessage}`);
+                devWarn(`Query ${funcName} returned: ${data.returnCode} - ${data.returnMessage}`);
                 return [];
             }
 
@@ -42,7 +43,7 @@ export function useContractQuery() {
                 return Buffer.from(b64, 'base64');
             });
         } catch (err) {
-            console.error(`Query ${funcName} error:`, err);
+            devError(`Query ${funcName} error:`, err);
             return [];
         } finally {
             setLoading(false);

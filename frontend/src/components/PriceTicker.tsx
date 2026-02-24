@@ -1,3 +1,4 @@
+import { devWarn } from '../utils/devLog';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
@@ -60,7 +61,7 @@ export function PriceTicker() {
                 setLastTick(new Date());
             }
         } catch (err) {
-            console.warn('PriceTicker REST fallback error:', err);
+            devWarn('PriceTicker REST fallback error:', err);
         } finally {
             setLoading(false);
         }

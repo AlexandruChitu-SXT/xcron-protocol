@@ -1,3 +1,4 @@
+import { devWarn } from '../utils/devLog';
 import { useState, useEffect } from 'react';
 import { NETWORK } from '../config';
 
@@ -29,7 +30,7 @@ export function useTxTracker() {
                     }
                 }
             } catch (err) {
-                console.warn('Error fetching tx status:', err);
+                devWarn('Error fetching tx status:', err);
             }
         };
 

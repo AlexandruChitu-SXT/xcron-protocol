@@ -1,3 +1,4 @@
+import { devWarn } from '../utils/devLog';
 import { useEffect, useState, useRef } from 'react';
 import { CONTRACTS, NETWORK } from '../config';
 
@@ -160,7 +161,7 @@ export function LiveActivityFeed() {
             firstLoad.current = false;
             setEvents(mapped);
         } catch (err) {
-            console.warn('Telemetry fetch error:', err);
+            devWarn('Telemetry fetch error:', err);
         } finally {
             setLoading(false);
         }

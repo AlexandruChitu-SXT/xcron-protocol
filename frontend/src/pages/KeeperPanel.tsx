@@ -1,3 +1,4 @@
+import { devError, devWarn } from '../utils/devLog';
 import { useEffect, useState } from 'react';
 import { Address } from '@multiversx/sdk-core';
 import { useWallet } from '../hooks/useWallet';
@@ -79,7 +80,7 @@ export function KeeperPanel() {
                             }
                         }
                     } catch (err) {
-                        console.warn('getKeeperInfo failed, trying fallback:', err);
+                        devWarn('getKeeperInfo failed, trying fallback:', err);
                     }
 
                     // Fallback: check recent transactions for registerKeeper calls
@@ -100,7 +101,7 @@ export function KeeperPanel() {
                                 keeperInfoParsed = true;
                             }
                         } catch (err) {
-                            console.warn('Fallback keeper check failed:', err);
+                            devWarn('Fallback keeper check failed:', err);
                         }
                     }
 
@@ -143,7 +144,7 @@ export function KeeperPanel() {
                                 } : prev);
                             }
                         } catch (err) {
-                            console.warn('Real execution stats fetch failed:', err);
+                            devWarn('Real execution stats fetch failed:', err);
                         }
                     }
 
@@ -154,12 +155,12 @@ export function KeeperPanel() {
                         });
                     }
                 } catch (err) {
-                    console.error('Failed to load keeper info:', err);
+                    devError('Failed to load keeper info:', err);
                     setStats(null);
                 }
             }
         } catch (err) {
-            console.error('Failed to load keeper data:', err);
+            devError('Failed to load keeper data:', err);
         } finally {
             setLoading(false);
         }

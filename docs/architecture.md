@@ -5,10 +5,10 @@
 XCron is a three-contract system that automates smart contract calls on MultiversX.
 
 ```
-┌─────────────┐     schedule      ┌─────────────┐     execute     ┌──────────────┐
-│   User /    │ ──────────────►   │  Scheduler   │ ──────────────► │   Target     │
-│   dApp      │   deposit EGLD    │  Contract    │   call endpoint │   Contract   │
-└─────────────┘                   └──────┬───────┘                 └──────────────┘
+┌─────────────┐     schedule      ┌─────────────┐  async call   ┌──────────────┐
+│   User /    │ ──────────────►   │  Scheduler   │ ───────────► │   Target     │
+│   dApp      │   deposit EGLD    │  Contract    │  ◄─callback─ │   Contract   │
+└─────────────┘                   └──────┬───────┘              └──────────────┘
                                          │
                               ┌──────────┴──────────┐
                               │                     │
@@ -18,13 +18,16 @@ XCron is a three-contract system that automates smart contract calls on Multiver
                      └─────────────────┘  └──────────────────┘
 ```
 
-## Flow
+## Execution Flow
 
-1. **User schedules a task** — Deposits EGLD and specifies what contract/function to call and when.
+1. **User schedules a task** — Deposits EGLD and specifies target contract, endpoint, trigger.
 2. **Keeper detects the task** — Off-chain bots monitor the Scheduler for ripe tasks.
-3. **Keeper executes** — Calls `executeTask(taskId)` on the Scheduler.
-4. **Scheduler processes** — Validates the task, pays the keeper 70%, sends 30% to protocol, calls the target contract.
-5. **Recurring tasks** — Automatically rescheduled with the remaining deposit.
+3. **Round-robin assignment** — Each task is assigned to a keeper. The assigned keeper has a 30-second exclusive window.
+4. **Keeper calls `executeTask`** — Triggers an async call to the target contract.
+5. **Callback verifies result** — `execution_callback` handles the outcome:
+   - ✅ **Success** → Keeper gets 70% reward, protocol gets 30% fee, remaining deposit refunded.
+   - ❌ **Failure** → Entire deposit refunded to user. Keeper gets nothing.
+6. **Recurring tasks** — Automatically rescheduled with remaining deposit if executions remain.
 
 ## Contracts
 
@@ -32,18 +35,22 @@ XCron is a three-contract system that automates smart contract calls on Multiver
 
 The main contract. Handles:
 - Task creation and storage
-- Task execution and reward distribution
+- Async execution with callback verification
+- Round-robin keeper assignment with grace period
 - Task cancellation and refunds
 - Task expiration cleanup
+- Stuck task recovery (tasks in Executing > 24h)
 - Recurring task rescheduling
+- On-chain oracle queries for ConditionOnChain triggers
 
 ### Keeper Registry
 
 Manages keeper participation:
 - Registration with EGLD bond
-- Unstaking with cooldown period
-- Slashing for missed executions
-- Reputation tracking (success/fail counts)
+- Unstaking with cooldown period (12h)
+- Early exit penalty (5% if unstake before 30 days)
+- Progressive slashing: Strike 1 = 5%, Strike 2 = 15%, Strike 3 = 20% + auto-expulsion
+- Reputation tracking (success/fail counts, consecutive failures)
 
 ### Rewards Engine
 
@@ -54,16 +61,22 @@ Collects and distributes protocol fees:
 
 ## Trigger Types
 
-| Trigger | Description | Use Case |
-|---------|-------------|----------|
-| `TimeOnce` | Execute at a specific timestamp | Scheduled transfers, one-time claims |
-| `TimeRecurring` | Execute at fixed intervals | Auto-compound, recurring payments |
-| `ConditionOnChain` | Execute when a condition is met | Price triggers, threshold alerts (Phase 2) |
+| Trigger | Description | Verification |
+|---------|-------------|-------------|
+| `TimeOnce` | Execute at a specific timestamp | Timestamp check on-chain |
+| `TimeRecurring` | Execute at fixed intervals | Timestamp check + auto-reschedule |
+| `ConditionOnChain` | Execute when a price/value condition is met | On-chain query to oracle (e.g. xExchange `getAmountOut`) |
 
 ## Security
 
-- **Reentrancy guard** — Tasks cannot trigger recursive execution
-- **Keeper whitelist** — Only authorized keepers can execute (Phase 1)
-- **Slashing** — Keepers lose 20% of bond per failure, 3 failures = 60% loss
-- **Cooldown** — 12-hour unstaking period prevents quick exits
-- **TTL expiration** — Tasks auto-expire with full refund if not executed
+| Mechanism | Protection |
+|-----------|-----------|
+| **Async callbacks** | Keepers can't profit from failed executions |
+| **On-chain oracle** | Price conditions verified trustlessly, no manipulation |
+| **Reentrancy guard** | Tasks cannot trigger recursive execution |
+| **Round-robin** | Prevents keeper competition / gas wars |
+| **Progressive slashing** | Escalating penalties deter repeated failures |
+| **Call injection block** | Cannot target scheduler, registry, or rewards contracts |
+| **Cooldown** | 12-hour unstaking period prevents quick exits |
+| **TTL expiration** | Tasks auto-expire with full refund if not executed |
+| **Circuit breaker** | Owner can pause/unpause all contracts |

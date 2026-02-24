@@ -2,9 +2,9 @@
 
 **Decentralized Task Automation on MultiversX**
 
-XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions — token swaps, DeFi harvests, governance votes, NFT mints — by posting tasks to a smart contract. A decentralized keeper network competes to execute those tasks on time, earning rewards for reliable service.
+XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions — token swaps, DeFi harvests, governance votes, NFT mints — by posting tasks to a smart contract. A decentralized keeper network executes those tasks on time, earning rewards for reliable service.
 
-> **Status:** Live on MultiversX Devnet · Phase 1 Complete · Economics Under Design
+> **Status:** Live on MultiversX Devnet & Testnet · Economic Model Finalized
 
 ---
 
@@ -13,102 +13,93 @@ XCron is a trustless cron-job scheduler that lets anyone automate on-chain actio
 You tell XCron _what_ to execute and _when_. The protocol handles the rest.
 
 - **"Claim my staking rewards every day"** → XCron does it automatically
-- **"Swap EGLD to USDC if price drops below $3.50"** → Hybrid price triggers
+- **"Swap EGLD to USDC if price drops below $3.50"** → On-chain oracle price triggers
 - **"Auto-compound my DeFi position weekly"** → Set and forget
 
 No servers needed. No cron jobs. Fully on-chain, trustless, and decentralized.
 
 ---
 
-## Current Status — Phase 1 Complete ✅
-
-| Component | Status |
-|-----------|--------|
-| **Smart Contracts** | Scheduler, KeeperRegistry, Rewards — deployed on devnet |
-| **Keeper Bot** | Intelligent executor with retry logic, error classification, exponential backoff |
-| **Frontend** | Dashboard with real-time prices, task scheduling, wallet connection |
-| **CI/CD** | GitHub Actions — TypeScript build, Rust build, security scanning |
-| **E2E Flow** | `scheduleTask` → Keeper detects → `executeTask` → Rewards distributed ✅ |
-
-**Phase 2 (in progress):** Testnet deployment, recurring tasks, multi-keeper competition, economic model finalization
-
----
-
 ## Architecture
 
 ```
-┌──────────────┐     scheduleTask()     ┌──────────────────┐
-│   Frontend   │ ────────────────────▶  │    Scheduler     │
-│  (React/TS)  │                        │  Smart Contract  │
-└──────────────┘                        └────────┬─────────┘
+┌──────────────┐     scheduleTask()     ┌──────────────────┐     async call     ┌──────────────┐
+│   Frontend   │ ────────────────────►  │    Scheduler     │ ─────────────────► │   Target     │
+│  (React/TS)  │   deposit EGLD         │  Smart Contract  │   callback verify  │   Contract   │
+└──────────────┘                        └────────┬─────────┘                    └──────────────┘
                                                  │
-                    ┌────────────────────────────┤
-                    │                            │
-           executeTask()                   callback/fees
-                    │                            │
-          ┌─────────▼────────┐          ┌────────▼─────────┐
-          │   Keeper Bot     │          │     Rewards      │
-          │   (TypeScript)   │          │  Smart Contract  │
-          └─────────┬────────┘          └──────────────────┘
-                    │
-           register/slash
-                    │
-          ┌─────────▼────────┐
-          │  KeeperRegistry  │
-          │  Smart Contract  │
-          └──────────────────┘
+                              ┌──────────────────┤
+                              │                  │
+                     executeTask()          fees/rewards
+                              │                  │
+                    ┌─────────▼────────┐  ┌──────▼───────────┐
+                    │   Keeper Bot     │  │     Rewards      │
+                    │   (TypeScript)   │  │  Smart Contract  │
+                    └─────────┬────────┘  └──────────────────┘
+                              │
+                     register/slash
+                              │
+                    ┌─────────▼────────┐
+                    │  KeeperRegistry  │
+                    │  Smart Contract  │
+                    └──────────────────┘
 ```
 
 ## Smart Contracts
 
 | Contract | Description | Key Endpoints |
 |----------|-------------|---------------|
-| **Scheduler** | Core task management | `scheduleTask`, `cancelTask`, `executeTask`, `expireStaleTasks` |
-| **KeeperRegistry** | Keeper registration & bonds | `registerKeeper`, `requestUnstake`, `withdrawStake`, `slashKeeper` |
+| **Scheduler** | Task management, async execution with callbacks | `scheduleTask`, `cancelTask`, `executeTask`, `expireStaleTasks`, `recoverStuckTask` |
+| **KeeperRegistry** | Keeper registration, progressive slashing, reputation | `registerKeeper`, `requestUnstake`, `withdrawStake`, `recordExecution` |
 | **Rewards** | Fee distribution & claiming | `receiveExecutionFee`, `claimRewards` |
 
-All contracts built with **MultiversX SC Framework v0.54.6** following the **Checks-Effects-Interactions (CEI)** pattern.
+Built with **MultiversX SC Framework v0.54.6** following the **Checks-Effects-Interactions (CEI)** pattern.
 
 ## Key Features
 
-- **Time-based scheduling** — Execute at a specific round or recurring intervals
-- **Hybrid price triggers** — Combine time schedules with real-time price conditions (Binance WebSocket)
-- **Real-time price dashboard** — Live streaming prices for EGLD, BTC, ETH, BNB, SOL, XRP
-- **Intelligent keeper bot** — Exponential backoff, error classification (PERMANENT vs TRANSIENT), SCResult parsing
-- **Keeper bond system** — Deposit EGLD as security, earn rewards, get slashed for failures
-- **Template library** — Auto-Compound, DCA, Stop-Loss, Claim Rewards, NFT Mint, Custom
-- **Full lifecycle management** — Schedule, monitor, cancel, and track task history
+- **Async callbacks** — Keepers only get paid when the target contract execution succeeds
+- **On-chain oracle** — Price conditions verified directly on-chain via xExchange (no trust needed)
+- **Fair task distribution** — Round-robin assignment with 30s grace period
+- **Progressive slashing** — Strike 1: 5%, Strike 2: 15%, Strike 3: 20% + auto-expulsion
+- **Early exit penalty** — 5% if a keeper unstakes before 30 days
+- **Recurring tasks** — Auto-rescheduled with remaining deposit
+- **Stuck task recovery** — Owner can recover tasks stuck in Executing state after 24h
+- **Circuit breaker** — Pause/unpause for emergency situations
+
+## Trigger Types
+
+| Trigger | Description | Use Case |
+|---------|-------------|----------|
+| `TimeOnce` | Execute at a specific timestamp | Scheduled transfers, one-time claims |
+| `TimeRecurring` | Execute at fixed intervals | Auto-compound, recurring payments |
+| `ConditionOnChain` | Execute when an on-chain condition is met | Price triggers via xExchange oracle |
 
 ## Protocol Economics
 
-> ⚠️ **Under Design** — The economic model is being carefully designed to ensure long-term sustainability for all participants: users, keepers, and the protocol.
+| Parameter | Value |
+|-----------|-------|
+| Keeper reward | 70% of task deposit |
+| Protocol fee | 30% of task deposit |
+| Max reward per exec | 0.05 EGLD |
+| Min keeper stake | Configurable |
+| Early exit penalty | 5% (if unstake < 30 days) |
+| Slash Strike 1 | 5% of stake |
+| Slash Strike 2 | 15% of stake |
+| Slash Strike 3 | 20% + auto-expulsion |
+| Unstake cooldown | 12 hours |
 
-**What we know:**
-- Fees denominated in USD, paid in EGLD (protects against price volatility)
-- Keepers earn rewards for executing tasks + gas reimbursement
-- No token at launch — fees in EGLD only
-- Economic model details will be published once finalized
-
-**Participants:**
-
-| Role | What they do | How they benefit |
-|------|-------------|-----------------|
-| **Users** | Schedule automated tasks | Save time, never miss DeFi opportunities |
-| **Keepers** | Execute tasks on-chain | Earn execution rewards + gas reimbursement |
-| **Protocol** | Infrastructure & smart contracts | Percentage of execution fees |
-| **Platforms (B2B)** | Integrate XCron for their users | Offer automation as a feature |
-
-## Security Model
+## Security
 
 | Mechanism | Description |
 |-----------|-------------|
-| **Keeper Bond** | EGLD deposit required to become a keeper |
-| **Slashing** | Bond penalty on failed/malicious executions |
-| **Cooldown Period** | Configurable delay before bond withdrawal |
+| **Async Callbacks** | Keeper only paid on confirmed target success |
+| **On-Chain Oracle** | Price verified on-chain, keepers can't fake conditions |
+| **Progressive Slashing** | Escalating penalties for consecutive failures |
+| **Reentrancy Guard** | Prevents recursive execution |
 | **CEI Pattern** | All contracts follow Checks-Effects-Interactions |
-| **Reentrancy Safe** | Rewards cleared before transfer |
-| **Access Controls** | `only_owner`, `require_authorized_caller`, `require_scheduler_caller` |
-| **CI Security Scan** | Automated secret scanning + sensitive data pattern checks on every push |
+| **Call Injection Protection** | Cannot target protocol contracts |
+| **Circuit Breaker** | Emergency pause capability |
+| **Pre-commit Scanning** | Automated secret detection |
 
 ## Project Structure
 
@@ -118,17 +109,18 @@ xcron-protocol/
 │   ├── common/              # Shared types, constants, errors
 │   ├── scheduler/           # Task scheduling & execution
 │   ├── keeper-registry/     # Keeper management & bonds
-│   └── rewards/             # Reward distribution
+│   ├── rewards/             # Reward distribution
+│   └── ping/                # Test target contract
 ├── frontend/                # Web interface (React + Vite)
 │   └── src/
 │       ├── pages/           # Dashboard, ScheduleTask, MyTasks, KeeperPanel
 │       ├── hooks/           # useWallet, useContractQuery
-│       └── components/      # PriceTicker, Header, ConnectModal, LiveActivityFeed
-├── keeper/                  # Keeper bot (TypeScript)
-│   └── src/                 # index, monitor, executor, network, config
-├── interaction/             # Deploy & interaction scripts
-└── xcron/                   # Documentation
-    └── whitepaper.md        # Technical whitepaper
+│       └── components/      # PriceTicker, Header, ConnectModal
+├── sdk/                     # TypeScript SDK
+│   └── src/                 # XCronClient, types, addresses
+├── docs/                    # Documentation
+├── scripts/                 # Utility scripts
+└── .github/                 # CI/CD & security hooks
 ```
 
 ## Quick Start
@@ -136,9 +128,7 @@ xcron-protocol/
 ### Frontend
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend && npm install && npm run dev
 ```
 
 Opens at `http://localhost:5173`
@@ -146,35 +136,35 @@ Opens at `http://localhost:5173`
 ### Smart Contracts
 
 ```bash
-cd contracts
-for contract in scheduler keeper-registry rewards; do
-  cd $contract/wasm
-  RUSTFLAGS="-C link-arg=-s -C link-arg=-zstack-size=131072" \
-    cargo build --target=wasm32-unknown-unknown --release \
-    --target-dir ../../target
-  cd ../..
-done
+cd contracts/scheduler && cargo check
+cd ../keeper-registry && cargo check
+cd ../rewards && cargo check
 ```
 
-### Keeper Bot
+## Deployments
 
-```bash
-cd keeper
-npm install
-npx ts-node src/index.ts
-```
-
-## Devnet Deployment
+### Devnet
 
 | Contract | Address |
 |----------|---------|
-| **Scheduler** | `erd1qqqqqqqqqqqqqpgqsmmpmp7hh6cqrnng0vp9ywgre70luvus7k8svk7ejh` |
-| **KeeperRegistry** | `erd1qqqqqqqqqqqqqpgq0zlpshzkjr5egtaueyn29a2t9kv8mywp7k8sxexula` |
-| **Rewards** | `erd1qqqqqqqqqqqqqpgqzkhxp72uzdq49dmzsng3g0tp98629k8z7k8szas8nt` |
+| Scheduler | `erd1qqqqqqqqqqqqqpgqsmmpmp7hh6cqrnng0vp9ywgre70luvus7k8svk7ejh` |
+| KeeperRegistry | `erd1qqqqqqqqqqqqqpgq0zlpshzkjr5egtaueyn29a2t9kv8mywp7k8sxexula` |
+| Rewards | `erd1qqqqqqqqqqqqqpgqzkhxp72uzdq49dmzsng3g0tp98629k8z7k8szas8nt` |
+
+### Testnet
+
+| Contract | Address |
+|----------|---------|
+| Scheduler | `erd1qqqqqqqqqqqqqpgqg49x0pq93549gt0nvds7fjaxslxc9lpt7k8sc6d263` |
+| KeeperRegistry | `erd1qqqqqqqqqqqqqpgq53ffcxnes943y6s27nhynxt6y9a787f07k8se4t2ka` |
+| Rewards | `erd1qqqqqqqqqqqqqpgq6t7um2uxapc9tk0mv4z5k68yd20a33vp7k8slmnpta` |
 
 ## Documentation
 
-- [Whitepaper](xcron/whitepaper.md) — Full technical specification
+- [Architecture](docs/architecture.md)
+- [Getting Started](docs/getting-started.md)
+- [Keeper Guide](docs/keeper-guide.md)
+- [SDK Reference](docs/sdk-reference.md)
 
 ## License
 

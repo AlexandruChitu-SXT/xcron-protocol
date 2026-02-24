@@ -8,7 +8,19 @@ import { TaskTelemetry } from '../components/TaskTelemetry';
 
 type TemplateType = 'quicktest' | 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom';
 
-const TEMPLATES: Record<TemplateType, { title: string; description: string; category: string; defaults: any }> = {
+interface TemplateDefaults {
+    targetContract: string;
+    targetEndpoint: string;
+    triggerType: 'once' | 'recurring';
+    targetRound: string;
+    interval: string;
+    deposit: string;
+    maxGas: string;
+    maxRetries: string;
+    ttlRounds: string;
+}
+
+const TEMPLATES: Record<TemplateType, { title: string; description: string; category: string; defaults: TemplateDefaults }> = {
     quicktest: {
         title: 'Quick Test',
         description: 'Try XCron in seconds. Schedules a simple ping to our test contract to verify the system works.',
@@ -268,6 +280,8 @@ export function ScheduleTask() {
     const [intervalSeconds, setIntervalSeconds] = useState(
         parseInt(TEMPLATES[initialTemplate].defaults.interval || '0') * SECONDS_PER_ROUND
     );
+    // How many times a recurring task should repeat
+    const [remainingExecs, setRemainingExecs] = useState(10);
 
     // Hybrid Price Condition state
     const [priceEnabled, setPriceEnabled] = useState(false);
@@ -283,6 +297,7 @@ export function ScheduleTask() {
         setError('');
         setDelaySeconds(0);
         setIntervalSeconds(parseInt(tmplDefaults.interval || '0') * SECONDS_PER_ROUND);
+        setRemainingExecs(10);
         setPriceEnabled(false);
         setPriceToken('EGLD');
         setPriceCondition('above');
@@ -290,7 +305,7 @@ export function ScheduleTask() {
     }, [template]);
 
     const update = (field: string, value: string) => {
-        setForm((prev: any) => ({ ...prev, [field]: value }));
+        setForm((prev: TemplateDefaults) => ({ ...prev, [field]: value }));
         setError('');
         setTxHash(null);
     };
@@ -386,7 +401,7 @@ export function ScheduleTask() {
             } else {
                 triggerHex = '01' + hex64(targetTime)
                     + hex64(intervalSeconds)
-                    + hex64(10); // remaining_execs (hardcoded to 10 for now)
+                    + hex64(remainingExecs);
             }
 
             const maxGasHex = hex64(parseInt(form.maxGas));
@@ -668,17 +683,37 @@ export function ScheduleTask() {
                                 </div>
 
                                 {form.triggerType === 'recurring' && (
-                                    <div className="form-group" style={{ marginTop: 12 }}>
-                                        <label>Repeat Every</label>
-                                        <CustomDropdown
-                                            value={intervalSeconds}
-                                            onChange={(val) => setIntervalSeconds(val)}
-                                            options={INTERVAL_PRESETS.map((p) => ({ value: p.seconds, label: p.label }))}
-                                        />
-                                        <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                            The task will re-execute exactly every {formatDuration(intervalSeconds)}
-                                        </small>
-                                    </div>
+                                    <>
+                                        <div className="form-group" style={{ marginTop: 12 }}>
+                                            <label>Repeat Every</label>
+                                            <CustomDropdown
+                                                value={intervalSeconds}
+                                                onChange={(val) => setIntervalSeconds(val)}
+                                                options={INTERVAL_PRESETS.map((p) => ({ value: p.seconds, label: p.label }))}
+                                            />
+                                            <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                                The task will re-execute exactly every {formatDuration(intervalSeconds)}
+                                            </small>
+                                        </div>
+                                        <div className="form-group" style={{ marginTop: 12 }}>
+                                            <label>Repeat Count</label>
+                                            <CustomDropdown
+                                                value={remainingExecs}
+                                                onChange={(val) => setRemainingExecs(val)}
+                                                options={[
+                                                    { value: 3, label: '3 times' },
+                                                    { value: 5, label: '5 times' },
+                                                    { value: 10, label: '10 times' },
+                                                    { value: 25, label: '25 times' },
+                                                    { value: 50, label: '50 times' },
+                                                    { value: 100, label: '100 times' },
+                                                ]}
+                                            />
+                                            <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                                How many times the task will execute before stopping. More repetitions need a larger deposit.
+                                            </small>
+                                        </div>
+                                    </>
                                 )}
                             </div>
 

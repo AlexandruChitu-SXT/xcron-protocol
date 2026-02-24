@@ -90,6 +90,6 @@ export const GAS_WITHDRAW_STAKE = 10_000_000;
 
 // WalletConnect (xPortal)
 export const WALLETCONNECT = {
-    projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '9b36b2703c75eb57d9680e44b74c4df9',
+    projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '',
     relayUrl: 'wss://relay.walletconnect.com',
 };

@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * TubesBackground — Minimal animated background.
@@ -171,15 +172,16 @@ export function TubesBackground() {
         };
     }, [render]);
 
-    return (
+    return createPortal(
         <canvas
             ref={canvasRef}
             style={{
                 position: 'fixed',
                 inset: 0,
-                zIndex: -1,
+                zIndex: 0,
                 pointerEvents: 'none',
             }}
-        />
+        />,
+        document.body
     );
 }

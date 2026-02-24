@@ -24,6 +24,8 @@ pub struct Task<M: ManagedTypeApi> {
     pub created_at: u64,
     pub status: TaskStatus,
     pub assigned_keeper: Option<ManagedAddress<M>>,
+    /// Timestamp when execution completed (for metrics / anomaly detection)
+    pub completed_at: u64,
 }
 
 /// Current status of a task in its lifecycle.

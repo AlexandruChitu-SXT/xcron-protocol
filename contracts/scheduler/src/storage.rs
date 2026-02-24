@@ -85,4 +85,33 @@ pub trait StorageModule {
     /// Counter that rotates through keeper_list for assignment.
     #[storage_mapper("roundRobinCounter")]
     fn round_robin_counter(&self) -> SingleValueMapper<u64>;
+
+    // ── Security: Target blacklist ──────────────────────────
+    /// Contracts that are blocked from being called as targets.
+    /// Auto-populated when a target fails >MAX_TARGET_FAILURES times.
+    #[storage_mapper("targetBlacklist")]
+    fn target_blacklist(&self) -> UnorderedSetMapper<ManagedAddress>;
+
+    /// Per-target consecutive failure counter for anomaly detection.
+    #[storage_mapper("targetFailureCount")]
+    fn target_failure_count(&self, target: &ManagedAddress) -> SingleValueMapper<u64>;
+
+    // ── Security: Execution metrics ─────────────────────────
+    /// Total successful executions across all tasks.
+    #[storage_mapper("totalSuccessfulExecs")]
+    fn total_successful_execs(&self) -> SingleValueMapper<u64>;
+
+    /// Total failed executions across all tasks.
+    #[storage_mapper("totalFailedExecs")]
+    fn total_failed_execs(&self) -> SingleValueMapper<u64>;
+
+    // ── Security: Deposit / value cap ───────────────────────
+    /// Maximum EGLD deposit per task. Prevents catastrophic loss from a single exploit.
+    #[storage_mapper("maxExecValueEgld")]
+    fn max_exec_value_egld(&self) -> SingleValueMapper<BigUint>;
+
+    // ── Security: Keeper-shard mapping ──────────────────────
+    /// Cached shard ID for each keeper (0, 1, 2, or 4294967295 for metachain).
+    #[storage_mapper("keeperShard")]
+    fn keeper_shard(&self, keeper: &ManagedAddress) -> SingleValueMapper<u32>;
 }

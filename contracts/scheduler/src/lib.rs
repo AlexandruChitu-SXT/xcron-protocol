@@ -96,11 +96,16 @@ pub trait SchedulerContract:
         require!(max_gas >= common::constants::MIN_GAS_LIMIT, "max_gas too low");
         require!(ttl_seconds >= common::constants::MIN_TTL_SECONDS, "TTL too short");
 
-        // C-2: Block targeting protocol contracts (prevents call injection)
-        let sc_self = self.blockchain().get_sc_address();
-        require!(target_contract != sc_self, "Cannot target self");
-        require!(target_contract != self.keeper_registry_addr().get(), "Cannot target registry");
-        require!(target_contract != self.rewards_addr().get(), "Cannot target rewards");
+        // S-1: Full target safety validation (blocks self, registry, rewards, blacklist, dangerous endpoints)
+        self.require_safe_target(&target_contract, &target_endpoint);
+
+        // S-8: Deposit cap — prevents catastrophic loss from a single exploited task
+        self.require_deposit_within_cap(&deposit);
+
+        // S-9: Rate limiting — max 100 active tasks per address
+        let caller = self.blockchain().get_caller();
+        let caller_active = self.owner_tasks(&caller).len();
+        require!(caller_active < 100, "S-9: Too many active tasks (max 100)");
 
         // Effects
         let task_id = self.task_nonce().get() + 1;
@@ -123,6 +128,7 @@ pub trait SchedulerContract:
             created_at: current_time,
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
+            completed_at: 0,
         };
 
         self.tasks(task_id).set(&task);
@@ -201,6 +207,9 @@ pub trait SchedulerContract:
         self.require_registered_keeper(&keeper);
         self.require_task_ripe(task_id, &task);
 
+        // S-1: Verify target is still safe (could have been blacklisted after scheduling)
+        self.require_safe_target(&task.target_contract, &task.target_endpoint);
+
         // Round-robin assignment: fair task distribution among keepers
         let keeper_count = self.keeper_list().len();
         if keeper_count > 1 {
@@ -221,9 +230,19 @@ pub trait SchedulerContract:
             }
         }
 
-        // C-3: Validate gas budget
+        // C-3: Validate gas budget with cross-shard awareness
         let callback_gas = common::constants::CALLBACK_GAS_RESERVE;
-        let min_gas_needed = task.max_gas + callback_gas + 10_000_000u64;
+
+        // S-10: Cross-shard gas adjustment — add 30% buffer for cross-shard calls
+        let target_shard = self.blockchain().get_shard_of_address(&task.target_contract);
+        let self_shard = self.blockchain().get_shard_of_address(&self.blockchain().get_sc_address());
+        let cross_shard_overhead = if target_shard != self_shard {
+            task.max_gas * 30 / 100  // +30% gas for cross-shard latency
+        } else {
+            0u64
+        };
+
+        let min_gas_needed = task.max_gas + cross_shard_overhead + callback_gas + 10_000_000u64;
         require!(
             self.blockchain().get_gas_left() >= min_gas_needed,
             "Insufficient gas for full execution"
@@ -276,7 +295,14 @@ pub trait SchedulerContract:
             ManagedAsyncCallResult::Ok(_) => {
                 // ✅ Target executed successfully — pay keeper and protocol
                 task.status = common::types::TaskStatus::Completed;
+                task.completed_at = self.blockchain().get_block_timestamp();
                 self.tasks(task_id).set(&task);
+
+                // S-2: Record execution metrics
+                self.total_successful_execs().update(|v| *v += 1);
+
+                // S-6: Reset target failure count on success
+                self.target_failure_count(&task.target_contract).set(0u64);
 
                 let reward = self.calculate_keeper_reward(&task);
                 let protocol_fee = self.calculate_protocol_fee(&task);
@@ -329,7 +355,21 @@ pub trait SchedulerContract:
             ManagedAsyncCallResult::Err(_) => {
                 // ❌ Target execution failed — refund user, no keeper payment
                 task.status = common::types::TaskStatus::Failed;
+                task.completed_at = self.blockchain().get_block_timestamp();
                 self.tasks(task_id).set(&task);
+
+                // S-2: Record failure metrics
+                self.total_failed_execs().update(|v| *v += 1);
+
+                // S-6: Track per-target failure count for anomaly detection
+                let failures = self.target_failure_count(&task.target_contract).get();
+                let new_failures = failures + 1;
+                self.target_failure_count(&task.target_contract).set(new_failures);
+
+                // S-7: Auto-blacklist targets with >10 consecutive failures
+                if new_failures >= 10 {
+                    self.target_blacklist().insert(task.target_contract.clone());
+                }
 
                 // Refund entire deposit to task owner
                 self.send().direct_egld(&task.owner, &task.deposit);
@@ -407,5 +447,168 @@ pub trait SchedulerContract:
                 processed += 1;
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  COMMIT-REVEAL — Anti-MEV Protection (Phase 3)
+    // ═══════════════════════════════════════════════════════════
+
+    /// CR-1: Commit to execute a task (prevents frontrunning).
+    /// Keeper submits hash(task_id, salt) + bond. Task moves to Committed status.
+    /// The keeper has `reveal_window` seconds to reveal, or loses the bond.
+    #[payable("EGLD")]
+    #[endpoint(commitTask)]
+    fn commit_task(&self, task_id: u64, commit_hash: ManagedByteArray<Self::Api, 32>) {
+        self.require_not_paused();
+        let keeper = self.blockchain().get_caller();
+        self.require_registered_keeper(&keeper);
+
+        let task = self.tasks(task_id).get();
+        require!(task.status == common::types::TaskStatus::Pending, "Task not Pending");
+
+        let bond = self.call_value().egld_value().clone_value();
+        let min_bond = self.commit_bond().get();
+        require!(bond >= min_bond, "Bond below minimum");
+
+        let commit_info = common::types::CommitInfo {
+            keeper: keeper.clone(),
+            commit_hash,
+            commit_timestamp: self.blockchain().get_block_timestamp(),
+            bond,
+        };
+
+        self.commits(task_id).set(&commit_info);
+
+        // Mark task as Committed
+        let mut task = task;
+        task.status = common::types::TaskStatus::Committed;
+        task.assigned_keeper = Some(keeper);
+        self.tasks(task_id).set(&task);
+    }
+
+    /// CR-2: Reveal commitment and execute the task.
+    /// Keeper proves they committed by providing the salt that hashes to the stored commit.
+    /// On valid reveal: bond is returned + task executes normally.
+    /// On expired reveal: bond is slashed.
+    #[endpoint(revealTask)]
+    fn reveal_task(&self, task_id: u64, salt: ManagedBuffer) {
+        self.require_not_paused();
+        let keeper = self.blockchain().get_caller();
+
+        let task = self.tasks(task_id).get();
+        require!(task.status == common::types::TaskStatus::Committed, "Task not Committed");
+
+        let commit_info = self.commits(task_id).get();
+        require!(commit_info.keeper == keeper, "Not the committing keeper");
+
+        // Check reveal window
+        let current_time = self.blockchain().get_block_timestamp();
+        let reveal_window = self.reveal_window().get();
+        require!(
+            current_time <= commit_info.commit_timestamp + reveal_window,
+            "Reveal window expired — bond slashed"
+        );
+
+        // Verify hash: keccak256(task_id_bytes ++ salt) == commit_hash
+        let mut data_to_hash = ManagedBuffer::new();
+        data_to_hash.append(&ManagedBuffer::from(&task_id.to_be_bytes()[..]));
+        data_to_hash.append(&salt);
+        let computed_hash = self.crypto().keccak256(&data_to_hash);
+
+        require!(
+            computed_hash.as_managed_buffer() == commit_info.commit_hash.as_managed_buffer(),
+            "Hash mismatch — invalid salt"
+        );
+
+        // Return bond to keeper
+        self.send().direct_egld(&keeper, &commit_info.bond);
+
+        // Move task back to Pending for normal execution
+        let mut task = task;
+        task.status = common::types::TaskStatus::Pending;
+        self.tasks(task_id).set(&task);
+        self.commits(task_id).clear();
+    }
+
+    /// CR-3: Slash expired commits (anyone can call).
+    /// If a keeper committed but didn't reveal within the window, their bond is slashed.
+    #[endpoint(slashExpiredCommit)]
+    fn slash_expired_commit(&self, task_id: u64) {
+        let commit_info = self.commits(task_id).get();
+        let current_time = self.blockchain().get_block_timestamp();
+        let reveal_window = self.reveal_window().get();
+
+        require!(
+            current_time > commit_info.commit_timestamp + reveal_window,
+            "Reveal window not expired yet"
+        );
+
+        // Slash: send bond to protocol (rewards contract)
+        let rewards_addr = self.rewards_addr().get();
+        self.send().direct_egld(&rewards_addr, &commit_info.bond);
+
+        // Reset task to Pending
+        let mut task = self.tasks(task_id).get();
+        task.status = common::types::TaskStatus::Pending;
+        task.assigned_keeper = None;
+        self.tasks(task_id).set(&task);
+        self.commits(task_id).clear();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SECURITY ADMIN ENDPOINTS
+    // ═══════════════════════════════════════════════════════════
+
+    /// S-3: Blacklist a malicious target contract (owner only).
+    #[only_owner]
+    #[endpoint(blacklistTarget)]
+    fn blacklist_target(&self, target: ManagedAddress) {
+        self.target_blacklist().insert(target);
+    }
+
+    /// S-4: Remove a contract from the blacklist (owner only).
+    #[only_owner]
+    #[endpoint(removeBlacklist)]
+    fn remove_blacklist(&self, target: ManagedAddress) {
+        self.target_blacklist().swap_remove(&target);
+    }
+
+    /// S-5: Set maximum EGLD deposit per task (owner only).
+    /// Set to 0 to disable the cap.
+    #[only_owner]
+    #[endpoint(setMaxExecValue)]
+    fn set_max_exec_value(&self, max_value: BigUint) {
+        self.max_exec_value_egld().set(&max_value);
+    }
+
+    /// S-10: Cache keeper shard for shard-aware task assignment (keeper calls this).
+    #[endpoint(registerKeeperShard)]
+    fn register_keeper_shard(&self) {
+        let keeper = self.blockchain().get_caller();
+        self.require_registered_keeper(&keeper);
+        let shard = self.blockchain().get_shard_of_address(&keeper);
+        self.keeper_shard(&keeper).set(shard);
+    }
+
+    /// View: get security metrics (success/failure/blacklist counts).
+    #[view(getSecurityMetrics)]
+    fn get_security_metrics(&self) -> MultiValue3<u64, u64, usize> {
+        (
+            self.total_successful_execs().get(),
+            self.total_failed_execs().get(),
+            self.target_blacklist().len(),
+        ).into()
+    }
+
+    /// View: check if a target is blacklisted.
+    #[view(isBlacklisted)]
+    fn is_blacklisted(&self, target: ManagedAddress) -> bool {
+        self.target_blacklist().contains(&target)
+    }
+
+    /// View: get target failure count.
+    #[view(getTargetFailures)]
+    fn get_target_failures(&self, target: ManagedAddress) -> u64 {
+        self.target_failure_count(&target).get()
     }
 }

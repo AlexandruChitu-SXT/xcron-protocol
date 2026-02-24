@@ -141,6 +141,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             created_at: self.blockchain().get_block_timestamp(),
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
+            completed_at: 0,
         };
 
         self.tasks(new_id).set(&new_task);

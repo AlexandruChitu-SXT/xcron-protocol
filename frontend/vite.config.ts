@@ -15,4 +15,23 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // Split vendor libraries into separate chunks for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — changes rarely, cached long-term
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // MultiversX SDK — large but stable
+          'vendor-mvx': [
+            '@multiversx/sdk-core',
+            '@multiversx/sdk-network-providers',
+            '@multiversx/sdk-wallet',
+          ],
+        },
+      },
+    },
+    // Raise warning limit since vendor chunks are expected to be large
+    chunkSizeWarningLimit: 1600,
+  },
 })

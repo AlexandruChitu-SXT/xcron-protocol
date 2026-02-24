@@ -51,3 +51,11 @@ pub const MAX_STRIKES: u64 = 3;
 /// Round-robin grace period: seconds the assigned keeper has exclusive rights
 /// before the task becomes available to any keeper.
 pub const ROUND_ROBIN_GRACE_SECONDS: u64 = 30;
+
+// ── Security constants ──────────────────────────────────
+
+/// Maximum consecutive failures on a single target before auto-blacklist.
+pub const MAX_TARGET_FAILURES: u64 = 10;
+
+/// Cross-shard gas overhead percentage (30 = 30% extra gas for cross-shard calls).
+pub const CROSS_SHARD_GAS_OVERHEAD_PCT: u64 = 30;

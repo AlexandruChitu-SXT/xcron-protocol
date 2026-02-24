@@ -12,6 +12,62 @@ pub trait ValidationModule: crate::storage::StorageModule {
         );
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  S-1: TARGET SAFETY VALIDATION
+    // ═══════════════════════════════════════════════════════════
+
+    /// Validate target contract is safe to call.
+    /// Blocks:
+    /// - Self-calls (prevent call injection / reentrancy)
+    /// - Calls to KeeperRegistry (prevent unauthorized slashing)
+    /// - Calls to Rewards contract (prevent fee manipulation)
+    /// - Calls to blacklisted contracts (known malicious targets)
+    /// - Calls to dangerous system endpoints (upgradeContract, changeOwner, etc.)
+    fn require_safe_target(&self, target: &ManagedAddress, endpoint: &ManagedBuffer) {
+        // Block self-referential calls
+        let self_addr = self.blockchain().get_sc_address();
+        require!(target != &self_addr, "S-1: Cannot target scheduler itself");
+        require!(
+            target != &self.keeper_registry_addr().get(),
+            "S-1: Cannot target KeeperRegistry"
+        );
+        require!(
+            target != &self.rewards_addr().get(),
+            "S-1: Cannot target Rewards contract"
+        );
+
+        // Block blacklisted targets
+        require!(
+            !self.target_blacklist().contains(target),
+            "S-1: Target contract is blacklisted"
+        );
+
+        // Block dangerous system endpoints
+        let ep_bytes = endpoint.to_boxed_bytes();
+        let ep_slice = ep_bytes.as_slice();
+        require!(ep_slice != b"upgradeContract", "S-1: Dangerous endpoint blocked");
+        require!(ep_slice != b"changeOwner", "S-1: Dangerous endpoint blocked");
+        require!(ep_slice != b"ClaimDeveloperRewards", "S-1: Dangerous endpoint blocked");
+        require!(ep_slice != b"ChangeOwnerAddress", "S-1: Dangerous endpoint blocked");
+        require!(ep_slice != b"ESDTTransfer", "S-1: Dangerous endpoint blocked");
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  S-8: DEPOSIT CAP VALIDATION
+    // ═══════════════════════════════════════════════════════════
+
+    /// Validate deposit does not exceed maximum execution value cap.
+    /// Prevents catastrophic loss from a single exploited task.
+    fn require_deposit_within_cap(&self, deposit: &BigUint) {
+        let max_value = self.max_exec_value_egld().get();
+        if max_value > BigUint::zero() {
+            require!(
+                deposit <= &max_value,
+                "S-8: Deposit exceeds maximum execution value"
+            );
+        }
+    }
+
     /// Verify a task's trigger condition is met (task is "ripe").
     fn require_task_ripe(&self, _task_id: u64, task: &common::types::Task<Self::Api>) {
         let current_time = self.blockchain().get_block_timestamp();

@@ -1,5 +1,5 @@
 {
-    "name": "@xcron-protocol/sdk",
+    "name": "xcron-sdk",
     "version": "0.1.0",
     "description": "SDK for integrating with XCron Protocol — Decentralized Task Automation on MultiversX",
     "main": "dist/index.js",
@@ -29,6 +29,6 @@
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/xcron-protocol/sdk"
+        "url": "https://github.com/AlexandruChitu-SXT/xcron-protocol"
     }
 }

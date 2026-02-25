@@ -120,6 +120,13 @@
             }
         },
         {
+            "step": "setState",
+            "comment": "Advance timestamp past target time so task is ripe",
+            "currentBlockInfo": {
+                "blockTimestamp": "300"
+            }
+        },
+        {
             "step": "scCall",
             "id": "execute-task",
             "comment": "Keeper1 executes the ripe task. Reward = min(deposit - fee, max_reward_cap)",

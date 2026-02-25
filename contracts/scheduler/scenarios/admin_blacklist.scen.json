@@ -120,7 +120,7 @@
             "expect": {
                 "out": [],
                 "status": "4",
-                "message": "str:Target is blacklisted"
+                "message": "str:S-1: Target contract is blacklisted"
             }
         },
         {
@@ -130,7 +130,7 @@
             "tx": {
                 "from": "address:owner",
                 "to": "sc:scheduler",
-                "function": "unblacklistTarget",
+                "function": "removeBlacklist",
                 "arguments": [
                     "address:malicious"
                 ],

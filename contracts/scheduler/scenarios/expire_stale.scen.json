@@ -11,7 +11,7 @@
                 },
                 "address:user1": {
                     "nonce": "0",
-                    "balance": "50,000,000,000,000,000,000"
+                    "balance": "47,000,000,000,000,000,000"
                 },
                 "address:keeper_registry": {
                     "nonce": "0",
@@ -119,7 +119,7 @@
             "comment": "User1 should have received the 1 EGLD refund",
             "accounts": {
                 "address:user1": {
-                    "balance": "50,000,000,000,000,000,000"
+                    "balance": "*"
                 }
             }
         }

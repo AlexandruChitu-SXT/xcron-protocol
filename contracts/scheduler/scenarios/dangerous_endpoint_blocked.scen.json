@@ -81,7 +81,7 @@
             "expect": {
                 "out": [],
                 "status": "4",
-                "message": "str:Dangerous endpoint"
+                "message": "str:S-1: Dangerous endpoint blocked"
             }
         },
         {
@@ -108,7 +108,7 @@
             "expect": {
                 "out": [],
                 "status": "4",
-                "message": "str:Dangerous endpoint"
+                "message": "str:S-1: Dangerous endpoint blocked"
             }
         },
         {
@@ -135,7 +135,7 @@
             "expect": {
                 "out": [],
                 "status": "4",
-                "message": "str:Dangerous endpoint"
+                "message": "str:S-1: Dangerous endpoint blocked"
             }
         }
     ]

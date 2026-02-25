@@ -80,7 +80,7 @@
             "expect": {
                 "out": [],
                 "status": "4",
-                "message": "str:Cannot target self"
+                "message": "str:S-1: Cannot target scheduler itself"
             }
         },
         {
@@ -107,7 +107,7 @@
             "expect": {
                 "out": [],
                 "status": "4",
-                "message": "str:Cannot target registry"
+                "message": "str:S-1: Cannot target KeeperRegistry"
             }
         },
         {
@@ -134,7 +134,7 @@
             "expect": {
                 "out": [],
                 "status": "4",
-                "message": "str:Cannot target rewards"
+                "message": "str:S-1: Cannot target Rewards contract"
             }
         }
     ]

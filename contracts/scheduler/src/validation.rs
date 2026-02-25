@@ -47,9 +47,11 @@ pub trait ValidationModule: crate::storage::StorageModule {
         let ep_slice = ep_bytes.as_slice();
         require!(ep_slice != b"upgradeContract", "S-1: Dangerous endpoint blocked");
         require!(ep_slice != b"changeOwner", "S-1: Dangerous endpoint blocked");
-        require!(ep_slice != b"ClaimDeveloperRewards", "S-1: Dangerous endpoint blocked");
         require!(ep_slice != b"ChangeOwnerAddress", "S-1: Dangerous endpoint blocked");
+        require!(ep_slice != b"setOwner", "S-1: Dangerous endpoint blocked");
         require!(ep_slice != b"ESDTTransfer", "S-1: Dangerous endpoint blocked");
+        require!(ep_slice != b"ESDTNFTTransfer", "S-1: Dangerous endpoint blocked");
+        require!(ep_slice != b"MultiESDTNFTTransfer", "S-1: Dangerous endpoint blocked");
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -90,7 +92,7 @@ pub trait ValidationModule: crate::storage::StorageModule {
             common::types::Trigger::ConditionOnChain {
                 oracle_contract,
                 query_endpoint,
-                query_args,
+                query_args: _query_args,
                 comparator,
                 threshold,
             } => {

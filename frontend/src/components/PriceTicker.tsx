@@ -70,58 +70,69 @@ export function PriceTicker() {
     // WebSocket connection
     const connectWs = useCallback(() => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
+        // Stop trying after 5 reconnects
+        if (reconnectRef.current >= 5) return;
 
-        const ws = new WebSocket(WS_URL);
-        wsRef.current = ws;
+        try {
+            const ws = new WebSocket(WS_URL);
+            wsRef.current = ws;
 
-        ws.onopen = () => {
-            setConnected(true);
-            reconnectRef.current = 0;
-        };
+            ws.onopen = () => {
+                setConnected(true);
+                reconnectRef.current = 0;
+            };
 
-        ws.onmessage = (event) => {
-            try {
-                const msg = JSON.parse(event.data);
-                const d = msg.data;
-                if (!d || !d.s) return;
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    const d = msg.data;
+                    if (!d || !d.s) return;
 
-                // d.s = symbol (e.g. EGLDUSDT), d.c = close/last price, d.P = 24h change %
-                const binanceSymbol = d.s;
-                const token = BINANCE_TOKENS.find(t => t.binance === binanceSymbol);
-                if (!token) return;
+                    // d.s = symbol (e.g. EGLDUSDT), d.c = close/last price, d.P = 24h change %
+                    const binanceSymbol = d.s;
+                    const token = BINANCE_TOKENS.find(t => t.binance === binanceSymbol);
+                    if (!token) return;
 
-                setPrices(prev => {
-                    const next = new Map(prev);
-                    next.set(binanceSymbol, {
-                        symbol: token.symbol,
-                        name: token.name,
-                        price: parseFloat(d.c),
-                        change24h: parseFloat(d.P) || prev.get(binanceSymbol)?.change24h || 0,
+                    setPrices(prev => {
+                        const next = new Map(prev);
+                        next.set(binanceSymbol, {
+                            symbol: token.symbol,
+                            name: token.name,
+                            price: parseFloat(d.c),
+                            change24h: parseFloat(d.P) || prev.get(binanceSymbol)?.change24h || 0,
+                        });
+                        return next;
                     });
-                    return next;
-                });
-                setLastTick(new Date());
-            } catch { }
-        };
+                    setLastTick(new Date());
+                } catch { }
+            };
 
-        ws.onclose = () => {
-            setConnected(false);
-            // Auto-reconnect with backoff
-            const delay = Math.min(1000 * Math.pow(2, reconnectRef.current), 30000);
-            reconnectRef.current++;
-            setTimeout(connectWs, delay);
-        };
+            ws.onclose = () => {
+                setConnected(false);
+                // Auto-reconnect with backoff (max 5 attempts)
+                if (reconnectRef.current < 5) {
+                    const delay = Math.min(2000 * Math.pow(2, reconnectRef.current), 30000);
+                    reconnectRef.current++;
+                    setTimeout(connectWs, delay);
+                }
+            };
 
-        ws.onerror = () => {
-            ws.close();
-        };
+            ws.onerror = () => {
+                // Silently close — onclose will handle reconnect
+                try { ws.close(); } catch { }
+            };
+        } catch {
+            // WebSocket constructor can throw if URL is invalid — silently ignore
+        }
     }, []);
 
     useEffect(() => {
         fetchInitial();
-        connectWs();
+        // Delay WebSocket connection slightly to avoid mount/unmount race
+        const wsTimer = setTimeout(connectWs, 500);
         return () => {
-            wsRef.current?.close();
+            clearTimeout(wsTimer);
+            try { wsRef.current?.close(); } catch { }
         };
     }, [fetchInitial, connectWs]);
 

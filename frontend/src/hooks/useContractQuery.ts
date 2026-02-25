@@ -1,4 +1,4 @@
-import { devError, devWarn } from '../utils/devLog';
+import { devWarn } from '../utils/devLog';
 import { useState, useCallback } from 'react';
 import { NETWORK } from '../config';
 
@@ -12,7 +12,8 @@ export function useContractQuery() {
     const query = useCallback(async (
         contractAddr: string,
         funcName: string,
-        args: string[] = []
+        args: string[] = [],
+        _retryCount = 0
     ): Promise<Buffer[]> => {
         setLoading(true);
         try {
@@ -27,6 +28,12 @@ export function useContractQuery() {
             });
 
             if (!response.ok) {
+                // Silent retry once before reporting error
+                if (_retryCount < 1) {
+                    setLoading(false);
+                    await new Promise(r => setTimeout(r, 2000));
+                    return query(contractAddr, funcName, args, _retryCount + 1);
+                }
                 throw new Error(`Query failed: ${response.status}`);
             }
 
@@ -43,7 +50,10 @@ export function useContractQuery() {
                 return Buffer.from(b64, 'base64');
             });
         } catch (err) {
-            devError(`Query ${funcName} error:`, err);
+            // Only log on final failure (after retry)
+            if (_retryCount >= 1) {
+                devWarn(`Query ${funcName} failed after retry:`, err);
+            }
             return [];
         } finally {
             setLoading(false);

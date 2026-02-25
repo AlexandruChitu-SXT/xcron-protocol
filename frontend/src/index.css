@@ -68,6 +68,41 @@
   --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ── Premium shimmer keyframe ── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ── Reset & Base ── */
 *,
 *::before,
@@ -154,15 +189,17 @@ a:hover {
 }
 
 .page-header h1 {
-  font-size: 2rem;
-  font-weight: 800;
+  font-size: 2.4rem;
+  font-weight: 900;
   color: #e8927c;
   margin-bottom: 8px;
+  letter-spacing: -0.02em;
 }
 
 .page-header p {
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 1rem;
+  max-width: 580px;
 }
 
 /* ── Header ── */
@@ -251,17 +288,36 @@ a:hover {
 
 /* ── Cards ── */
 .card {
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
+  background: var(--gradient-card);
+  backdrop-filter: blur(14px);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: 24px;
   transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+  transition: left 0.6s ease;
+  pointer-events: none;
 }
 
 .card:hover {
   border-color: var(--border-hover);
   box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.card:hover::after {
+  left: 100%;
 }
 
 /* ── Stat Cards ── */
@@ -297,7 +353,7 @@ a:hover {
 
 .stat-card:hover {
   border-color: var(--border-hover);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-glow);
 }
 
@@ -347,13 +403,13 @@ a:hover {
 .btn-primary {
   background: var(--accent);
   color: white;
-  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 12px rgba(0, 155, 119, 0.3);
 }
 
 .btn-primary:hover {
   background: var(--accent-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 155, 119, 0.4);
 }
 
 .btn-primary:disabled {
@@ -389,12 +445,12 @@ a:hover {
   font-weight: 700;
   padding: 10px 24px;
   border-radius: var(--radius-md);
-  box-shadow: 0 2px 16px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 16px rgba(0, 155, 119, 0.3);
 }
 
 .btn-connect:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(0, 155, 119, 0.4);
 }
 
 .btn-sm {
@@ -966,11 +1022,12 @@ a:hover {
 /* ── How It Works ── */
 .section-title-center {
   text-align: center;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 24px;
   letter-spacing: -0.02em;
+  position: relative;
 }
 
 .how-it-works {
@@ -1047,13 +1104,15 @@ a:hover {
 .use-case-card {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  background: var(--bg-card);
+  padding: 20px;
+  background: var(--gradient-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   text-decoration: none;
-  transition: var(--transition);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
 .use-case-card:hover {
@@ -1092,11 +1151,15 @@ a:hover {
   font-weight: 600;
   color: var(--accent-light);
   margin-top: 14px;
-  transition: var(--transition);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .use-case-card:hover .uc-cta {
   color: var(--text-primary);
+  gap: 8px;
 }
 
 /* ── Benefit Cards ── */
@@ -1224,18 +1287,23 @@ a:hover {
 }
 
 .hero-section h1 {
-  font-size: 2.2rem;
+  font-size: 2.6rem;
   font-weight: 900;
-  color: #e8927c;
-  margin-bottom: 8px;
+  background: linear-gradient(135deg, #e8927c 0%, #f0b090 40%, #e8927c 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
   line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
 .hero-section .hero-sub {
   color: var(--text-secondary);
-  font-size: 1.1rem;
-  max-width: 500px;
+  font-size: 1.05rem;
+  max-width: 520px;
   margin: 0 auto;
+  line-height: 1.6;
 }
 
 /* ── Hero Background Glow (3D Tubes) ── */

@@ -535,11 +535,12 @@ export function KeeperPanel() {
 
                             <div style={{ background: 'var(--bg-card)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
                                 <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}># 1. Clone the repository and enter the keeper directory</div>
-                                <div style={{ color: '#38bdf8', marginBottom: 16 }}>git clone https://github.com/xcron-protocol/keeper-bot.git<br />cd keeper-bot</div>
+                                <div style={{ color: '#38bdf8', marginBottom: 16 }}>git clone https://github.com/AlexandruChitu-SXT/xcron-protocol.git<br />cd xcron-protocol/keeper</div>
 
-                                <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}># 2. Add your Wallet PEM file as 'wallet.pem' in the root folder</div>
+                                <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}># 2. Copy the example config and add your wallet PEM</div>
+                                <div style={{ color: '#38bdf8', marginBottom: 16 }}>cp keeper-config.example.json keeper-config.json<br /># Edit keeper-config.json with your settings</div>
 
-                                <div style={{ color: 'var(--text-muted)', marginBottom: 8, marginTop: 16 }}># 3. Start the node</div>
+                                <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}># 3. Start the node</div>
                                 <div style={{ color: '#34d399' }}>npm install && npm start</div>
                             </div>
 

@@ -10,6 +10,7 @@ import { ContractAddresses, KeeperSettings } from "./config";
 import { Logger } from "./logger";
 import { GasOptimizer } from "./gas_optimizer";
 import { AIEvaluator, AIDecision, MarketContext, TaskContext } from "./ai_evaluator";
+import { CommitRevealManager } from "./commit_reveal";
 
 export interface ExecutionResult {
     taskId: number;
@@ -92,12 +93,34 @@ export class Executor {
         this.marketContext = ctx;
     }
 
+    // ── Commit-Reveal (optional) ──
+    private commitReveal?: CommitRevealManager;
+
+    setCommitReveal(cr: CommitRevealManager): void {
+        this.commitReveal = cr;
+    }
+
     /**
      * Execute a ripe task by calling the Scheduler's executeTask endpoint.
      */
     async executeTask(task: MonitoredTask): Promise<ExecutionResult> {
         try {
             this.log(`Executing task #${task.id}...`);
+
+            // CR: Commit-Reveal anti-MEV (if enabled)
+            if (this.commitReveal) {
+                this.log(`Task #${task.id}: using commit-reveal flow`);
+                const crResult = await this.commitReveal.commitRevealExecute(task.id);
+                if (!crResult.success) {
+                    return {
+                        taskId: task.id,
+                        success: false,
+                        error: `CR ${crResult.phase} failed: ${crResult.error}`,
+                        permanent: false,
+                    };
+                }
+                this.log(`Task #${task.id}: CR complete, proceeding to execute`);
+            }
 
             // S-DRY: Dry-run simulation — test execution via vm-query before spending gas
             const dryRunResult = await this.dryRunSimulation(task.id);

@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { AIConfig, AIProvider } from "./ai_evaluator";
+import { CommitRevealConfig } from "./commit_reveal";
 
 export interface NetworkConfig {
     chainId: string;
@@ -32,6 +33,7 @@ export interface AppConfig {
     keeper: KeeperSettings;
     xportalClaim?: XPortalClaimConfig;
     ai?: AIConfig;
+    commitReveal?: CommitRevealConfig;
 }
 
 export function loadConfig(path: string): AppConfig {
@@ -63,6 +65,15 @@ export function loadConfig(path: string): AppConfig {
             model: "gpt-4o-mini",
             maxCostPerDayUsd: 0.50,
             timeoutMs: 10000,
+        };
+    }
+
+    // Default commit-reveal config if not present (disabled by default)
+    if (!config.commitReveal) {
+        config.commitReveal = {
+            enabled: false,
+            revealDelayMs: 5000,
+            bondEgld: "0",
         };
     }
 

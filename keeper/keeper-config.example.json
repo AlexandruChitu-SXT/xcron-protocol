@@ -27,5 +27,10 @@
         "model": "gpt-4o-mini",
         "maxCostPerDayUsd": 0.50,
         "timeoutMs": 10000
+    },
+    "commitReveal": {
+        "enabled": false,
+        "revealDelayMs": 5000,
+        "bondEgld": "0"
     }
 }

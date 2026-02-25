@@ -8,6 +8,7 @@ import { Executor } from "./executor";
 import { Logger, HealthTracker, withRetry } from "./logger";
 import { XPortalClaimer } from "./xportal_claim";
 import { AIEvaluator } from "./ai_evaluator";
+import { CommitRevealManager } from "./commit_reveal";
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -112,6 +113,23 @@ async function main(): Promise<void> {
         logger.info("Main", `   Budget: $${config.ai.maxCostPerDayUsd}/day`);
     } else {
         logger.info("Main", "🤖 AI Evaluator: DISABLED (enable in config.ai)");
+    }
+
+    // 7. Initialize Commit-Reveal anti-MEV (if enabled)
+    if (config.commitReveal?.enabled) {
+        const crManager = new CommitRevealManager(
+            networkClient,
+            config.contracts,
+            config.keeper,
+            signer,
+            keeperAddress,
+            logger,
+            config.commitReveal
+        );
+        executor.setCommitReveal(crManager);
+        logger.info("Main", `🛡️ Commit-Reveal: ENABLED (reveal delay: ${config.commitReveal.revealDelayMs}ms)`);
+    } else {
+        logger.info("Main", "🛡️ Commit-Reveal: DISABLED (direct execution mode)");
     }
 
     logger.info("Main", "Starting keeper loop... (Ctrl+C to stop)");

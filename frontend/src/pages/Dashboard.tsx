@@ -6,6 +6,7 @@ import { CONTRACTS, NETWORK } from '../config';
 import { NavLink } from 'react-router-dom';
 import { LiveActivityFeed } from '../components/LiveActivityFeed';
 import { PriceTicker } from '../components/PriceTicker';
+import { ProtocolRadar } from '../components/ProtocolRadar';
 import SlicedLogo3D from '../components/SlicedLogo3D';
 import { AnimatedCounter } from '../components/AnimatedCounter';
 
@@ -149,6 +150,11 @@ export function Dashboard() {
                         <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.totalFailed} />}</div>
                         <div className="stat-sub">Executions</div>
                     </div>
+                </div>
+
+                {/* Protocol Performance Radar */}
+                <div style={{ marginTop: 32 }}>
+                    <ProtocolRadar />
                 </div>
 
                 {/* Live Protocol Activity Feed */}

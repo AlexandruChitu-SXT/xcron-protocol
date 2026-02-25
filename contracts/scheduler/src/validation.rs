@@ -94,19 +94,20 @@ pub trait ValidationModule: crate::storage::StorageModule {
                 comparator,
                 threshold,
             } => {
-                // On-chain oracle: query the oracle contract (e.g. xExchange getAmountOut)
-                // and verify the condition is met before allowing execution.
-                let mut call: ContractCallNoPayment<Self::Api, BigUint<Self::Api>> =
-                    ContractCallNoPayment::new(
-                        oracle_contract.clone(),
-                        query_endpoint.clone(),
-                    );
+                // SDK 0.63+: Execute oracle query using raw tx builder.
+                // Builds a cross-contract call to the oracle, passes args,
+                // and decodes the result as BigUint.
+                let raw_result = self.tx()
+                    .to(oracle_contract)
+                    .raw_call(query_endpoint.clone())
+                    .returns(ReturnsRawResult)
+                    .sync_call();
 
-                for arg in query_args.iter() {
-                    call.push_raw_argument((*arg).clone());
-                }
-
-                let oracle_value: BigUint = call.execute_on_dest_context();
+                let oracle_value = if raw_result.is_empty() {
+                    BigUint::zero()
+                } else {
+                    BigUint::from_bytes_be(raw_result.get(0).to_boxed_bytes().as_slice())
+                };
 
                 let condition_met = match comparator {
                     common::types::Comparator::Gt => oracle_value > *threshold,

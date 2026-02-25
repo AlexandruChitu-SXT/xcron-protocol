@@ -37,6 +37,11 @@ fn deposit_below_minimum() {
     world().run("scenarios/deposit_below_minimum.scen.json");
 }
 
+#[test]
+fn condition_on_chain() {
+    world().run("scenarios/condition_on_chain.scen.json");
+}
+
 // ═══════════════════════════════════════════════════════════
 //  ACCESS CONTROL
 // ═══════════════════════════════════════════════════════════
@@ -46,13 +51,14 @@ fn cancel_unauthorized() {
     world().run("scenarios/cancel_unauthorized.scen.json");
 }
 
-// ═══════════════════════════════════════════════════════════
-//  EXPIRATION
-// ═══════════════════════════════════════════════════════════
+#[test]
+fn config_owner_only() {
+    world().run("scenarios/config_owner_only.scen.json");
+}
 
 #[test]
-fn expire_stale_tasks() {
-    world().run("scenarios/expire_stale.scen.json");
+fn execute_unauthorized() {
+    world().run("scenarios/execute_unauthorized.scen.json");
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -69,27 +75,19 @@ fn execute_paused() {
     world().run("scenarios/execute_paused.scen.json");
 }
 
-// ═══════════════════════════════════════════════════════════
-//  SECURITY (C-2 Target Validation)
-// ═══════════════════════════════════════════════════════════
-
-#[test]
-fn target_self_blocked() {
-    world().run("scenarios/target_self_blocked.scen.json");
-}
-
-// ═══════════════════════════════════════════════════════════
-//  KEEPER AUTHORIZATION
-// ═══════════════════════════════════════════════════════════
-
-#[test]
-fn execute_unauthorized() {
-    world().run("scenarios/execute_unauthorized.scen.json");
-}
-
 #[test]
 fn execute_not_ripe() {
     world().run("scenarios/execute_not_ripe.scen.json");
+}
+
+#[test]
+fn round_robin_assignment() {
+    world().run("scenarios/round_robin_assignment.scen.json");
+}
+
+#[test]
+fn recover_stuck_task() {
+    world().run("scenarios/recover_stuck_task.scen.json");
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -99,6 +97,15 @@ fn execute_not_ripe() {
 #[test]
 fn schedule_while_paused() {
     world().run("scenarios/schedule_while_paused.scen.json");
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPIRATION & TTL
+// ═══════════════════════════════════════════════════════════
+
+#[test]
+fn expire_stale_tasks() {
+    world().run("scenarios/expire_stale.scen.json");
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -116,10 +123,24 @@ fn fee_exceeds_100() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  ACCESS CONTROL (Owner-only Config)
+//  SECURITY RULES  (S-1 to S-10)
 // ═══════════════════════════════════════════════════════════
 
+/// S-1a: Cannot target scheduler, registry, or rewards contracts
 #[test]
-fn config_owner_only() {
-    world().run("scenarios/config_owner_only.scen.json");
+fn target_self_blocked() {
+    world().run("scenarios/target_self_blocked.scen.json");
 }
+
+/// S-1b: Dangerous endpoints (upgradeContract, ESDTTransfer, setOwner) are blocked
+#[test]
+fn dangerous_endpoint_blocked() {
+    world().run("scenarios/dangerous_endpoint_blocked.scen.json");
+}
+
+/// S-3/S-4: Admin blacklist and unblacklist with access control
+#[test]
+fn admin_blacklist() {
+    world().run("scenarios/admin_blacklist.scen.json");
+}
+

@@ -33,6 +33,7 @@ export function Navigation() {
                         <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>Dashboard</NavLink>
                         <NavLink to="/schedule" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Schedule Task</NavLink>
                         <NavLink to="/tasks" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>My Tasks</NavLink>
+                        <NavLink to="/explore" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Explore</NavLink>
                         <NavLink to="/keeper" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Keeper Panel <span>[1] Nodes</span></NavLink>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ import { TaskMonitor } from "./monitor";
 import { Executor } from "./executor";
 import { Logger, HealthTracker, withRetry } from "./logger";
 import { XPortalClaimer } from "./xportal_claim";
+import { AIEvaluator } from "./ai_evaluator";
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -101,6 +102,16 @@ async function main(): Promise<void> {
         logger.info("Main", "✨ xPortal XP Auto-Claim: ENABLED");
         logger.info("Main", `   Wallets dir: ${config.xportalClaim.walletsDir}`);
         logger.info("Main", `   Network: ${config.xportalClaim.network}`);
+    }
+
+    // 6. Initialize AI Evaluator (if enabled)
+    if (config.ai?.enabled && config.ai.apiKey) {
+        const aiEvaluator = new AIEvaluator(config.ai, logger);
+        executor.setAIEvaluator(aiEvaluator);
+        logger.info("Main", `🤖 AI Evaluator: ENABLED (${config.ai.provider}/${config.ai.model})`);
+        logger.info("Main", `   Budget: $${config.ai.maxCostPerDayUsd}/day`);
+    } else {
+        logger.info("Main", "🤖 AI Evaluator: DISABLED (enable in config.ai)");
     }
 
     logger.info("Main", "Starting keeper loop... (Ctrl+C to stop)");

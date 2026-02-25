@@ -9,6 +9,7 @@ import { MonitoredTask } from "./monitor";
 import { ContractAddresses, KeeperSettings } from "./config";
 import { Logger } from "./logger";
 import { GasOptimizer } from "./gas_optimizer";
+import { AIEvaluator, AIDecision, MarketContext, TaskContext } from "./ai_evaluator";
 
 export interface ExecutionResult {
     taskId: number;
@@ -16,6 +17,7 @@ export interface ExecutionResult {
     txHash?: string;
     error?: string;
     delayedDueToGas?: boolean;
+    skippedByAI?: boolean;
     permanent?: boolean; // True if error is unrecoverable (wrong endpoint, contract not found)
 }
 
@@ -78,6 +80,18 @@ export class Executor {
         this.gasOptimizer = new GasOptimizer(networkClient, logger);
     }
 
+    // ── AI Evaluator (optional) ──
+    private aiEvaluator?: AIEvaluator;
+    private marketContext?: MarketContext;
+
+    setAIEvaluator(evaluator: AIEvaluator): void {
+        this.aiEvaluator = evaluator;
+    }
+
+    updateMarketContext(ctx: MarketContext): void {
+        this.marketContext = ctx;
+    }
+
     /**
      * Execute a ripe task by calling the Scheduler's executeTask endpoint.
      */
@@ -97,6 +111,27 @@ export class Executor {
                 };
             }
             this.log(`Task #${task.id} dry-run OK — proceeding with real execution`);
+
+            // AI Gate: if AI evaluator is configured, ask it before executing
+            if (this.aiEvaluator && task.aiEnabled && this.marketContext) {
+                const taskCtx: TaskContext = {
+                    taskId: task.id,
+                    templateType: task.aiTemplateType || "custom",
+                    targetEndpoint: task.targetEndpoint,
+                    targetContract: task.targetContract,
+                    depositEgld: (Number(task.depositEgld) / 1e18).toFixed(4),
+                    executionCount: 0,
+                };
+                const aiDecision = await this.aiEvaluator.shouldExecute(taskCtx, this.marketContext);
+                if (!aiDecision.execute) {
+                    return {
+                        taskId: task.id,
+                        success: false,
+                        skippedByAI: true,
+                        error: `AI skip: ${aiDecision.reason} (${(aiDecision.confidence * 100).toFixed(0)}% confidence)`,
+                    };
+                }
+            }
 
             // AI-Feature: Fee/Volatility Watchdog
             const isCongested = await this.gasOptimizer.shouldDelayExecution();

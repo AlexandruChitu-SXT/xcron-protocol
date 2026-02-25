@@ -21,6 +21,8 @@ export interface MonitoredTask {
     priceCondition?: PriceCondition; // Optional: hybrid off-chain price check
     conditionConfig?: ConditionConfig; // Optional: on-chain condition trigger
     isPriority?: boolean; // Emergency recovery tasks get priority
+    aiEnabled?: boolean;       // AI trigger: keeper consults AI before executing
+    aiTemplateType?: string;   // AI trigger: template type for prompt selection
 }
 
 /**

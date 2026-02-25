@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import { AIConfig, AIProvider } from "./ai_evaluator";
 
 export interface NetworkConfig {
     chainId: string;
@@ -30,6 +31,7 @@ export interface AppConfig {
     contracts: ContractAddresses;
     keeper: KeeperSettings;
     xportalClaim?: XPortalClaimConfig;
+    ai?: AIConfig;
 }
 
 export function loadConfig(path: string): AppConfig {
@@ -49,6 +51,18 @@ export function loadConfig(path: string): AppConfig {
             enabled: false,
             walletsDir: "./.secrets/xportal-wallets",
             network: "mainnet",
+        };
+    }
+
+    // Default AI config if not present (disabled by default)
+    if (!config.ai) {
+        config.ai = {
+            enabled: false,
+            provider: "openai" as AIProvider,
+            apiKey: "",
+            model: "gpt-4o-mini",
+            maxCostPerDayUsd: 0.50,
+            timeoutMs: 10000,
         };
     }
 

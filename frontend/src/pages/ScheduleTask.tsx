@@ -289,6 +289,9 @@ export function ScheduleTask() {
     const [priceCondition, setPriceCondition] = useState<'above' | 'below'>('above');
     const [priceThreshold, setPriceThreshold] = useState('');
 
+    // AI-Optimized execution state
+    const [aiOptimized, setAiOptimized] = useState(false);
+
     useEffect(() => {
         const tmplDefaults = TEMPLATES[template].defaults;
         setForm({ ...tmplDefaults });
@@ -881,6 +884,35 @@ export function ScheduleTask() {
                             )}
                         </div>
 
+                        {/* Section: AI-Optimized Execution */}
+                        <div className="form-section" style={{ marginBottom: 14, padding: 14, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', border: aiOptimized ? '1px solid rgba(168,85,247,0.3)' : '1px solid transparent' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: aiOptimized ? 8 : 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>🤖 AI-Optimized</span>
+                                    <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(168,85,247,0.12)', color: 'rgb(168,85,247)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>NEW</span>
+                                </div>
+                                <div
+                                    onClick={() => setAiOptimized(!aiOptimized)}
+                                    style={{
+                                        width: 40, height: 22, borderRadius: 11, cursor: 'pointer',
+                                        background: aiOptimized ? 'rgb(168,85,247)' : 'var(--bg-secondary)',
+                                        border: `1px solid ${aiOptimized ? 'rgb(168,85,247)' : 'var(--border-primary)'}`,
+                                        position: 'relative', transition: 'all 0.2s',
+                                    }}
+                                >
+                                    <div style={{
+                                        width: 16, height: 16, borderRadius: '50%',
+                                        background: '#fff', position: 'absolute', top: 2,
+                                        left: aiOptimized ? 20 : 2, transition: 'left 0.2s',
+                                    }} />
+                                </div>
+                            </div>
+                            {aiOptimized && (
+                                <div style={{ marginTop: 4, padding: '8px 10px', borderRadius: 6, background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.15)', fontSize: '0.75rem', color: 'rgb(168,85,247)', lineHeight: 1.5 }}>
+                                    ✨ Keeper AI will analyze market conditions (momentum, volatility, gas costs) and execute at the <strong>optimal moment</strong> within your schedule — no extra cost.
+                                </div>
+                            )}
+                        </div>
 
 
                         {error && (

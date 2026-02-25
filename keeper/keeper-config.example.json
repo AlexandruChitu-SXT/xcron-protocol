@@ -19,5 +19,13 @@
         "enabled": false,
         "walletsDir": "./.secrets/xportal-wallets",
         "network": "mainnet"
+    },
+    "ai": {
+        "enabled": false,
+        "provider": "openai",
+        "apiKey": "sk-YOUR_OPENAI_API_KEY_HERE",
+        "model": "gpt-4o-mini",
+        "maxCostPerDayUsd": 0.50,
+        "timeoutMs": 10000
     }
 }

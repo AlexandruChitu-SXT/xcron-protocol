@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { XCronClient } from "@xcron-protocol/sdk";
+ * import { XCronClient } from "xcron-sdk";
  * import { Address } from "@multiversx/sdk-core";
  *
  * const xcron = new XCronClient("testnet");
@@ -43,7 +43,7 @@ import {
     BytesType,
 } from "@multiversx/sdk-core";
 
-import { ScheduleTaskParams, Network, XCronAddresses, Trigger } from "./types";
+import { ScheduleTaskParams, Network, XCronAddresses, Trigger, ProtocolStats } from "./types";
 import { getAddresses } from "./addresses";
 
 const DEFAULT_GAS_LIMIT = 30_000_000;
@@ -159,6 +159,182 @@ export class XCronClient {
      */
     getSchedulerAddress(): string {
         return this.addresses.scheduler;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  QUERY METHODS — Read on-chain data via MultiversX API
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Query the MultiversX API gateway for smart contract view functions.
+     * Returns decoded hex results from the VM.
+     */
+    private async vmQuery(funcName: string, args: string[] = []): Promise<string[]> {
+        const apiUrl = this.getApiUrl();
+        const response = await fetch(`${apiUrl}/vm-values/query`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                scAddress: this.addresses.scheduler,
+                funcName,
+                args,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`VM query failed: ${response.statusText}`);
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result: any = await response.json();
+        if (result.data?.data?.returnCode !== "ok") {
+            throw new Error(`VM query error: ${result.data?.data?.returnMessage || "unknown"}`);
+        }
+
+        return result.data.data.returnData || [];
+    }
+
+    /**
+     * Get the current task nonce (total number of tasks ever created).
+     *
+     * @example
+     * ```typescript
+     * const totalTasks = await xcron.getTaskNonce();
+     * console.log(`Total tasks created: ${totalTasks}`);
+     * ```
+     */
+    async getTaskNonce(): Promise<number> {
+        const result = await this.vmQuery("getTaskNonce");
+        if (!result.length || !result[0]) return 0;
+        return parseInt(Buffer.from(result[0], "base64").toString("hex") || "0", 16);
+    }
+
+    /**
+     * Get protocol statistics.
+     *
+     * @example
+     * ```typescript
+     * const stats = await xcron.getProtocolStats();
+     * console.log(`Success: ${stats.totalSuccessful}, Failed: ${stats.totalFailed}`);
+     * ```
+     */
+    async getProtocolStats(): Promise<ProtocolStats> {
+        const [successResult, failedResult, nonceResult] = await Promise.all([
+            this.vmQuery("getTotalSuccessfulExecs"),
+            this.vmQuery("getTotalFailedExecs"),
+            this.vmQuery("getTaskNonce"),
+        ]);
+
+        const decodeU64 = (data: string[]): number => {
+            if (!data.length || !data[0]) return 0;
+            return parseInt(Buffer.from(data[0], "base64").toString("hex") || "0", 16);
+        };
+
+        return {
+            totalTasks: decodeU64(nonceResult),
+            totalSuccessful: decodeU64(successResult),
+            totalFailed: decodeU64(failedResult),
+        };
+    }
+
+    /**
+     * Check if the protocol is currently paused.
+     *
+     * @example
+     * ```typescript
+     * const isPaused = await xcron.isPaused();
+     * if (isPaused) console.log("Protocol is paused!");
+     * ```
+     */
+    async isPaused(): Promise<boolean> {
+        const result = await this.vmQuery("isPaused");
+        if (!result.length || !result[0]) return false;
+        const hex = Buffer.from(result[0], "base64").toString("hex");
+        return hex === "01";
+    }
+
+    /**
+     * Get the minimum deposit required to schedule a task.
+     *
+     * @returns Minimum deposit in EGLD (as string in smallest denomination)
+     *
+     * @example
+     * ```typescript
+     * const minDeposit = await xcron.getMinDeposit();
+     * console.log(`Minimum deposit: ${minDeposit} (atomic units)`);
+     * ```
+     */
+    async getMinDeposit(): Promise<string> {
+        const result = await this.vmQuery("getMinDeposit");
+        if (!result.length || !result[0]) return "0";
+        const hex = Buffer.from(result[0], "base64").toString("hex");
+        return BigInt("0x" + (hex || "0")).toString();
+    }
+
+    /**
+     * Get the protocol fee in basis points.
+     *
+     * @example
+     * ```typescript
+     * const feeBps = await xcron.getProtocolFeeBps();
+     * console.log(`Protocol fee: ${feeBps / 100}%`);
+     * ```
+     */
+    async getProtocolFeeBps(): Promise<number> {
+        const result = await this.vmQuery("getProtocolFeeBps");
+        if (!result.length || !result[0]) return 0;
+        return parseInt(Buffer.from(result[0], "base64").toString("hex") || "0", 16);
+    }
+
+    /**
+     * Check if an address is a whitelisted keeper.
+     *
+     * @example
+     * ```typescript
+     * const isKeeper = await xcron.isWhitelistedKeeper("erd1...");
+     * ```
+     */
+    async isWhitelistedKeeper(address: string): Promise<boolean> {
+        try {
+            const addrHex = Address.fromBech32(address).hex();
+            const result = await this.vmQuery("isWhitelistedKeeper", [addrHex]);
+            if (!result.length || !result[0]) return false;
+            const hex = Buffer.from(result[0], "base64").toString("hex");
+            return hex === "01";
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a target contract is blacklisted.
+     *
+     * @example
+     * ```typescript
+     * const isBlocked = await xcron.isBlacklisted("erd1qqq...");
+     * ```
+     */
+    async isBlacklisted(target: string): Promise<boolean> {
+        try {
+            const addrHex = Address.fromBech32(target).hex();
+            const result = await this.vmQuery("isBlacklisted", [addrHex]);
+            if (!result.length || !result[0]) return false;
+            const hex = Buffer.from(result[0], "base64").toString("hex");
+            return hex === "01";
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Get the MultiversX API base URL for the configured network.
+     */
+    getApiUrl(): string {
+        switch (this.network) {
+            case "mainnet": return "https://api.multiversx.com";
+            case "testnet": return "https://testnet-api.multiversx.com";
+            case "devnet": return "https://devnet-api.multiversx.com";
+        }
     }
 
     // ── Internal helpers ──

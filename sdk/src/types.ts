@@ -85,4 +85,10 @@ export interface XCronAddresses {
     rewards: string;
 }
 
+export interface ProtocolStats {
+    totalTasks: number;
+    totalSuccessful: number;
+    totalFailed: number;
+}
+
 export type Network = "mainnet" | "testnet" | "devnet";

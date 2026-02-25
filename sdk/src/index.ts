@@ -1,11 +1,11 @@
 /**
- * @xcron-protocol/sdk
+ * xcron-sdk
  *
  * SDK for integrating with XCron Protocol — Decentralized Task Automation on MultiversX.
  *
  * @example
  * ```typescript
- * import { XCronClient } from "@xcron-protocol/sdk";
+ * import { XCronClient } from "xcron-sdk";
  *
  * const xcron = new XCronClient("testnet");
  *
@@ -32,5 +32,6 @@ export type {
     KeeperInfo,
     ScheduleTaskParams,
     XCronAddresses,
+    ProtocolStats,
     Network,
 } from "./types";

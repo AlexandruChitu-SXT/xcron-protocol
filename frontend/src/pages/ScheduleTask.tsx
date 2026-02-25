@@ -641,237 +641,238 @@ export function ScheduleTask() {
                                 )}
                             </div>
 
-                            {/* Section: Schedule */}
-                            <div className="form-section" style={{ marginBottom: 14, padding: 14, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)' }}>
-                                <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 8 }}>Schedule</div>
+                            {/* Schedule + Budget — side by side */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
 
-                                <div className="form-group">
-                                    <label>Trigger Type</label>
-                                    <div className="segmented-control">
-                                        <div
-                                            className={`segmented-item ${form.triggerType === 'once' ? 'active' : ''}`}
-                                            onClick={() => update('triggerType', 'once')}
-                                        >
-                                            One-time
-                                        </div>
-                                        <div
-                                            className={`segmented-item ${form.triggerType === 'recurring' ? 'active' : ''}`}
-                                            onClick={() => update('triggerType', 'recurring')}
-                                        >
-                                            Recurring
-                                        </div>
-                                    </div>
-                                </div>
+                                {/* Section: Schedule */}
+                                <div className="form-section" style={{ marginBottom: 0, padding: 14, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)' }}>
+                                    <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 8 }}>Schedule</div>
 
-                                <div className="form-group">
-                                    <label>{form.triggerType === 'once' ? 'Execute After' : 'Start After'}</label>
-                                    <CustomDropdown
-                                        value={delaySeconds}
-                                        onChange={(val) => setDelaySeconds(val)}
-                                        options={[
-                                            { value: 0, label: 'Immediately (as soon as possible)' },
-                                            { value: 600, label: '10 minutes' },
-                                            { value: 1800, label: '30 minutes' },
-                                            { value: 3600, label: '1 hour' },
-                                            { value: 21600, label: '6 hours' },
-                                            { value: 86400, label: '24 hours' },
-                                        ]}
-                                    />
-                                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                        {delaySeconds === 0 ? 'A keeper will execute the task as soon as possible' : `The task will become executable at the specific exact time after ~${formatDuration(delaySeconds)}`}
-                                    </small>
-                                </div>
-
-                                {form.triggerType === 'recurring' && (
-                                    <>
-                                        <div className="form-group" style={{ marginTop: 12 }}>
-                                            <label>Repeat Every</label>
-                                            <CustomDropdown
-                                                value={intervalSeconds}
-                                                onChange={(val) => setIntervalSeconds(val)}
-                                                options={INTERVAL_PRESETS.map((p) => ({ value: p.seconds, label: p.label }))}
-                                            />
-                                            <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                                The task will re-execute exactly every {formatDuration(intervalSeconds)}
-                                            </small>
-                                        </div>
-                                        <div className="form-group" style={{ marginTop: 12 }}>
-                                            <label>Repeat Count</label>
-                                            <CustomDropdown
-                                                value={remainingExecs}
-                                                onChange={(val) => setRemainingExecs(val)}
-                                                options={[
-                                                    { value: 3, label: '3 times' },
-                                                    { value: 5, label: '5 times' },
-                                                    { value: 10, label: '10 times' },
-                                                    { value: 25, label: '25 times' },
-                                                    { value: 50, label: '50 times' },
-                                                    { value: 100, label: '100 times' },
-                                                ]}
-                                            />
-                                            <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                                How many times the task will execute before stopping. More repetitions need a larger deposit.
-                                            </small>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Section: Price Condition (Hybrid Oracle) */}
-                            <div className="form-section" style={{ marginBottom: 14, padding: 14, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', border: priceEnabled ? '1px solid rgba(6, 182, 212, 0.3)' : '1px solid transparent' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: priceEnabled ? 12 : 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>🧬 Price Condition</span>
-                                        <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(6,182,212,0.12)', color: 'rgb(6,182,212)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hybrid</span>
-                                    </div>
-                                    <div
-                                        onClick={() => setPriceEnabled(!priceEnabled)}
-                                        style={{
-                                            width: 40, height: 22, borderRadius: 11, cursor: 'pointer',
-                                            background: priceEnabled ? 'rgb(6,182,212)' : 'var(--bg-secondary)',
-                                            border: `1px solid ${priceEnabled ? 'rgb(6,182,212)' : 'var(--border-primary)'}`,
-                                            position: 'relative', transition: 'all 0.2s',
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: 16, height: 16, borderRadius: '50%',
-                                            background: priceEnabled ? '#fff' : 'var(--text-muted)',
-                                            position: 'absolute', top: 2,
-                                            left: priceEnabled ? 21 : 2,
-                                            transition: 'all 0.2s',
-                                        }} />
-                                    </div>
-                                </div>
-
-                                {!priceEnabled && (
-                                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                        Enable to add a price condition. The keeper will check prices off-chain before executing (0 gas cost).
-                                    </small>
-                                )}
-
-                                {priceEnabled && (
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
-                                        <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
-                                            <label style={{ fontSize: '0.72rem' }}>Token</label>
-                                            <CustomDropdown
-                                                value={['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'].indexOf(priceToken)}
-                                                onChange={(val) => setPriceToken(['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'][val])}
-                                                options={[
-                                                    { value: 0, label: 'EGLD' },
-                                                    { value: 1, label: 'BTC' },
-                                                    { value: 2, label: 'ETH' },
-                                                    { value: 3, label: 'USDC' },
-                                                    { value: 4, label: 'UTK' },
-                                                ]}
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
-                                            <label style={{ fontSize: '0.72rem' }}>Condition</label>
-                                            <div className="segmented-control" style={{ height: 36 }}>
-                                                <div
-                                                    className={`segmented-item ${priceCondition === 'above' ? 'active' : ''}`}
-                                                    onClick={() => setPriceCondition('above')}
-                                                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                                                >
-                                                    ≥ Above
-                                                </div>
-                                                <div
-                                                    className={`segmented-item ${priceCondition === 'below' ? 'active' : ''}`}
-                                                    onClick={() => setPriceCondition('below')}
-                                                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                                                >
-                                                    ≤ Below
-                                                </div>
+                                    <div className="form-group">
+                                        <label>Trigger Type</label>
+                                        <div className="segmented-control">
+                                            <div
+                                                className={`segmented-item ${form.triggerType === 'once' ? 'active' : ''}`}
+                                                onClick={() => update('triggerType', 'once')}
+                                            >
+                                                One-time
                                             </div>
-                                        </div>
-                                        <div className="form-group" style={{ flex: '1 1 120px', margin: 0 }}>
-                                            <label style={{ fontSize: '0.72rem' }}>Price (USD)</label>
-                                            <div style={{ position: 'relative' }}>
-                                                <input
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    placeholder="50.00"
-                                                    value={priceThreshold}
-                                                    onChange={(e) => setPriceThreshold(e.target.value.replace(/,/g, '.'))}
-                                                    style={{ paddingRight: 30, fontSize: '0.85rem' }}
-                                                />
-                                                <span style={{ position: 'absolute', right: 10, top: 10, color: 'var(--text-muted)', fontSize: '0.75rem' }}>$</span>
+                                            <div
+                                                className={`segmented-item ${form.triggerType === 'recurring' ? 'active' : ''}`}
+                                                onClick={() => update('triggerType', 'recurring')}
+                                            >
+                                                Recurring
                                             </div>
                                         </div>
                                     </div>
-                                )}
 
-                                {priceEnabled && priceThreshold && (
-                                    <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)', fontSize: '0.75rem', color: 'rgb(6,182,212)' }}>
-                                        🤖 Keeper will execute when <strong>{priceToken}</strong> is {priceCondition === 'above' ? '≥' : '≤'} <strong>${priceThreshold}</strong> USD — checked off-chain (0 gas)
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Section: Budget */}
-                            <div className="form-section" style={{ marginBottom: 14 }}>
-                                <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 8 }}>Budget</div>
-
-                                <div className="form-group">
-                                    <label>EGLD to Deposit</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            placeholder="0.005"
-                                            value={form.deposit}
-                                            onChange={(e) => updateDecimal('deposit', e.target.value)}
-                                            required
-                                            style={{ paddingRight: 60 }}
+                                    <div className="form-group">
+                                        <label>{form.triggerType === 'once' ? 'Execute After' : 'Start After'}</label>
+                                        <CustomDropdown
+                                            value={delaySeconds}
+                                            onChange={(val) => setDelaySeconds(val)}
+                                            options={[
+                                                { value: 0, label: 'Immediately (as soon as possible)' },
+                                                { value: 600, label: '10 minutes' },
+                                                { value: 1800, label: '30 minutes' },
+                                                { value: 3600, label: '1 hour' },
+                                                { value: 21600, label: '6 hours' },
+                                                { value: 86400, label: '24 hours' },
+                                            ]}
                                         />
-                                        <span style={{ position: 'absolute', right: 12, top: 12, color: 'var(--text-muted)', fontSize: '0.85rem' }}>EGLD</span>
+                                        <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                            {delaySeconds === 0 ? 'A keeper will execute the task as soon as possible' : `The task will become executable at the specific exact time after ~${formatDuration(delaySeconds)}`}
+                                        </small>
                                     </div>
-                                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', lineHeight: 1.5 }}>
-                                        This is the budget that pays keepers for executing your task.
-                                        {form.triggerType === 'recurring'
-                                            ? ' For recurring tasks, a larger deposit allows more executions before running out.'
-                                            : ' For a single execution, 0.005 EGLD is usually enough.'}
-                                        {' '}Any unused deposit is refunded when you cancel the task.
-                                    </small>
+
+                                    {form.triggerType === 'recurring' && (
+                                        <>
+                                            <div className="form-group" style={{ marginTop: 12 }}>
+                                                <label>Repeat Every</label>
+                                                <CustomDropdown
+                                                    value={intervalSeconds}
+                                                    onChange={(val) => setIntervalSeconds(val)}
+                                                    options={INTERVAL_PRESETS.map((p) => ({ value: p.seconds, label: p.label }))}
+                                                />
+                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                                    The task will re-execute exactly every {formatDuration(intervalSeconds)}
+                                                </small>
+                                            </div>
+                                            <div className="form-group" style={{ marginTop: 12 }}>
+                                                <label>Repeat Count</label>
+                                                <CustomDropdown
+                                                    value={remainingExecs}
+                                                    onChange={(val) => setRemainingExecs(val)}
+                                                    options={[
+                                                        { value: 3, label: '3 times' },
+                                                        { value: 5, label: '5 times' },
+                                                        { value: 10, label: '10 times' },
+                                                        { value: 25, label: '25 times' },
+                                                        { value: 50, label: '50 times' },
+                                                        { value: 100, label: '100 times' },
+                                                    ]}
+                                                />
+                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                                    How many times the task will execute before stopping. More repetitions need a larger deposit.
+                                                </small>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
-                                {template === 'custom' && (
-                                    <details style={{ marginTop: 8 }}>
-                                        <summary style={{
-                                            cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)',
-                                            padding: '6px 0', userSelect: 'none',
-                                        }}>
-                                            ⚙️ Advanced Settings (optional)
-                                        </summary>
-                                        <div className="grid-2" style={{ gap: 12, marginTop: 8 }}>
-                                            <div className="form-group">
-                                                <label style={{ fontSize: '0.78rem' }}>Gas Limit</label>
-                                                <input
-                                                    type="number"
-                                                    value={form.maxGas}
-                                                    onChange={(e) => update('maxGas', e.target.value)}
-                                                />
-                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
-                                                    Default: 10,000,000 (works for most calls)
-                                                </small>
+                                {/* Section: Budget */}
+                                <div className="form-section" style={{ marginBottom: 0, padding: 14, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)' }}>
+                                    <div className="section-title" style={{ fontSize: '0.9rem', marginBottom: 8 }}>Budget</div>
+
+                                    <div className="form-group">
+                                        <label>EGLD to Deposit</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                placeholder="0.005"
+                                                value={form.deposit}
+                                                onChange={(e) => updateDecimal('deposit', e.target.value)}
+                                                required
+                                                style={{ paddingRight: 60 }}
+                                            />
+                                            <span style={{ position: 'absolute', right: 12, top: 12, color: 'var(--text-muted)', fontSize: '0.85rem' }}>EGLD</span>
+                                        </div>
+                                        <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', lineHeight: 1.5 }}>
+                                            Budget for keeper gas costs.
+                                            {form.triggerType === 'recurring'
+                                                ? ' More deposit = more executions.'
+                                                : ' 0.005 EGLD is usually enough.'}
+                                            {' '}Unused deposit is refundable.
+                                        </small>
+                                    </div>
+
+                                    {template === 'custom' && (
+                                        <details style={{ marginTop: 8 }}>
+                                            <summary style={{
+                                                cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)',
+                                                padding: '6px 0', userSelect: 'none',
+                                            }}>
+                                                ⚙️ Advanced Settings
+                                            </summary>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+                                                <div className="form-group">
+                                                    <label style={{ fontSize: '0.78rem' }}>Gas Limit</label>
+                                                    <input
+                                                        type="number"
+                                                        value={form.maxGas}
+                                                        onChange={(e) => update('maxGas', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label style={{ fontSize: '0.78rem' }}>Max Retries</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="10"
+                                                        value={form.maxRetries}
+                                                        onChange={(e) => update('maxRetries', e.target.value)}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="form-group">
-                                                <label style={{ fontSize: '0.78rem' }}>Max Retries</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max="10"
-                                                    value={form.maxRetries}
-                                                    onChange={(e) => update('maxRetries', e.target.value)}
+                                        </details>
+                                    )}
+                                </div>
+
+                            </div>{/* end grid Schedule+Budget */}
+
+                            {/* Section: Price Condition (Hybrid Oracle) */
+                                <div className="form-section" style={{ marginBottom: 14, padding: 14, background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', border: priceEnabled ? '1px solid rgba(6, 182, 212, 0.3)' : '1px solid transparent' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: priceEnabled ? 12 : 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>🧬 Price Condition</span>
+                                            <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(6,182,212,0.12)', color: 'rgb(6,182,212)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hybrid</span>
+                                        </div>
+                                        <div
+                                            onClick={() => setPriceEnabled(!priceEnabled)}
+                                            style={{
+                                                width: 40, height: 22, borderRadius: 11, cursor: 'pointer',
+                                                background: priceEnabled ? 'rgb(6,182,212)' : 'var(--bg-secondary)',
+                                                border: `1px solid ${priceEnabled ? 'rgb(6,182,212)' : 'var(--border-primary)'}`,
+                                                position: 'relative', transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            <div style={{
+                                                width: 16, height: 16, borderRadius: '50%',
+                                                background: priceEnabled ? '#fff' : 'var(--text-muted)',
+                                                position: 'absolute', top: 2,
+                                                left: priceEnabled ? 21 : 2,
+                                                transition: 'all 0.2s',
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    {!priceEnabled && (
+                                        <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                            Enable to add a price condition. The keeper will check prices off-chain before executing (0 gas cost).
+                                        </small>
+                                    )}
+
+                                    {priceEnabled && (
+                                        <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
+                                            <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
+                                                <label style={{ fontSize: '0.72rem' }}>Token</label>
+                                                <CustomDropdown
+                                                    value={['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'].indexOf(priceToken)}
+                                                    onChange={(val) => setPriceToken(['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'][val])}
+                                                    options={[
+                                                        { value: 0, label: 'EGLD' },
+                                                        { value: 1, label: 'BTC' },
+                                                        { value: 2, label: 'ETH' },
+                                                        { value: 3, label: 'USDC' },
+                                                        { value: 4, label: 'UTK' },
+                                                    ]}
                                                 />
-                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
-                                                    How many times to retry if execution fails
-                                                </small>
+                                            </div>
+                                            <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
+                                                <label style={{ fontSize: '0.72rem' }}>Condition</label>
+                                                <div className="segmented-control" style={{ height: 36 }}>
+                                                    <div
+                                                        className={`segmented-item ${priceCondition === 'above' ? 'active' : ''}`}
+                                                        onClick={() => setPriceCondition('above')}
+                                                        style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                                                    >
+                                                        ≥ Above
+                                                    </div>
+                                                    <div
+                                                        className={`segmented-item ${priceCondition === 'below' ? 'active' : ''}`}
+                                                        onClick={() => setPriceCondition('below')}
+                                                        style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                                                    >
+                                                        ≤ Below
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="form-group" style={{ flex: '1 1 120px', margin: 0 }}>
+                                                <label style={{ fontSize: '0.72rem' }}>Price (USD)</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="decimal"
+                                                        placeholder="50.00"
+                                                        value={priceThreshold}
+                                                        onChange={(e) => setPriceThreshold(e.target.value.replace(/,/g, '.'))}
+                                                        style={{ paddingRight: 30, fontSize: '0.85rem' }}
+                                                    />
+                                                    <span style={{ position: 'absolute', right: 10, top: 10, color: 'var(--text-muted)', fontSize: '0.75rem' }}>$</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </details>
-                                )}
-                            </div>
+                                    )}
+
+                                    {priceEnabled && priceThreshold && (
+                                        <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)', fontSize: '0.75rem', color: 'rgb(6,182,212)' }}>
+                                            🤖 Keeper will execute when <strong>{priceToken}</strong> is {priceCondition === 'above' ? '≥' : '≤'} <strong>${priceThreshold}</strong> USD — checked off-chain (0 gas)
+                                        </div>
+                                    )}
+                                </div>
+
+
 
                             {error && (
                                 <div className="toast-error" style={{ position: 'relative', marginBottom: 16, padding: 12, borderRadius: 8 }}>

@@ -1,0 +1,23 @@
+{
+    "network": {
+        "chainId": "D",
+        "gatewayUrl": "https://devnet-gateway.multiversx.com",
+        "apiUrl": "https://devnet-api.multiversx.com"
+    },
+    "contracts": {
+        "scheduler": "erd1qqqqqqqqqqqqqpgq_YOUR_SCHEDULER_ADDRESS_HERE",
+        "keeperRegistry": "erd1qqqqqqqqqqqqqpgq_YOUR_REGISTRY_ADDRESS_HERE",
+        "rewards": "erd1qqqqqqqqqqqqqpgq_YOUR_REWARDS_ADDRESS_HERE"
+    },
+    "keeper": {
+        "walletPem": "${KEEPER_WALLET_PEM:-./.secrets/deployer.pem}",
+        "pollIntervalMs": 6000,
+        "maxGasPerExecution": 50000000,
+        "minProfitEgld": "0"
+    },
+    "xportalClaim": {
+        "enabled": false,
+        "walletsDir": "./.secrets/xportal-wallets",
+        "network": "mainnet"
+    }
+}

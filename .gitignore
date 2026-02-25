@@ -42,9 +42,13 @@ __pycache__/
 xcron/*.pdf
 xcron/*.metadata.json
 
-# ──────── KEEPER BOT SECRETS & LOGS ────────
+# ──────── KEEPER BOT SECRETS & ARTIFACTS ────────
 keeper/keeper-config.json
+keeper/keeper-config.testnet.json
 keeper/keeper-logs/
+keeper/dist/
+keeper/node_modules/
+keeper/build_error.txt
 keeper-logs/
 xportal-claim-state.json
 
@@ -69,8 +73,8 @@ contracts/*/wasm/target/
 
 
 
-# ──────── KEEPER BOT (PRIVATE REPO) ────────
-keeper/
+# ──────── KEEPER BOT ────────
+# (keeper-config.json and keeper-logs/ already excluded above)
 
 # ──────── CLEANED UP — OLD/REDUNDANT ────────
 xcron/

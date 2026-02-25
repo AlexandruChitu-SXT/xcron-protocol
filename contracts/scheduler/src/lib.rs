@@ -89,7 +89,7 @@ pub trait SchedulerContract:
         ttl_seconds: u64,
     ) -> u64 {
         self.require_not_paused();
-        let deposit = self.call_value().egld_value().clone_value();
+        let deposit = self.call_value().egld().clone_value();
 
         // Checks
         require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
@@ -111,7 +111,7 @@ pub trait SchedulerContract:
         let task_id = self.task_nonce().get() + 1;
         self.task_nonce().set(task_id);
 
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
 
         let task = common::types::Task {
             id: task_id,
@@ -220,9 +220,9 @@ pub trait SchedulerContract:
                 let ripe_time = match &task.trigger {
                     common::types::Trigger::TimeOnce { target_time } => *target_time,
                     common::types::Trigger::TimeRecurring { start_time, .. } => *start_time,
-                    _ => self.blockchain().get_block_timestamp(),
+                    _ => self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
                 };
-                let current_time = self.blockchain().get_block_timestamp();
+                let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                 require!(
                     current_time >= ripe_time + common::constants::ROUND_ROBIN_GRACE_SECONDS,
                     "Task assigned to another keeper — wait 30s grace period"
@@ -295,7 +295,7 @@ pub trait SchedulerContract:
             ManagedAsyncCallResult::Ok(_) => {
                 // ✅ Target executed successfully — pay keeper and protocol
                 task.status = common::types::TaskStatus::Completed;
-                task.completed_at = self.blockchain().get_block_timestamp();
+                task.completed_at = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                 self.tasks(task_id).set(&task);
 
                 // S-2: Record execution metrics
@@ -355,7 +355,7 @@ pub trait SchedulerContract:
             ManagedAsyncCallResult::Err(_) => {
                 // ❌ Target execution failed — refund user, no keeper payment
                 task.status = common::types::TaskStatus::Failed;
-                task.completed_at = self.blockchain().get_block_timestamp();
+                task.completed_at = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                 self.tasks(task_id).set(&task);
 
                 // S-2: Record failure metrics
@@ -395,7 +395,7 @@ pub trait SchedulerContract:
             "Task not in Executing state"
         );
 
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let stuck_threshold = 24 * 60 * 60; // 24 hours
         require!(
             current_time > task.created_at + stuck_threshold,
@@ -426,7 +426,7 @@ pub trait SchedulerContract:
             "Not authorized to expire tasks"
         );
 
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let mut processed: usize = 0;
         for task_id in task_ids {
             if processed >= common::constants::MAX_EXPIRE_BATCH {
@@ -466,14 +466,14 @@ pub trait SchedulerContract:
         let task = self.tasks(task_id).get();
         require!(task.status == common::types::TaskStatus::Pending, "Task not Pending");
 
-        let bond = self.call_value().egld_value().clone_value();
+        let bond = self.call_value().egld().clone_value();
         let min_bond = self.commit_bond().get();
         require!(bond >= min_bond, "Bond below minimum");
 
         let commit_info = common::types::CommitInfo {
             keeper: keeper.clone(),
             commit_hash,
-            commit_timestamp: self.blockchain().get_block_timestamp(),
+            commit_timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             bond,
         };
 
@@ -502,7 +502,7 @@ pub trait SchedulerContract:
         require!(commit_info.keeper == keeper, "Not the committing keeper");
 
         // Check reveal window
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let reveal_window = self.reveal_window().get();
         require!(
             current_time <= commit_info.commit_timestamp + reveal_window,
@@ -535,7 +535,7 @@ pub trait SchedulerContract:
     #[endpoint(slashExpiredCommit)]
     fn slash_expired_commit(&self, task_id: u64) {
         let commit_info = self.commits(task_id).get();
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let reveal_window = self.reveal_window().get();
 
         require!(

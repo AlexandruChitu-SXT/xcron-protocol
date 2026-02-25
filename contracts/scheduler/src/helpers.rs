@@ -101,7 +101,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             }
             _ => {
                 // Time-based: re-index at current time + 10s (grace period for retry)
-                let next_time = self.blockchain().get_block_timestamp() + 10;
+                let next_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds() + 10;
                 self.time_index(next_time).insert(task_id);
             }
         }
@@ -118,7 +118,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
         remaining_execs: u64,
         remaining_deposit: BigUint,
     ) {
-        let next_time = self.blockchain().get_block_timestamp() + interval;
+        let next_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds() + interval;
         let new_id = self.task_nonce().get() + 1;
         self.task_nonce().set(new_id);
 
@@ -138,7 +138,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             max_retries: original_task.max_retries,
             retry_count: 0,
             ttl_seconds: original_task.ttl_seconds,
-            created_at: self.blockchain().get_block_timestamp(),
+            created_at: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
             completed_at: 0,

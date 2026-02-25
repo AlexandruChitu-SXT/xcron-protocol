@@ -72,7 +72,7 @@ pub trait ValidationModule: crate::storage::StorageModule {
 
     /// Verify a task's trigger condition is met (task is "ripe").
     fn require_task_ripe(&self, _task_id: u64, task: &common::types::Task<Self::Api>) {
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
 
         // H-3: TTL expiry check — prevent execution of stale tasks
         if task.ttl_seconds > 0 {

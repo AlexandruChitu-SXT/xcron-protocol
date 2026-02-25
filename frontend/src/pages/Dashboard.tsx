@@ -15,6 +15,8 @@ interface ProtocolStats {
     activeKeepers: number;
     minDeposit: string;
     protocolFeeBps: number;
+    totalSuccessful: number;
+    totalFailed: number;
 }
 
 export function Dashboard() {
@@ -25,6 +27,8 @@ export function Dashboard() {
         activeKeepers: 0,
         minDeposit: '0',
         protocolFeeBps: 0,
+        totalSuccessful: 0,
+        totalFailed: 0,
     });
     const [txStats, setTxStats] = useState({ lifetime: 0, daily: 0 });
     const [loading, setLoading] = useState(true);
@@ -37,11 +41,13 @@ export function Dashboard() {
 
     async function loadStats() {
         try {
-            const [nonceRes, keeperRes, depositRes, feeRes] = await Promise.all([
+            const [nonceRes, keeperRes, depositRes, feeRes, successRes, failedRes] = await Promise.all([
                 query(CONTRACTS.scheduler, 'getTaskNonce'),
                 query(CONTRACTS.keeperRegistry, 'getActiveKeeperCount'),
                 query(CONTRACTS.scheduler, 'getMinDeposit'),
                 query(CONTRACTS.scheduler, 'getProtocolFeeBps'),
+                query(CONTRACTS.scheduler, 'getTotalSuccessfulExecs'),
+                query(CONTRACTS.scheduler, 'getTotalFailedExecs'),
             ]);
 
             setStats({
@@ -49,6 +55,8 @@ export function Dashboard() {
                 activeKeepers: keeperRes.length > 0 ? bufferToNumber(keeperRes[0]) : 0,
                 minDeposit: depositRes.length > 0 ? bufferToBigInt(depositRes[0]) : '0',
                 protocolFeeBps: feeRes.length > 0 ? bufferToNumber(feeRes[0]) : 0,
+                totalSuccessful: successRes.length > 0 ? bufferToNumber(successRes[0]) : 0,
+                totalFailed: failedRes.length > 0 ? bufferToNumber(failedRes[0]) : 0,
             });
 
             // Fetch transaction count stats from API (proxy through current network)
@@ -79,10 +87,10 @@ export function Dashboard() {
                 <div className="hero-section">
                     <SlicedLogo3D />
                     <h1>Decentralized Task Automation</h1>
-                    <p className="hero-sub" style={{ marginBottom: 12 }}>
+                    <p className="hero-sub" style={{ marginBottom: 8 }}>
                         The automation layer for MultiversX. Schedule smart contract executions and let decentralized keepers handle the rest.
                     </p>
-                    <div style={{ display: 'flex', gap: 24, justifyContent: 'center', marginBottom: 24 }}>
+                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-glass)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-primary)' }}>
                             <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }} />
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Lifetime Executions: <span style={{ color: 'var(--text-primary)' }}>{txStats.lifetime.toLocaleString()}</span></span>
@@ -124,10 +132,22 @@ export function Dashboard() {
                         <div className="stat-sub">EGLD per task</div>
                     </div>
                     <div className="stat-card" style={{ background: 'rgba(244,114,182,0.1)', borderColor: 'rgba(244,114,182,0.2)', boxShadow: '0 0 25px rgba(244,114,182,0.25)' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 26" fill="none" stroke="rgba(244,114,182,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><path d="M12 2L3 7v6c0 5.25 3.85 10.15 9 11.35C17.15 23.15 21 18.25 21 13V7L12 2z" /></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 26" fill="none" stroke="rgba(244,114,182,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><path d="M12 2L3 7v6c0 5.25 3.85 10.15 9 11.35C17.15 23.15 21 18.25 21 13V7L12 2z" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(244,114,182)' }}>Protocol Fee</div>
                         <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <><AnimatedCounter value={stats.protocolFeeBps / 100} />%</>}</div>
                         <div className="stat-sub">Per execution</div>
+                    </div>
+                    <div className="stat-card" style={{ background: 'rgba(34,197,94,0.1)', borderColor: 'rgba(34,197,94,0.2)', boxShadow: '0 0 25px rgba(34,197,94,0.25)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(34,197,94,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polyline points="20,6 9,17 4,12" /></svg>
+                        <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Successful</div>
+                        <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.totalSuccessful} />}</div>
+                        <div className="stat-sub">Executions</div>
+                    </div>
+                    <div className="stat-card" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)', boxShadow: '0 0 25px rgba(239,68,68,0.15)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                        <div className="stat-label" style={{ color: 'rgb(239,68,68)' }}>Failed</div>
+                        <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.totalFailed} />}</div>
+                        <div className="stat-sub">Executions</div>
                     </div>
                 </div>
 
@@ -233,6 +253,64 @@ export function Dashboard() {
                             <p>Call any contract function on any schedule. Full developer flexibility.</p>
                             <span className="uc-cta">Create →</span>
                         </NavLink>
+                    </div>
+                </div>
+
+                {/* Ecosystem Integrations */}
+                <div className="section" style={{ marginTop: 32 }}>
+                    <div className="section-title-center">Ecosystem Integrations</div>
+                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: -12, marginBottom: 20 }}>
+                        XCron becomes the <strong style={{ color: 'var(--accent-light)' }}>automation engine</strong> that every MultiversX protocol needs
+                    </p>
+                    <div className="use-cases-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                        <div className="use-case-card" style={{ cursor: 'default' }}>
+                            <div className="uc-icon" style={{ background: 'rgba(99,102,241,0.15)', color: 'rgb(99,102,241)' }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M8 12l2 2 4-4" /></svg>
+                            </div>
+                            <h3>Hatom</h3>
+                            <p>Auto-compound lending positions. Claim and reinvest interest without manual intervention.</p>
+                            <span className="uc-cta" style={{ color: 'rgb(99,102,241)' }}>Lending Automation</span>
+                        </div>
+                        <div className="use-case-card" style={{ cursor: 'default' }}>
+                            <div className="uc-icon" style={{ background: 'rgba(6,182,212,0.15)', color: 'rgb(6,182,212)' }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M14 14l7 7M3 8V3h5M10 10L3 3" /></svg>
+                            </div>
+                            <h3>xExchange</h3>
+                            <p>Automated DCA, scheduled swaps, and liquidity rebalancing on the largest MultiversX DEX.</p>
+                            <span className="uc-cta" style={{ color: 'rgb(6,182,212)' }}>DEX Automation</span>
+                        </div>
+                        <div className="use-case-card" style={{ cursor: 'default' }}>
+                            <div className="uc-icon" style={{ background: 'rgba(236,72,153,0.15)', color: 'rgb(236,72,153)' }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18" /><circle cx="8" cy="15" r="2" /><path d="M14 13l3 4h-6l3-4z" /></svg>
+                            </div>
+                            <h3>XOXNO</h3>
+                            <p>Scheduled NFT mints at exact drop times. Auto-list, auto-bid, and collection management.</p>
+                            <span className="uc-cta" style={{ color: 'rgb(236,72,153)' }}>NFT Automation</span>
+                        </div>
+                        <div className="use-case-card" style={{ cursor: 'default' }}>
+                            <div className="uc-icon" style={{ background: 'rgba(245,158,11,0.15)', color: 'rgb(245,158,11)' }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
+                            </div>
+                            <h3>AshSwap</h3>
+                            <p>Automated yield farming, auto-harvest rewards, and stable pool rebalancing strategies.</p>
+                            <span className="uc-cta" style={{ color: 'rgb(245,158,11)' }}>Yield Automation</span>
+                        </div>
+                        <div className="use-case-card" style={{ cursor: 'default' }}>
+                            <div className="uc-icon" style={{ background: 'rgba(16,185,129,0.15)', color: 'rgb(16,185,129)' }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9" /></svg>
+                            </div>
+                            <h3>OneDex</h3>
+                            <p>Scheduled limit orders, auto-swap on price targets, and portfolio auto-balancing.</p>
+                            <span className="uc-cta" style={{ color: 'rgb(16,185,129)' }}>Trading Automation</span>
+                        </div>
+                        <div className="use-case-card" style={{ cursor: 'default' }}>
+                            <div className="uc-icon" style={{ background: 'rgba(139,92,246,0.15)', color: 'rgb(139,92,246)' }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                            </div>
+                            <h3>Your Protocol</h3>
+                            <p>Any smart contract on MultiversX can leverage XCron. Build automation into your dApp.</p>
+                            <span className="uc-cta" style={{ color: 'rgb(139,92,246)' }}>npm install xcron-sdk</span>
+                        </div>
                     </div>
                 </div>
 

@@ -8,8 +8,8 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
-multiversx-sc = "0.54.6"
+multiversx-sc = "0.63.0"
 common = { path = "../common" }
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.54.6"
+version = "0.63.0"

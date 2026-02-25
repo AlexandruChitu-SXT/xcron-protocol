@@ -21,8 +21,8 @@ members = [
 ]
 
 [workspace.dependencies]
-multiversx-sc = "0.54.6"
-multiversx-sc-meta-lib = "0.54.6"
-multiversx-sc-scenario = "0.54.6"
-multiversx-sc-wasm-adapter = "0.54.6"
+multiversx-sc = "0.63.0"
+multiversx-sc-meta-lib = "0.63.0"
+multiversx-sc-scenario = "0.63.0"
+multiversx-sc-wasm-adapter = "0.63.0"
 common = { path = "common" }

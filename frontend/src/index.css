@@ -1201,9 +1201,9 @@ a:hover {
 /* 6-column template grid */
 .template-selector-6 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .template-info {

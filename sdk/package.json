@@ -1,6 +1,6 @@
 {
     "name": "xcron-sdk",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "SDK for integrating with XCron Protocol — Decentralized Task Automation on MultiversX",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

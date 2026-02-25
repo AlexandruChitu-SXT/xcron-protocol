@@ -256,11 +256,11 @@ export function Dashboard() {
                     </div>
                 </div>
 
-                {/* Ecosystem Integrations */}
+                {/* Possible Automations */}
                 <div className="section" style={{ marginTop: 32 }}>
-                    <div className="section-title-center">Ecosystem Integrations</div>
+                    <div className="section-title-center">Possible Automations</div>
                     <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: -12, marginBottom: 20 }}>
-                        XCron becomes the <strong style={{ color: 'var(--accent-light)' }}>automation engine</strong> that every MultiversX protocol needs
+                        Examples of what you <strong style={{ color: 'var(--accent-light)' }}>could automate</strong> with XCron on MultiversX
                     </p>
                     <div className="use-cases-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                         <div className="use-case-card" style={{ cursor: 'default' }}>

@@ -69,7 +69,7 @@ pub trait KeeperRegistryContract:
     fn register_keeper(&self) {
         self.require_not_paused();
         let caller = self.blockchain().get_caller();
-        let stake = self.call_value().egld_value().clone_value();
+        let stake = self.call_value().egld().clone_value();
 
         require!(self.keepers(&caller).is_empty(), "Keeper already registered");
         require!(stake >= self.min_stake().get(), "Stake below minimum");
@@ -77,7 +77,7 @@ pub trait KeeperRegistryContract:
         let info = common::types::KeeperInfo {
             addr: caller.clone(),
             stake,
-            registered_at: self.blockchain().get_block_timestamp(),
+            registered_at: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             total_executions: 0,
             successful_execs: 0,
             failed_execs: 0,
@@ -99,7 +99,7 @@ pub trait KeeperRegistryContract:
         let caller = self.blockchain().get_caller();
         require!(!self.keepers(&caller).is_empty(), "Keeper not registered");
 
-        let additional = self.call_value().egld_value().clone_value();
+        let additional = self.call_value().egld().clone_value();
         let mut info = self.keepers(&caller).get();
         info.stake += additional;
         self.keepers(&caller).set(&info);
@@ -123,7 +123,7 @@ pub trait KeeperRegistryContract:
         self.keepers(&caller).set(&info);
         self.active_keeper_set().swap_remove(&caller);
         self.unstake_request_time(&caller)
-            .set(self.blockchain().get_block_timestamp());
+            .set(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
     }
 
     /// Withdraw stake after cooldown period has elapsed.
@@ -136,7 +136,7 @@ pub trait KeeperRegistryContract:
         require!(!info.active, "Must request unstake first");
 
         let request_time = self.unstake_request_time(&caller).get();
-        let current = self.blockchain().get_block_timestamp();
+        let current = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         require!(
             current >= request_time + self.cooldown_seconds().get(),
             "Cooldown not elapsed"

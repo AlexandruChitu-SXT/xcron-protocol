@@ -68,7 +68,7 @@ pub trait RewardsContract:
     fn receive_execution_fee(&self, keeper: ManagedAddress, task_id: u64) {
         self.require_scheduler_caller();
 
-        let fee = self.call_value().egld_value().clone_value();
+        let fee = self.call_value().egld().clone_value();
         let treasury_cut =
             &fee * self.treasury_split_bps().get() / common::constants::BPS_DENOMINATOR;
         let keeper_bonus = &fee - &treasury_cut;

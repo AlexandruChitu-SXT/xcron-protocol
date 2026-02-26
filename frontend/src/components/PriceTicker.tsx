@@ -208,11 +208,11 @@ export function PriceTicker() {
             <div style={styles.grid}>
                 {priceList.map((token) => (
                     <div key={token.symbol} style={styles.card}>
-                        <div style={styles.cardTop}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <div style={styles.symbol}>{token.symbol}</div>
                             <div style={styles.name}>{token.name}</div>
                         </div>
-                        <div style={styles.cardBottom}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={styles.price}>{formatPrice(token.price)}</span>
                             <span style={{
                                 ...styles.change,
@@ -236,17 +236,20 @@ export function PriceTicker() {
 
 const styles: Record<string, React.CSSProperties> = {
     container: {
-        padding: 20,
+        padding: 12,
         background: 'rgba(0, 255, 136, 0.03)',
         borderRadius: 'var(--radius-lg, 12px)',
         border: '1px solid rgba(0, 255, 136, 0.25)',
         boxShadow: '0 0 30px rgba(0, 255, 136, 0.10), 0 0 60px rgba(0, 255, 136, 0.05)',
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column' as const,
     },
     header: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 8,
     },
     title: {
         fontSize: '1rem',
@@ -270,30 +273,33 @@ const styles: Record<string, React.CSSProperties> = {
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-        gap: 10,
+        gridTemplateColumns: '1fr',
+        gap: 6,
+        flex: 1,
     },
     card: {
-        padding: '12px 14px',
+        padding: '6px 10px',
         background: 'rgba(0, 255, 136, 0.06)',
         borderRadius: 'var(--radius-md, 8px)',
         border: '1px solid rgba(0, 255, 136, 0.15)',
         transition: 'all 0.15s ease',
         cursor: 'default',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     cardTop: {
-        marginBottom: 8,
     },
     symbol: {
-        fontSize: '0.85rem',
+        fontSize: '0.78rem',
         fontWeight: 700,
         color: 'var(--text-primary)',
-        lineHeight: 1.3,
+        lineHeight: 1.2,
     },
     name: {
-        fontSize: '0.6rem',
+        fontSize: '0.55rem',
         color: 'var(--text-muted)',
-        lineHeight: 1.2,
+        lineHeight: 1.1,
     },
     cardBottom: {
         display: 'flex',
@@ -301,7 +307,7 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: 'center',
     },
     price: {
-        fontSize: '0.9rem',
+        fontSize: '0.8rem',
         fontWeight: 600,
         color: 'var(--text-primary)',
         fontFamily: "'SF Mono', 'Fira Code', monospace",
@@ -313,10 +319,10 @@ const styles: Record<string, React.CSSProperties> = {
         borderRadius: 4,
     },
     footer: {
-        marginTop: 12,
+        marginTop: 6,
         display: 'flex',
         justifyContent: 'space-between',
-        fontSize: '0.6rem',
+        fontSize: '0.55rem',
         color: 'var(--text-muted)',
         opacity: 0.7,
     },

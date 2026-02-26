@@ -15,6 +15,15 @@ export default defineConfig({
       },
     }),
   ],
+  optimizeDeps: {
+    include: [
+      '@multiversx/sdk-wallet',
+      '@multiversx/sdk-wallet-connect-provider',
+      '@multiversx/sdk-extension-provider',
+      '@multiversx/sdk-web-wallet-provider',
+      '@multiversx/sdk-core',
+    ],
+  },
   build: {
     // Split vendor libraries into separate chunks for better caching
     rollupOptions: {

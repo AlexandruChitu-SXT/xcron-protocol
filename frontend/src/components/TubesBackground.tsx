@@ -1,62 +1,87 @@
 import { useRef, useEffect, useCallback } from 'react';
 
 /**
- * TubesBackground — Minimal animated background.
- * Very faint tube paths with a single smooth electric pulse that
- * fades linearly with no visible segmentation.
+ * StarlightBackground — Rolls Royce starfield + shooting stars.
+ * Twinkling fiber-optic stars with occasional shooting stars
+ * that streak across the screen from random positions.
  */
 
-interface Tube {
-    points: [number, number][];
-    width: number;
+// ── Starlight (Rolls Royce style) ──
+
+interface Star {
+    x: number;       // 0-1 normalized
+    y: number;       // 0-1 normalized
+    size: number;    // pixel radius
+    speed: number;   // twinkle cycle duration in seconds
+    offset: number;  // phase offset 0-1
+    brightness: number; // max brightness 0-1
 }
 
-const TUBES: Tube[] = [
-    { points: [[-0.05, 0.18], [0.2, 0.14], [0.45, 0.32], [0.7, 0.22], [1.05, 0.35]], width: 1 },
-    { points: [[-0.05, 0.55], [0.25, 0.62], [0.5, 0.45], [0.75, 0.58], [1.05, 0.5]], width: 0.8 },
-    { points: [[-0.05, 0.82], [0.2, 0.76], [0.5, 0.88], [0.8, 0.74], [1.05, 0.8]], width: 0.9 },
-    { points: [[0.15, -0.05], [0.18, 0.3], [0.25, 0.6], [0.2, 0.85], [0.15, 1.05]], width: 0.7 },
-    { points: [[0.78, -0.05], [0.82, 0.25], [0.72, 0.55], [0.8, 0.8], [0.75, 1.05]], width: 0.7 },
-];
-
-function catmullRom(
-    p0: [number, number], p1: [number, number],
-    p2: [number, number], p3: [number, number],
-    t: number
-): [number, number] {
-    const t2 = t * t, t3 = t2 * t;
-    return [
-        0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
-        0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3),
-    ];
-}
-
-function getSplinePoint(points: [number, number][], t: number): [number, number] {
-    const n = points.length - 1;
-    const segment = Math.min(Math.floor(t * n), n - 1);
-    const localT = (t * n) - segment;
-    const p0 = points[Math.max(0, segment - 1)];
-    const p1 = points[segment];
-    const p2 = points[Math.min(n, segment + 1)];
-    const p3 = points[Math.min(n, segment + 2)];
-    return catmullRom(p0, p1, p2, p3, localT);
-}
-
-// Precompute a path of screen-space points for a tube
-function computePath(points: [number, number][], W: number, H: number, dpr: number, steps: number): [number, number][] {
-    const path: [number, number][] = [];
-    for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        const [x, y] = getSplinePoint(points, t);
-        path.push([x * W / dpr, y * H / dpr]);
+function generateStars(count: number): Star[] {
+    const stars: Star[] = [];
+    for (let i = 0; i < count; i++) {
+        stars.push({
+            x: Math.random(),
+            y: Math.random(),
+            size: 0.5 + Math.random() * 1.2,
+            speed: 3 + Math.random() * 5,
+            offset: Math.random(),
+            brightness: 0.3 + Math.random() * 0.7,
+        });
     }
-    return path;
+    return stars;
+}
+
+const STARS = generateStars(120);
+
+// ── Shooting star state ──
+
+interface ShootingStar {
+    startX: number;
+    startY: number;
+    angle: number;      // radians — direction of travel
+    length: number;     // trail length in pixels
+    speed: number;      // pixels per second
+    startTime: number;  // elapsed seconds when it spawned
+    duration: number;   // how long this shooting star lives
+    brightness: number;
+}
+
+function spawnShootingStar(elapsed: number, screenW: number, screenH: number): ShootingStar {
+    // Random edge: top or right side, traveling down-left (like a real meteor)
+    const side = Math.random();
+    let startX: number, startY: number, angle: number;
+
+    if (side < 0.5) {
+        // Spawn from top edge
+        startX = 0.1 * screenW + Math.random() * 0.8 * screenW;
+        startY = -10;
+        angle = Math.PI * 0.55 + Math.random() * 0.35; // ~100°–160° (down-left to down-right)
+    } else {
+        // Spawn from right edge
+        startX = screenW + 10;
+        startY = Math.random() * 0.6 * screenH;
+        angle = Math.PI * 0.65 + Math.random() * 0.25; // ~120°–160° (down-left)
+    }
+
+    return {
+        startX,
+        startY,
+        angle,
+        length: 60 + Math.random() * 100,
+        speed: 300 + Math.random() * 400,
+        startTime: elapsed,
+        duration: 1.0 + Math.random() * 0.8,
+        brightness: 0.5 + Math.random() * 0.5,
+    };
 }
 
 export function TubesBackground() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animRef = useRef<number>(0);
     const startRef = useRef(performance.now() / 1000);
+    const shootingStarRef = useRef<ShootingStar | null>(null);
+    const nextSpawnRef = useRef(3 + Math.random() * 4); // first spawn after 3-7 seconds
 
     const render = useCallback(() => {
         const canvas = canvasRef.current;
@@ -69,78 +94,91 @@ export function TubesBackground() {
         const dpr = window.devicePixelRatio || 1;
         const now = performance.now() / 1000;
         const elapsed = now - startRef.current;
+        const screenW = W / dpr;
+        const screenH = H / dpr;
 
         ctx.clearRect(0, 0, W, H);
 
-        const pathSteps = 400; // very high for smooth trail
+        // ── Starfield — Rolls Royce Starlight ceiling ──
+        for (const star of STARS) {
+            const phase = ((elapsed / star.speed) + star.offset) % 1;
+            const alpha = star.brightness * Math.sin(phase * Math.PI);
+            if (alpha < 0.02) continue;
 
-        // ── Draw all tubes as barely-visible structural lines ──
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        for (const tube of TUBES) {
-            const path = computePath(tube.points, W, H, dpr, 80);
-            ctx.beginPath();
-            ctx.moveTo(path[0][0], path[0][1]);
-            for (let i = 1; i < path.length; i++) {
-                ctx.lineTo(path[i][0], path[i][1]);
+            const sx = star.x * screenW;
+            const sy = star.y * screenH;
+
+            // Soft glow for larger stars
+            if (star.size > 0.9 && alpha > 0.3) {
+                const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, star.size * 4);
+                glow.addColorStop(0, `rgba(220, 235, 255, ${alpha * 0.15})`);
+                glow.addColorStop(1, 'rgba(220, 235, 255, 0)');
+                ctx.beginPath();
+                ctx.arc(sx, sy, star.size * 4, 0, Math.PI * 2);
+                ctx.fillStyle = glow;
+                ctx.fill();
             }
-            ctx.strokeStyle = 'rgba(0, 155, 119, 0.04)';
-            ctx.lineWidth = tube.width;
-            ctx.stroke();
+
+            // Star dot
+            ctx.beginPath();
+            ctx.arc(sx, sy, star.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(230, 240, 255, ${alpha})`;
+            ctx.fill();
         }
 
-        // ── Single pulse traveling one tube at a time ──
-        const pulseDuration = 6;
-        const pauseBetween = 2;
-        const cycleDuration = pulseDuration + pauseBetween;
-        const cycleTime = elapsed % cycleDuration;
-        const tubeIndex = Math.floor(elapsed / cycleDuration) % TUBES.length;
+        // ── Shooting star ──
+        // Spawn a new one if it's time
+        if (elapsed >= nextSpawnRef.current && !shootingStarRef.current) {
+            shootingStarRef.current = spawnShootingStar(elapsed, screenW, screenH);
+            nextSpawnRef.current = elapsed + 5 + Math.random() * 6; // next one in 5-11 seconds
+        }
 
-        if (cycleTime < pulseDuration) {
-            const tube = TUBES[tubeIndex];
-            const progress = cycleTime / pulseDuration;
-            const trailLength = 0.14;
-            const path = computePath(tube.points, W, H, dpr, pathSteps);
+        const ss = shootingStarRef.current;
+        if (ss) {
+            const age = elapsed - ss.startTime;
+            const progress = age / ss.duration;
 
-            // Draw the trail as a single continuous gradient stroke
-            // by drawing many tiny overlapping sub-segments with smooth alpha
-            const headIdx = Math.floor(progress * pathSteps);
-            const tailIdx = Math.max(0, Math.floor((progress - trailLength) * pathSteps));
+            if (progress > 1) {
+                // Shooting star done
+                shootingStarRef.current = null;
+            } else {
+                // Current head position
+                const dist = age * ss.speed;
+                const headX = ss.startX + Math.cos(ss.angle) * dist;
+                const headY = ss.startY + Math.sin(ss.angle) * dist;
 
-            if (headIdx > tailIdx && headIdx < pathSteps) {
-                // Draw from tail to head, increasing alpha smoothly
-                const totalSegments = headIdx - tailIdx;
+                // Trail tail position
+                const tailDist = Math.max(0, dist - ss.length);
+                const tailX = ss.startX + Math.cos(ss.angle) * tailDist;
+                const tailY = ss.startY + Math.sin(ss.angle) * tailDist;
 
-                for (let i = tailIdx; i < headIdx; i++) {
-                    const fade = (i - tailIdx) / totalSegments; // 0 at tail → 1 at head
-                    // Smooth cubic easing for natural falloff
-                    const alpha = fade * fade * 0.3;
+                // Fade in at start, fade out at end
+                const fadeIn = Math.min(1, progress * 4);
+                const fadeOut = Math.min(1, (1 - progress) * 3);
+                const alpha = ss.brightness * fadeIn * fadeOut;
 
-                    ctx.beginPath();
-                    ctx.moveTo(path[i][0], path[i][1]);
-                    // Draw to next point (and one more if possible for continuity)
-                    const end = Math.min(i + 2, headIdx);
-                    for (let j = i + 1; j <= end; j++) {
-                        ctx.lineTo(path[j][0], path[j][1]);
-                    }
+                // Draw trail as a gradient line
+                const trail = ctx.createLinearGradient(tailX, tailY, headX, headY);
+                trail.addColorStop(0, `rgba(230, 240, 255, 0)`);
+                trail.addColorStop(0.7, `rgba(230, 240, 255, ${alpha * 0.4})`);
+                trail.addColorStop(1, `rgba(255, 255, 255, ${alpha})`);
 
-                    ctx.strokeStyle = `rgba(0, 255, 204, ${alpha})`;
-                    ctx.lineWidth = tube.width + 0.5;
-                    ctx.lineCap = 'round';
-                    ctx.stroke();
-                }
+                ctx.beginPath();
+                ctx.moveTo(tailX, tailY);
+                ctx.lineTo(headX, headY);
+                ctx.strokeStyle = trail;
+                ctx.lineWidth = 1.5;
+                ctx.lineCap = 'round';
+                ctx.stroke();
 
-                // Tiny bright dot at the head — just a small soft circle
-                if (headIdx < path.length) {
-                    const [hx, hy] = path[headIdx];
-                    const grad = ctx.createRadialGradient(hx, hy, 0, hx, hy, 4);
-                    grad.addColorStop(0, 'rgba(200, 255, 240, 0.6)');
-                    grad.addColorStop(1, 'rgba(0, 255, 204, 0)');
-                    ctx.beginPath();
-                    ctx.arc(hx, hy, 4, 0, Math.PI * 2);
-                    ctx.fillStyle = grad;
-                    ctx.fill();
-                }
+                // Bright head glow
+                const glow = ctx.createRadialGradient(headX, headY, 0, headX, headY, 6);
+                glow.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.8})`);
+                glow.addColorStop(1, 'rgba(230, 240, 255, 0)');
+                ctx.beginPath();
+                ctx.arc(headX, headY, 6, 0, Math.PI * 2);
+                ctx.fillStyle = glow;
+                ctx.fill();
             }
         }
 

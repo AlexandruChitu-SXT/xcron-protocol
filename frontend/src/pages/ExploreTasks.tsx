@@ -1,9 +1,11 @@
 import { devError, devWarn } from '../utils/devLog';
 import { useEffect, useState } from 'react';
 import { Address } from '@multiversx/sdk-core';
+import { NavLink } from 'react-router-dom';
 import { useContractQuery, bufferToNumber, formatEgld, shortenAddress } from '../hooks/useContractQuery';
 import { CONTRACTS, NETWORK } from '../config';
 import { AnimatedCounter } from '../components/AnimatedCounter';
+import { TypewriterTitle } from '../components/TypewriterTitle';
 
 interface TaskInfo {
     id: number;
@@ -33,6 +35,22 @@ const STATUS_CLASS: Record<string, string> = {
     Completed: 'badge-completed', Failed: 'badge-failed', Cancelled: 'badge-cancelled', Expired: 'badge-cancelled',
 };
 
+const DEMO_TASKS: TaskInfo[] = [
+    { id: 1, owner: 'erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnp1elg8a3...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqd77fnev2sthnczp2lnfx0y...hatom', targetEndpoint: 'claimRewards', status: 'Completed', triggerTime: Math.floor(Date.now() / 1000) - 3600, deposit: '5000000000000000' },
+    { id: 2, owner: 'erd1adfmxhyczrl48lqwz48v7qqt5lzphky3wqnm9n...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqa0fsfshnff4n76jhcye6k3...xexchange', targetEndpoint: 'swapTokensFixedInput', status: 'Pending', triggerTime: Math.floor(Date.now() / 1000) + 1800, deposit: '10000000000000000' },
+    { id: 3, owner: 'erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3z...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqeel2kumf0r8ffyhth7pqd...ashswap', targetEndpoint: 'harvestRewards', status: 'Committed', triggerTime: Math.floor(Date.now() / 1000) + 600, deposit: '8000000000000000' },
+    { id: 4, owner: 'erd1k2s324ww2cqfx7mn8v8ceqdrp4m32wd8sxaah5...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqd77fnev2sthnczp2lnfx0y...hatom', targetEndpoint: 'enterMarket', status: 'Completed', triggerTime: Math.floor(Date.now() / 1000) - 7200, deposit: '5000000000000000' },
+    { id: 5, owner: 'erd1cevsw7mq67tjvvnp56ccfmfj43ent08rk5mnqp...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqa7hv0nahgsl8tz0psat46x...onedex', targetEndpoint: 'limitOrder', status: 'Failed', triggerTime: Math.floor(Date.now() / 1000) - 1200, deposit: '3000000000000000' },
+    { id: 6, owner: 'erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnp1elg8a3...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqzqvm5ywq05yj2ee55x3fz...xoxno', targetEndpoint: 'mint', status: 'Pending', triggerTime: Math.floor(Date.now() / 1000) + 86400, deposit: '15000000000000000' },
+];
+
+const DEMO_EXEC_HISTORY: ExecutionLog[] = [
+    { txHash: '0x4a8b...demo1', taskId: '1', status: 'success', timestamp: Math.floor(Date.now() / 1000) - 3600, sender: 'erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3z...keeper1' },
+    { txHash: '0x9f2c...demo2', taskId: '4', status: 'success', timestamp: Math.floor(Date.now() / 1000) - 7200, sender: 'erd1adfmxhyczrl48lqwz48v7qqt5lzphky3wqnm9n...keeper2' },
+    { txHash: '0x1d7e...demo3', taskId: '5', status: 'fail', timestamp: Math.floor(Date.now() / 1000) - 1200, sender: 'erd1cevsw7mq67tjvvnp56ccfmfj43ent08rk5mnqp...keeper1' },
+    { txHash: '0xb3f1...demo4', taskId: '3', status: 'success', timestamp: Math.floor(Date.now() / 1000) - 900, sender: 'erd1k2s324ww2cqfx7mn8v8ceqdrp4m32wd8sxaah5...keeper3' },
+];
+
 export function ExploreTasks() {
     const { query } = useContractQuery();
     const [tasks, setTasks] = useState<TaskInfo[]>([]);
@@ -43,7 +61,7 @@ export function ExploreTasks() {
 
     useEffect(() => {
         loadAll();
-        const interval = setInterval(() => loadAll(true), 15000);
+        const interval = setInterval(() => loadAll(true), 30000);
         return () => clearInterval(interval);
     }, []);
 
@@ -168,7 +186,7 @@ export function ExploreTasks() {
     async function loadExecHistory() {
         try {
             const res = await fetch(
-                `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success,fail&size=25&order=desc`
+                `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success&size=25&order=desc`
             );
             const txs = await res.json();
             if (Array.isArray(txs)) {
@@ -198,45 +216,125 @@ export function ExploreTasks() {
         return `${Math.floor(diff / 86400)}d ago`;
     }
 
-    const filteredTasks = statusFilter === 'all'
-        ? tasks
-        : tasks.filter(t => t.status.toLowerCase() === statusFilter);
+    const isDemo = tasks.length === 0 && !loading;
+    const displayTasks = isDemo ? DEMO_TASKS : tasks;
+    const displayHistory = isDemo ? DEMO_EXEC_HISTORY : execHistory;
+    const displayStats = isDemo
+        ? { total: DEMO_TASKS.length, active: DEMO_TASKS.filter(t => t.status === 'Pending' || t.status === 'Committed').length, completed: DEMO_TASKS.filter(t => t.status === 'Completed').length, failed: DEMO_TASKS.filter(t => t.status === 'Failed').length }
+        : stats;
+
+    const filteredDisplay = statusFilter === 'all'
+        ? displayTasks
+        : displayTasks.filter(t => t.status.toLowerCase() === statusFilter);
 
     return (
         <div className="page">
             <div className="app-container">
-                <div className="page-header">
-                    <h1>Explore Tasks</h1>
-                    <p>Browse all tasks scheduled on XCron Protocol</p>
+                <div className="page-header" style={{ marginBottom: 8 }}>
+                    <TypewriterTitle as="h1" text="Explore Tasks" speed={70} />
+                    <TypewriterTitle as="p" text="Browse all tasks scheduled on XCron Protocol" speed={30} />
                 </div>
 
-                {/* Protocol overview stats */}
-                <div className="stats-grid" style={{ marginBottom: 20 }}>
-                    <div className="stat-card" style={{ background: 'rgba(59,130,246,0.1)', borderColor: 'rgba(59,130,246,0.25)' }}>
+                {isDemo && (
+                    <div style={{
+                        marginBottom: 14, padding: '10px 16px', borderRadius: 8,
+                        background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                    }}>
+                        <span style={{ fontSize: '0.82rem', color: 'rgb(251,191,36)' }}>
+                            ⚡ Showing demo tasks — no on-chain tasks found yet on testnet
+                        </span>
+                        <NavLink to="/schedule" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-light)', textDecoration: 'none' }}>
+                            Schedule your first task →
+                        </NavLink>
+                    </div>
+                )}
+
+                {/* Protocol overview stats — Dashboard style */}
+                <div className="stats-grid" style={{ marginBottom: 16 }}>
+                    <div className="stat-card" style={{ background: 'rgba(59,130,246,0.12)', borderColor: 'rgba(59,130,246,0.25)', boxShadow: '0 0 25px rgba(59,130,246,0.25)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(59,130,246,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" /><line x1="12" y1="2" x2="12" y2="22" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(59,130,246)' }}>Total Tasks</div>
-                        <div className="stat-value"><AnimatedCounter value={stats.total} /></div>
+                        <div className="stat-value"><AnimatedCounter value={displayStats.total} /></div>
+                        <div className="stat-sub">Scheduled on-chain</div>
                     </div>
-                    <div className="stat-card" style={{ background: 'rgba(251,191,36,0.1)', borderColor: 'rgba(251,191,36,0.2)' }}>
+                    <div className="stat-card" style={{ background: 'rgba(251,191,36,0.1)', borderColor: 'rgba(251,191,36,0.2)', boxShadow: '0 0 25px rgba(251,191,36,0.25)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(251,191,36)' }}>Active</div>
-                        <div className="stat-value"><AnimatedCounter value={stats.active} /></div>
+                        <div className="stat-value"><AnimatedCounter value={displayStats.active} /></div>
+                        <div className="stat-sub">Pending execution</div>
                     </div>
-                    <div className="stat-card" style={{ background: 'rgba(34,197,94,0.1)', borderColor: 'rgba(34,197,94,0.2)' }}>
+                    <div className="stat-card" style={{ background: 'rgba(34,197,94,0.1)', borderColor: 'rgba(34,197,94,0.2)', boxShadow: '0 0 25px rgba(34,197,94,0.25)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(34,197,94,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polyline points="20,6 9,17 4,12" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Completed</div>
-                        <div className="stat-value"><AnimatedCounter value={stats.completed} /></div>
+                        <div className="stat-value"><AnimatedCounter value={displayStats.completed} /></div>
+                        <div className="stat-sub">Successfully executed</div>
                     </div>
-                    <div className="stat-card" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)' }}>
+                    <div className="stat-card" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)', boxShadow: '0 0 25px rgba(239,68,68,0.15)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(239,68,68)' }}>Failed</div>
-                        <div className="stat-value"><AnimatedCounter value={stats.failed} /></div>
+                        <div className="stat-value"><AnimatedCounter value={displayStats.failed} /></div>
+                        <div className="stat-sub">Reverted on-chain</div>
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                {/* Execution History — shown above task list */}
+                {displayHistory.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                        <TypewriterTitle text="Recent Executions" className="section-title" style={{ marginBottom: 12 }} />
+                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                            {displayHistory.map((log, i) => (
+                                <div
+                                    key={log.txHash}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 12,
+                                        padding: '10px 16px',
+                                        borderBottom: i < displayHistory.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                                        background: log.status === 'success' ? 'rgba(34,197,94,0.03)' : 'rgba(239,68,68,0.03)',
+                                    }}
+                                >
+                                    <div style={{
+                                        width: 28, height: 28, borderRadius: 6, display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                        background: log.status === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                                    }}>
+                                        {log.status === 'success' ? (
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                        ) : (
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(239,68,68)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                                        )}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                                            Task {log.taskId}
+                                        </div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 8, marginTop: 2 }}>
+                                            <span>Keeper: {shortenAddress(log.sender)}</span>
+                                            <span>{timeAgo(log.timestamp)}</span>
+                                        </div>
+                                    </div>
+                                    <a
+                                        href={`${NETWORK.explorerUrl}/transactions/${log.txHash}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: 'var(--accent-light)', fontSize: '0.75rem', textDecoration: 'none', flexShrink: 0 }}
+                                    >
+                                        View Tx →
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Filters — pill style */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                     {['all', 'pending', 'committed', 'completed', 'failed', 'cancelled'].map(f => (
                         <button
                             key={f}
                             className={`btn ${statusFilter === f ? 'btn-primary' : 'btn-secondary'} btn-sm`}
                             onClick={() => setStatusFilter(f)}
+                            style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: 20 }}
                         >
                             {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
                         </button>
@@ -245,7 +343,7 @@ export function ExploreTasks() {
                         className="btn btn-secondary btn-sm"
                         onClick={() => loadAll()}
                         disabled={loading}
-                        style={{ marginLeft: 'auto' }}
+                        style={{ marginLeft: 'auto', padding: '4px 12px', fontSize: '0.75rem', borderRadius: 20 }}
                     >
                         {loading ? <span className="loading-spinner" /> : '↻ Refresh'}
                     </button>
@@ -257,14 +355,23 @@ export function ExploreTasks() {
                         <span className="loading-spinner" style={{ width: 32, height: 32 }} />
                         <p style={{ marginTop: 16 }}>Loading tasks from blockchain...</p>
                     </div>
-                ) : filteredTasks.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-icon">—</div>
+                ) : filteredDisplay.length === 0 ? (
+                    <div className="empty-state" style={{ padding: '60px 20px' }}>
+                        <div style={{
+                            width: 64, height: 64, borderRadius: 16,
+                            background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 16px', animation: 'pulseGlow 2s ease-in-out infinite'
+                        }}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </div>
                         <p>No tasks found{statusFilter !== 'all' ? ` with status "${statusFilter}"` : ''}</p>
                     </div>
                 ) : (
                     <div className="task-list">
-                        {filteredTasks.map(task => (
+                        {filteredDisplay.map(task => (
                             <div key={task.id} className="task-card">
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                                     <span className="task-id"># {task.id}</span>
@@ -315,56 +422,6 @@ export function ExploreTasks() {
                     </div>
                 )}
 
-                {/* Execution History */}
-                {execHistory.length > 0 && (
-                    <div style={{ marginTop: 32 }}>
-                        <div className="section-title" style={{ marginBottom: 12 }}>
-                            Recent Executions
-                        </div>
-                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                            {execHistory.map((log, i) => (
-                                <div
-                                    key={log.txHash}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 12,
-                                        padding: '10px 16px',
-                                        borderBottom: i < execHistory.length - 1 ? '1px solid var(--border-primary)' : 'none',
-                                        background: log.status === 'success' ? 'rgba(34,197,94,0.03)' : 'rgba(239,68,68,0.03)',
-                                    }}
-                                >
-                                    <div style={{
-                                        width: 28, height: 28, borderRadius: 6, display: 'flex',
-                                        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                        background: log.status === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                                    }}>
-                                        {log.status === 'success' ? (
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                        ) : (
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(239,68,68)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                                        )}
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
-                                            Task {log.taskId}
-                                        </div>
-                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 8, marginTop: 2 }}>
-                                            <span>Keeper: {shortenAddress(log.sender)}</span>
-                                            <span>{timeAgo(log.timestamp)}</span>
-                                        </div>
-                                    </div>
-                                    <a
-                                        href={`${NETWORK.explorerUrl}/transactions/${log.txHash}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{ color: 'var(--accent-light)', fontSize: '0.75rem', textDecoration: 'none', flexShrink: 0 }}
-                                    >
-                                        View Tx →
-                                    </a>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );

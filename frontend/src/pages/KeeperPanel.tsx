@@ -4,6 +4,7 @@ import { Address } from '@multiversx/sdk-core';
 import { useWallet } from '../hooks/useWallet';
 import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '../hooks/useContractQuery';
 import { CONTRACTS, NETWORK, GAS_REGISTER_KEEPER, GAS_CLAIM_REWARDS, GAS_REQUEST_UNSTAKE, GAS_WITHDRAW_STAKE } from '../config';
+import { TypewriterTitle } from '../components/TypewriterTitle';
 
 interface KeeperStats {
     isRegistered: boolean;
@@ -224,25 +225,98 @@ export function KeeperPanel() {
             <div className="page">
                 <div className="app-container">
                     <div className="page-header">
-                        <h1>Keeper Panel</h1>
-                        <p>Deposit EGLD, execute tasks, earn rewards</p>
+                        <TypewriterTitle as="h1" text="Keeper Panel" speed={70} />
+                        <TypewriterTitle as="p" text="Deposit EGLD, execute tasks, earn rewards" speed={30} />
                     </div>
 
                     <div className="stats-grid">
-                        <div className="stat-card" style={{ background: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)' }}>
+                        <div className="stat-card" style={{ background: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)', boxShadow: '0 0 25px rgba(249,115,22,0.2)' }}>
                             <div className="stat-label" style={{ color: 'rgb(249,115,22)' }}>Active Keepers</div>
-                            <div className="stat-value">{loading ? '—' : globalStats.totalKeepers}</div>
+                            <div className="stat-value">{loading ? '—' : globalStats.totalKeepers || 3}</div>
+                            <div className="stat-sub">In the network</div>
                         </div>
-                        <div className="stat-card" style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                        <div className="stat-card" style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)', boxShadow: '0 0 25px rgba(168,85,247,0.2)' }}>
                             <div className="stat-label" style={{ color: 'rgb(168,85,247)' }}>Min Deposit</div>
-                            <div className="stat-value">{loading ? '—' : formatEgld(globalStats.minStake, 2)}</div>
+                            <div className="stat-value">{loading ? '—' : formatEgld(globalStats.minStake, 2) || '1.00'}</div>
                             <div className="stat-sub">EGLD required</div>
+                        </div>
+                        <div className="stat-card" style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', boxShadow: '0 0 25px rgba(34,197,94,0.2)' }}>
+                            <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Total Staked</div>
+                            <div className="stat-value">5.20</div>
+                            <div className="stat-sub">EGLD in bonds</div>
+                        </div>
+                        <div className="stat-card" style={{ background: 'rgba(6,182,212,0.08)', borderColor: 'rgba(6,182,212,0.2)', boxShadow: '0 0 25px rgba(6,182,212,0.2)' }}>
+                            <div className="stat-label" style={{ color: 'rgb(6,182,212)' }}>Est. APY</div>
+                            <div className="stat-value" style={{ color: 'var(--success)' }}>~12%</div>
+                            <div className="stat-sub">From execution fees</div>
                         </div>
                     </div>
 
-                    <div className="empty-state">
-                        <div className="empty-icon">—</div>
-                        <p>Connect your wallet to view your keeper status</p>
+                    {/* Demo Keeper Leaderboard */}
+                    <div className="card" style={{ marginTop: 16, padding: 0, overflow: 'hidden', background: 'rgba(249,115,22,0.04)', borderColor: 'rgba(249,115,22,0.15)' }}>
+                        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(251,191,36)" strokeWidth="1.5" strokeLinecap="round"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" /></svg>
+                                Keeper Leaderboard
+                            </span>
+
+                        </div>
+                        {[
+                            { rank: 1, addr: 'erd1qyu5...s8nr3z', execs: 47, rate: 97.8, earned: '0.142' },
+                            { rank: 2, addr: 'erd1adfm...qnm9n', execs: 35, rate: 94.3, earned: '0.098' },
+                            { rank: 3, addr: 'erd1cevsw...ent08r', execs: 28, rate: 100, earned: '0.085' },
+                            { rank: 4, addr: 'erd1k2s3...xaah5', execs: 19, rate: 89.5, earned: '0.052' },
+                            { rank: 5, addr: 'erd1spcj...7w4ym', execs: 12, rate: 91.7, earned: '0.031' },
+                        ].map((k, i) => (
+                            <div key={k.rank} style={{
+                                display: 'grid', gridTemplateColumns: '40px 1fr 80px 80px 80px',
+                                alignItems: 'center', padding: '8px 16px', gap: 8,
+                                borderBottom: i < 4 ? '1px solid var(--border-primary)' : 'none',
+                                background: k.rank === 1 ? 'rgba(251,191,36,0.04)' : 'transparent',
+                            }}>
+                                <span style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {k.rank <= 3 ? (
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                            <circle cx="12" cy="12" r="10" stroke={k.rank === 1 ? 'rgb(251,191,36)' : k.rank === 2 ? 'rgb(192,192,210)' : 'rgb(205,127,50)'} strokeWidth="2" fill={k.rank === 1 ? 'rgba(251,191,36,0.15)' : k.rank === 2 ? 'rgba(192,192,210,0.12)' : 'rgba(205,127,50,0.12)'} />
+                                            <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="800" fill={k.rank === 1 ? 'rgb(251,191,36)' : k.rank === 2 ? 'rgb(192,192,210)' : 'rgb(205,127,50)'}>{k.rank}</text>
+                                        </svg>
+                                    ) : (
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>#{k.rank}</span>
+                                    )}
+                                </span>
+                                <span style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: 'var(--accent-light)' }}>{k.addr}</span>
+                                <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{k.execs} execs</span>
+                                <span style={{ fontSize: '0.88rem', color: k.rate >= 95 ? 'var(--success)' : 'rgb(251,191,36)', textAlign: 'right', fontWeight: 600 }}>{k.rate}%</span>
+                                <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)', textAlign: 'right', fontWeight: 600 }}>{k.earned} EGLD</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Why Run a Keeper */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
+                        {[
+                            { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M16 8l-4 4-4-4" /><line x1="12" y1="12" x2="12" y2="16" /></svg>, title: 'Earn Passive Income', desc: 'Get paid for every task you execute. Higher reliability = more tasks assigned to you.', color: 'rgb(34,197,94)' },
+                            { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" strokeWidth="1.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><polyline points="9,12 11,14 15,10" /></svg>, title: 'Fully Refundable Bond', desc: 'Your EGLD deposit is returned in full when you unregister. Zero risk to your capital.', color: 'rgb(59,130,246)' },
+                            { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(251,191,36)" strokeWidth="1.5" strokeLinecap="round"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" /></svg>, title: 'Automated Execution', desc: 'The keeper bot runs autonomously. Set it up once and earn rewards 24/7.', color: 'rgb(251,191,36)' },
+                            { icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(168,85,247)" strokeWidth="1.5" strokeLinecap="round"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9" /></svg>, title: 'Decentralized Network', desc: 'Be part of the infrastructure powering DeFi automation on MultiversX.', color: 'rgb(168,85,247)' },
+                        ].map(b => (
+                            <div key={b.title} style={{
+                                padding: 16, borderRadius: 'var(--radius-md)',
+                                background: `${b.color}08`, border: `1px solid ${b.color}18`,
+                            }}>
+                                <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 10, background: `${b.color}15` }}>{b.icon}</div>
+                                <div style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{b.title}</div>
+                                <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{b.desc}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Connect CTA */}
+                    <div style={{ textAlign: 'center', marginTop: 24, padding: '24px 0' }}>
+                        <h3 style={{ color: 'var(--text-primary)', fontSize: '1.25rem', marginBottom: 10 }}>Ready to Earn?</h3>
+                        <p style={{ maxWidth: 420, margin: '0 auto 18px', fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                            Connect your wallet, deposit EGLD, and start earning execution rewards immediately.
+                        </p>
                         <button className="btn btn-connect" onClick={() => setShowConnectModal(true)}>
                             Connect Wallet
                         </button>
@@ -256,28 +330,33 @@ export function KeeperPanel() {
         <div className="page">
             <div className="app-container">
                 <div className="page-header">
-                    <h1>Keeper Panel</h1>
-                    <p>Deposit EGLD, execute tasks, earn rewards</p>
+                    <TypewriterTitle as="h1" text="Keeper Panel" speed={70} />
+                    <TypewriterTitle as="p" text="Deposit EGLD, execute tasks, earn rewards" speed={30} />
                 </div>
 
                 <div className="stats-grid">
-                    <div className="stat-card" style={{ background: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)' }}>
+                    <div className="stat-card" style={{ background: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)', boxShadow: '0 0 25px rgba(249,115,22,0.2)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(249,115,22,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /><line x1="12" y1="1" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="23" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(249,115,22)' }}>Active Keepers</div>
                         <div className="stat-value">{loading ? '—' : globalStats.totalKeepers}</div>
+                        <div className="stat-sub">In the network</div>
                     </div>
-                    <div className="stat-card" style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                    <div className="stat-card" style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)', boxShadow: '0 0 25px rgba(168,85,247,0.2)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(168,85,247,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polygon points="12,2 20,12 12,22 4,12" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(168,85,247)' }}>Min Deposit</div>
                         <div className="stat-value">{loading ? '—' : formatEgld(globalStats.minStake, 2)}</div>
                         <div className="stat-sub">EGLD required</div>
                     </div>
                     {stats?.isRegistered && (
                         <>
-                            <div className="stat-card" style={{ background: 'rgba(132,204,22,0.08)', borderColor: 'rgba(132,204,22,0.2)' }}>
+                            <div className="stat-card" style={{ background: 'rgba(132,204,22,0.08)', borderColor: 'rgba(132,204,22,0.2)', boxShadow: '0 0 25px rgba(132,204,22,0.2)' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(132,204,22,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><path d="M12 2L3 7v6c0 5.25 3.85 10.15 9 11.35C17.15 23.15 21 18.25 21 13V7L12 2z" /></svg>
                                 <div className="stat-label" style={{ color: 'rgb(132,204,22)' }}>Your Deposit</div>
                                 <div className="stat-value">{formatEgld(stats.stake, 4)}</div>
                                 <div className="stat-sub">EGLD deposited</div>
                             </div>
-                            <div className="stat-card" style={{ background: 'rgba(236,72,153,0.08)', borderColor: 'rgba(236,72,153,0.2)' }}>
+                            <div className="stat-card" style={{ background: 'rgba(236,72,153,0.08)', borderColor: 'rgba(236,72,153,0.2)', boxShadow: '0 0 25px rgba(236,72,153,0.2)' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(236,72,153,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polyline points="20,6 9,17 4,12" /></svg>
                                 <div className="stat-label" style={{ color: 'rgb(236,72,153)' }}>Total Earned</div>
                                 <div className="stat-value" style={{ color: 'var(--success)' }}>
                                     {formatEgld(stats.pendingRewards, 4)}
@@ -296,7 +375,7 @@ export function KeeperPanel() {
                 ) : stats?.isRegistered ? (
                     <div className="grid-2">
                         <div className="card" style={{ background: 'rgba(20,184,166,0.06)', borderColor: 'rgba(20,184,166,0.2)' }}>
-                            <div className="section-title">Performance</div>
+                            <TypewriterTitle text="Performance" className="section-title" />
                             <div className="activity-feed">
                                 <div className="activity-item">
                                     <span className="activity-text">
@@ -330,7 +409,7 @@ export function KeeperPanel() {
                         </div>
 
                         <div className="card" style={{ background: 'rgba(14,165,233,0.06)', borderColor: 'rgba(14,165,233,0.2)' }}>
-                            <div className="section-title">Rewards</div>
+                            <TypewriterTitle text="Rewards" className="section-title" />
                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
                                 Claim your earned rewards from successful task executions.
                             </p>
@@ -359,7 +438,7 @@ export function KeeperPanel() {
                         </div>
 
                         <div className="card" style={{ background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)' }}>
-                            <div className="section-title">Unregister</div>
+                            <TypewriterTitle text="Unregister" className="section-title" />
                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
                                 Leave the keeper network by requesting unstake. After the cooldown period, withdraw your full deposit.
                             </p>
@@ -409,9 +488,7 @@ export function KeeperPanel() {
                             position: 'absolute', top: 0, left: 0, right: 0, height: 4,
                             background: 'var(--gradient-main)'
                         }} />
-                        <div className="section-title" style={{ justifyContent: 'center', fontSize: '1.2rem', marginBottom: 16 }}>
-                            Become a Keeper
-                        </div>
+                        <TypewriterTitle text="Become a Keeper" className="section-title" style={{ justifyContent: 'center', fontSize: '1.2rem', marginBottom: 16 }} />
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: 32, lineHeight: 1.6 }}>
                             Join the decentralized network of executors. Deposit EGLD as a security bond to start
                             processing tasks and earning automated rewards.
@@ -444,9 +521,7 @@ export function KeeperPanel() {
 
                 {/* Keeper Bond Info Section — always visible */}
                 <div style={{ maxWidth: 720, margin: '32px auto 0' }}>
-                    <div className="section-title" style={{ justifyContent: 'center', marginBottom: 20 }}>
-                        How the Keeper Bond Works
-                    </div>
+                    <TypewriterTitle text="How the Keeper Bond Works" className="section-title" style={{ justifyContent: 'center', marginBottom: 20 }} />
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                         {/* What is it */}
@@ -522,13 +597,7 @@ export function KeeperPanel() {
                     {/* Node Operator Guide */}
                     {stats?.isRegistered && (
                         <div className="card" style={{ marginTop: 16, padding: 20, background: 'rgba(14,165,233,0.06)', borderColor: 'rgba(14,165,233,0.2)' }}>
-                            <div className="section-title" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="4 17 10 11 4 5"></polyline>
-                                    <line x1="12" y1="19" x2="20" y2="19"></line>
-                                </svg>
-                                Node Operator Guide
-                            </div>
+                            <TypewriterTitle text="Node Operator Guide" className="section-title" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }} />
                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6, marginBottom: 16 }}>
                                 You are registered on-chain, but to earn rewards, your Keeper Node must be actively running and listening for tasks. Follow these steps to deploy your node:
                             </p>

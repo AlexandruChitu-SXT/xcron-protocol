@@ -2,6 +2,10 @@ import { devWarn } from '../utils/devLog';
 import { useState, useCallback } from 'react';
 import { NETWORK } from '../config';
 
+// Backoff cache: remember failed 400 queries for 60s to stop browser console spam
+const failedQueryCache = new Map<string, number>(); // key → timestamp of last 400
+const BACKOFF_MS = 60_000; // don't retry failed queries for 60 seconds
+
 /**
  * Hook for read-only smart contract queries.
  * Uses the MultiversX API directly to avoid SDK version mismatches.
@@ -17,6 +21,14 @@ export function useContractQuery() {
     ): Promise<Buffer[]> => {
         setLoading(true);
         try {
+            // Check backoff cache — skip fetch entirely if this query recently returned 400
+            const cacheKey = `${contractAddr}:${funcName}`;
+            const lastFail = failedQueryCache.get(cacheKey);
+            if (lastFail && Date.now() - lastFail < BACKOFF_MS) {
+                setLoading(false);
+                return [];
+            }
+
             const response = await fetch(`${NETWORK.apiUrl}/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -28,10 +40,16 @@ export function useContractQuery() {
             });
 
             if (!response.ok) {
-                // Silent retry once before reporting error
+                // 400 = bad request — cache it and return silently (no retry)
+                if (response.status === 400) {
+                    failedQueryCache.set(cacheKey, Date.now());
+                    setLoading(false);
+                    return [];
+                }
+                // 5xx or other — retry once
                 if (_retryCount < 1) {
                     setLoading(false);
-                    await new Promise(r => setTimeout(r, 2000));
+                    await new Promise(r => setTimeout(r, 3000));
                     return query(contractAddr, funcName, args, _retryCount + 1);
                 }
                 throw new Error(`Query failed: ${response.status}`);

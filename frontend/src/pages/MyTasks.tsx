@@ -4,6 +4,8 @@ import { Address } from '@multiversx/sdk-core';
 import { useWallet } from '../hooks/useWallet';
 import { useContractQuery, bufferToNumber, shortenAddress } from '../hooks/useContractQuery';
 import { CONTRACTS, GAS_CANCEL_TASK, NETWORK } from '../config';
+import { TypewriterTitle } from '../components/TypewriterTitle';
+import { AnimatedCounter } from '../components/AnimatedCounter';
 
 interface TaskInfo {
     id: number;
@@ -240,7 +242,7 @@ export function MyTasks() {
     async function loadExecHistory() {
         try {
             const res = await fetch(
-                `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success,fail&size=20&order=desc`
+                `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success&size=20&order=desc`
             );
             const txs = await res.json();
             if (Array.isArray(txs)) {
@@ -288,12 +290,23 @@ export function MyTasks() {
             <div className="page">
                 <div className="app-container">
                     <div className="page-header">
-                        <h1>My Tasks</h1>
-                        <p>View and manage your scheduled tasks</p>
+                        <TypewriterTitle as="h1" text="My Tasks" speed={70} />
+                        <TypewriterTitle as="p" text="View and manage your scheduled tasks" speed={30} />
                     </div>
-                    <div className="empty-state">
-                        <div className="empty-icon">—</div>
-                        <p>Connect your wallet to view your tasks</p>
+                    <div className="empty-state" style={{ padding: '80px 20px' }}>
+                        <div style={{
+                            width: 80, height: 80, borderRadius: 20,
+                            background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 20px', animation: 'pulseGlow 2s ease-in-out infinite'
+                        }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgb(139,92,246)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <path d="M3 9h18" /><path d="M9 21V9" />
+                            </svg>
+                        </div>
+                        <h3 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', marginBottom: 8 }}>Connect Your Wallet</h3>
+                        <p style={{ maxWidth: 360, margin: '0 auto 24px', lineHeight: 1.6 }}>Link your MultiversX wallet to view, manage, and track all your scheduled automations in real time.</p>
                         <button className="btn btn-connect" onClick={() => setShowConnectModal(true)}>
                             Connect Wallet
                         </button>
@@ -306,29 +319,66 @@ export function MyTasks() {
     return (
         <div className="page">
             <div className="app-container">
-                <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                        <h1>My Tasks</h1>
-                        <p>View and manage your scheduled tasks</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                            className={`btn ${filter === 'mine' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-                            onClick={() => setFilter('mine')}
-                        >
-                            My Tasks
-                        </button>
-                        <button
-                            className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-                            onClick={() => setFilter('all')}
-                        >
-                            All Tasks
-                        </button>
-                        <button className="btn btn-secondary btn-sm" onClick={() => loadTasks()} disabled={loading}>
-                            {loading ? <span className="loading-spinner" /> : '↻'}
-                        </button>
-                    </div>
+                <div className="page-header">
+                    <TypewriterTitle as="h1" text="My Tasks" speed={70} />
+                    <TypewriterTitle as="p" text="View and manage your scheduled tasks" speed={30} />
                 </div>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+                    <button
+                        className={`btn ${filter === 'mine' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                        onClick={() => setFilter('mine')}
+                        style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: 20 }}
+                    >
+                        My Tasks
+                    </button>
+                    <button
+                        className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                        onClick={() => setFilter('all')}
+                        style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: 20 }}
+                    >
+                        All Tasks
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => loadTasks()} disabled={loading}
+                        style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: 20 }}
+                    >
+                        {loading ? <span className="loading-spinner" /> : '↻'}
+                    </button>
+                </div>
+
+                {/* Stats summary — Dashboard style */}
+                {!loading && filteredTasks.length > 0 && (() => {
+                    const myActive = filteredTasks.filter(t => t.status === 'Pending' || t.status === 'Committed').length;
+                    const myCompleted = filteredTasks.filter(t => t.status === 'Completed').length;
+                    const myFailed = filteredTasks.filter(t => t.status === 'Failed').length;
+                    return (
+                        <div className="stats-grid" style={{ marginBottom: 16 }}>
+                            <div className="stat-card" style={{ background: 'rgba(59,130,246,0.12)', borderColor: 'rgba(59,130,246,0.25)', boxShadow: '0 0 25px rgba(59,130,246,0.25)' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(59,130,246,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" /></svg>
+                                <div className="stat-label" style={{ color: 'rgb(59,130,246)' }}>Total</div>
+                                <div className="stat-value"><AnimatedCounter value={filteredTasks.length} /></div>
+                                <div className="stat-sub">Your tasks</div>
+                            </div>
+                            <div className="stat-card" style={{ background: 'rgba(251,191,36,0.1)', borderColor: 'rgba(251,191,36,0.2)', boxShadow: '0 0 25px rgba(251,191,36,0.25)' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                                <div className="stat-label" style={{ color: 'rgb(251,191,36)' }}>Active</div>
+                                <div className="stat-value"><AnimatedCounter value={myActive} /></div>
+                                <div className="stat-sub">Awaiting execution</div>
+                            </div>
+                            <div className="stat-card" style={{ background: 'rgba(34,197,94,0.1)', borderColor: 'rgba(34,197,94,0.2)', boxShadow: '0 0 25px rgba(34,197,94,0.25)' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(34,197,94,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polyline points="20,6 9,17 4,12" /></svg>
+                                <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Completed</div>
+                                <div className="stat-value"><AnimatedCounter value={myCompleted} /></div>
+                                <div className="stat-sub">Successfully done</div>
+                            </div>
+                            <div className="stat-card" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)', boxShadow: '0 0 25px rgba(239,68,68,0.15)' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                                <div className="stat-label" style={{ color: 'rgb(239,68,68)' }}>Failed</div>
+                                <div className="stat-value"><AnimatedCounter value={myFailed} /></div>
+                                <div className="stat-sub">Reverted</div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {loading ? (
                     <div className="empty-state">
@@ -336,13 +386,27 @@ export function MyTasks() {
                         <p style={{ marginTop: 16 }}>Loading tasks from blockchain...</p>
                     </div>
                 ) : filteredTasks.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-icon">—</div>
-                        <p>{filter === 'mine' ? 'You have no tasks yet' : 'No tasks found'}</p>
+                    <div className="empty-state" style={{ padding: '80px 20px' }}>
+                        <div style={{
+                            width: 80, height: 80, borderRadius: 20,
+                            background: 'rgba(80,200,120,0.1)', border: '1px solid rgba(80,200,120,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 20px', animation: 'pulseGlow 2s ease-in-out infinite'
+                        }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <h3 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', marginBottom: 8 }}>
+                            {filter === 'mine' ? 'No Tasks Yet' : 'No Tasks Found'}
+                        </h3>
+                        <p style={{ maxWidth: 360, margin: '0 auto 24px', lineHeight: 1.6 }}>
+                            {filter === 'mine'
+                                ? 'Schedule your first on-chain automation — auto-compound, DCA, or any custom smart contract call.'
+                                : 'No tasks are registered on the protocol yet. Be the first to schedule one!'}
+                        </p>
                         {filter === 'mine' && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => setFilter('all')}>
-                                View All Tasks →
-                            </button>
+                            <a href="/schedule" className="btn btn-primary">Schedule Your First Task →</a>
                         )}
                     </div>
                 ) : (
@@ -405,9 +469,7 @@ export function MyTasks() {
                 {/* Execution History */}
                 {execHistory.length > 0 && (
                     <div style={{ marginTop: 40 }}>
-                        <div className="section-title" style={{ marginBottom: 16 }}>
-                            Execution History
-                        </div>
+                        <TypewriterTitle text="Execution History" className="section-title" />
                         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                             {execHistory.map((log, i) => (
                                 <div

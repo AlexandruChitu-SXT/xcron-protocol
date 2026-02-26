@@ -176,7 +176,7 @@ export function LiveActivityFeed() {
 
     // Polling Every Round (6s or 3s in DEMO)
     useEffect(() => {
-        const rate = DEMO_MODE ? 3000 : 6000;
+        const rate = DEMO_MODE ? 15000 : 30000;
 
         // Initial Fetch
         fetchEvents();
@@ -202,6 +202,9 @@ export function LiveActivityFeed() {
             fontFamily: "'Inter', 'SF Mono', monospace",
             boxShadow: '0 8px 32px rgba(0,255,120,0.08), 0 0 60px rgba(0,0,0,0.3)',
             backdropFilter: 'blur(12px)',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column' as const,
         } as React.CSSProperties,
         header: {
             padding: '14px 20px',
@@ -250,23 +253,23 @@ export function LiveActivityFeed() {
             </div>
 
             {/* ── Task Execution Pipeline ── */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
+            <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border-primary)' }}>
                 <div style={{
-                    fontSize: '0.72rem', fontWeight: 600, letterSpacing: '1px',
-                    color: 'var(--text-secondary)', marginBottom: 12, textTransform: 'uppercase',
+                    fontSize: '0.65rem', fontWeight: 600, letterSpacing: '1px',
+                    color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase',
                 }}>
                     Task Execution Pipeline
                 </div>
 
                 {/* Time axis */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, paddingRight: 120 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, paddingRight: 120 }}>
                     {['0ms', '100ms', '200ms', '300ms', '400ms', '500ms'].map((l, i) => (
                         <span key={i} style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{l}</span>
                     ))}
                 </div>
 
                 {/* Pipeline visualization */}
-                <div style={{ position: 'relative', minHeight: 120 }}>
+                <div style={{ position: 'relative', minHeight: 68 }}>
                     {/* Grid lines */}
                     {[0, 1, 2, 3, 4, 5].map(i => (
                         <div key={i} style={{
@@ -278,15 +281,15 @@ export function LiveActivityFeed() {
                     {/* Bars for each recent event (top 4, preferring successful) */}
                     {(() => {
                         const successes = events.filter(e => e.status === 'success');
-                        const pipelineEvents = successes.length >= 4
-                            ? successes.slice(0, 4)
-                            : [...successes, ...events.filter(e => e.status !== 'success')].slice(0, 4);
+                        const pipelineEvents = successes.length >= 3
+                            ? successes.slice(0, 3)
+                            : [...successes, ...events.filter(e => e.status !== 'success')].slice(0, 3);
                         return pipelineEvents;
                     })().map((ev, idx) => {
                         const schedW = ((ev.scheduledMs || 30) / PIPELINE_W) * 78;
                         const confW = ((ev.confirmedMs || 60) / PIPELINE_W) * 78;
                         const execW = ((ev.executedMs || 120) / PIPELINE_W) * 78;
-                        const y = idx * 28;
+                        const y = idx * 22;
 
                         return (
                             <div key={ev.hash} style={{ position: 'absolute', top: y, left: 0, right: 0, height: 24, display: 'flex', alignItems: 'center' }}>
@@ -360,7 +363,7 @@ export function LiveActivityFeed() {
                 </div>
             </div>
 
-            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
                 {loading ? (
                     <div style={{ padding: 40, textAlign: 'center' }}>
                         <span className="loading-spinner" style={{ width: 20, height: 20 }} />

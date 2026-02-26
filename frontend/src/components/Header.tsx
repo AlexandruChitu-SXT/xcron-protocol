@@ -54,7 +54,7 @@ export function Header() {
             <header className="header">
                 <div className="header-inner">
                     <NavLink to="/" className="header-logo">
-                        <canvas ref={logoCanvasRef} className="logo-icon" style={{ width: 64, height: 64 }} />
+                        <canvas ref={logoCanvasRef} className="logo-icon" style={{ width: 80, height: 80 }} />
                         <span style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '-0.5px', fontSize: '1.4em' }}>XCron</span>
                         <span className="logo-badge">{NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1)}</span>
                     </NavLink>

@@ -50,7 +50,7 @@ function drawRadar(
             else ctx.lineTo(x, y);
         }
         ctx.closePath();
-        ctx.strokeStyle = `rgba(255,255,255,${ring === 1 ? 0.12 : 0.06})`;
+        ctx.strokeStyle = `rgba(255,255,255,${ring === 1 ? 0.18 : 0.10})`;
         ctx.lineWidth = 1;
         ctx.stroke();
     }
@@ -61,7 +61,7 @@ function drawRadar(
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
         ctx.lineWidth = 1;
         ctx.stroke();
     }
@@ -71,7 +71,8 @@ function drawRadar(
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
         const angle = startAngle + i * angleStep;
-        const val = (metrics[i].value / 100) * animProgress;
+        const rawVal = (metrics[i].value / 100) * animProgress;
+        const val = Math.max(0.3, rawVal); // floor at 30% so points spread out
         const x = cx + Math.cos(angle) * radius * val;
         const y = cy + Math.sin(angle) * radius * val;
         dataPoints.push({ x, y });
@@ -82,8 +83,8 @@ function drawRadar(
 
     // Gradient fill
     const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    gradient.addColorStop(0, 'rgba(232,146,124,0.25)');
-    gradient.addColorStop(1, 'rgba(232,146,124,0.05)');
+    gradient.addColorStop(0, 'rgba(232,146,124,0.40)');
+    gradient.addColorStop(1, 'rgba(232,146,124,0.12)');
     ctx.fillStyle = gradient;
     ctx.fill();
 
@@ -151,17 +152,17 @@ export function ProtocolRadar() {
 
     const fetchMetrics = useCallback(async () => {
         try {
-            const [nonceRes, keeperRes, successRes, failedRes] = await Promise.all([
+            const [nonceRes, keeperRes, metricsRes] = await Promise.all([
                 query(CONTRACTS.scheduler, 'getTaskNonce'),
                 query(CONTRACTS.keeperRegistry, 'getActiveKeeperCount'),
-                query(CONTRACTS.scheduler, 'getTotalSuccessfulExecs'),
-                query(CONTRACTS.scheduler, 'getTotalFailedExecs'),
+                query(CONTRACTS.scheduler, 'getSecurityMetrics'),
             ]);
 
             const totalTasks = nonceRes.length > 0 ? bufferToNumber(nonceRes[0]) : 0;
             const activeKeepers = keeperRes.length > 0 ? bufferToNumber(keeperRes[0]) : 0;
-            const totalSuccessful = successRes.length > 0 ? bufferToNumber(successRes[0]) : 0;
-            const totalFailed = failedRes.length > 0 ? bufferToNumber(failedRes[0]) : 0;
+            // getSecurityMetrics returns MultiValue3<u64, u64, usize> = (totalExecuted, totalFailed, pendingCount)
+            const totalSuccessful = metricsRes.length > 0 ? bufferToNumber(metricsRes[0]) : 0;
+            const totalFailed = metricsRes.length > 1 ? bufferToNumber(metricsRes[1]) : 0;
             const totalExecs = totalSuccessful + totalFailed;
 
             // Fetch 24h activity
@@ -211,7 +212,7 @@ export function ProtocolRadar() {
     // Fetch on mount + every 3 seconds
     useEffect(() => {
         fetchMetrics();
-        const interval = setInterval(fetchMetrics, 3000);
+        const interval = setInterval(fetchMetrics, 30000);
         return () => clearInterval(interval);
     }, [fetchMetrics]);
 
@@ -274,7 +275,7 @@ export function ProtocolRadar() {
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Score
                     </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'rgb(232,146,124)' }}>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'rgba(232,146,124,0.7)' }}>
                         {(overallScore * animProgress).toFixed(1)}
                     </div>
                 </div>
@@ -282,23 +283,23 @@ export function ProtocolRadar() {
 
             <canvas
                 ref={canvasRef}
-                style={{ width: '100%', height: 220, display: 'block' }}
+                style={{ width: '100%', height: 200, display: 'block' }}
             />
 
-            {/* Compact metric pills */}
+            {/* Metric pills — 3-column grid */}
             <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8,
-                justifyContent: 'center',
+                display: 'grid', gridTemplateColumns: 'repeat(3, auto)',
+                gap: '3px 6px', marginTop: 6, justifyContent: 'center',
             }}>
                 {metrics.map((m) => (
                     <div key={m.label} style={{
-                        display: 'flex', alignItems: 'center', gap: 4,
-                        padding: '2px 8px', borderRadius: 10,
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        padding: '2px 6px', borderRadius: 8,
                         background: 'var(--bg-glass)',
                         border: '1px solid var(--border-primary)',
-                        fontSize: '0.65rem',
+                        fontSize: '0.58rem', whiteSpace: 'nowrap',
                     }}>
-                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: m.color }} />
+                        <div style={{ width: 4, height: 4, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
                         <span style={{ color: 'var(--text-muted)' }}>{m.label}</span>
                         <span style={{ color: m.color, fontWeight: 700 }}>{m.rawValue}</span>
                     </div>

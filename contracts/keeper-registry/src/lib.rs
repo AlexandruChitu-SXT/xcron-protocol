@@ -1,3 +1,9 @@
+//! XCron KeeperRegistry Contract
+//!
+//! Manages keeper enrollment, EGLD staking, progressive slashing, and
+//! reputation tracking. Keepers stake EGLD to participate in task execution
+//! and earn rewards proportional to their reliability.
+
 #![no_std]
 
 multiversx_sc::imports!();
@@ -8,9 +14,6 @@ pub mod storage;
 pub mod validation;
 pub mod views;
 
-/// XCron KeeperRegistry Contract
-///
-/// Manages keeper enrollment, EGLD staking, slashing, and reputation tracking.
 #[multiversx_sc::contract]
 pub trait KeeperRegistryContract:
     storage::StorageModule
@@ -18,6 +21,7 @@ pub trait KeeperRegistryContract:
     + views::ViewsModule
     + config::ConfigModule
     + validation::ValidationModule
+    + common::pausable::PausableModule
 {
     #[init]
     fn init(
@@ -41,23 +45,7 @@ pub trait KeeperRegistryContract:
         self.version().set(self.version().get() + 1);
     }
 
-    // ── Circuit Breaker ─────────────────────────────────────
-
-    #[only_owner]
-    #[endpoint(pause)]
-    fn pause(&self) {
-        self.paused().set(true);
-    }
-
-    #[only_owner]
-    #[endpoint(unpause)]
-    fn unpause(&self) {
-        self.paused().set(false);
-    }
-
-    fn require_not_paused(&self) {
-        require!(!self.paused().get(), "Contract is paused");
-    }
+    // ── Circuit Breaker ── (provided by common::pausable::PausableModule)
 
     // ═══════════════════════════════════════════════════════════
     //  KEEPER REGISTRATION

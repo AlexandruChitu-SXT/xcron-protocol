@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { useContractQuery, bufferToNumber, bufferToBigInt } from '../hooks/useContractQuery';
+import { useContractQuery, bufferToNumber } from '../hooks/useContractQuery';
 import { CONTRACTS, NETWORK } from '../config';
 import { devWarn } from '../utils/devLog';
 
@@ -31,7 +31,7 @@ function drawRadar(
 
     const cx = displayW / 2;
     const cy = displayH / 2;
-    const radius = Math.min(cx, cy) - 60;
+    const radius = Math.min(cx, cy) - 42;
     const n = metrics.length;
     const angleStep = (Math.PI * 2) / n;
     const startAngle = -Math.PI / 2; // Start from top
@@ -109,18 +109,17 @@ function drawRadar(
     ctx.textBaseline = 'middle';
     for (let i = 0; i < n; i++) {
         const angle = startAngle + i * angleStep;
-        const labelDist = radius + 40;
+        const labelDist = radius + 28;
         const lx = cx + Math.cos(angle) * labelDist;
         const ly = cy + Math.sin(angle) * labelDist;
 
-        // Label
-        ctx.font = '600 11px Inter, system-ui, sans-serif';
+        ctx.font = '600 10px Inter, system-ui, sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.fillText(metrics[i].label, lx, ly - 9);
 
         // Score value
         const displayVal = Math.round(metrics[i].value * animProgress);
-        ctx.font = '700 16px Inter, system-ui, sans-serif';
+        ctx.font = '700 13px Inter, system-ui, sans-serif';
         ctx.fillStyle = metrics[i].color;
 
         // Format with decimal-like appearance
@@ -128,7 +127,7 @@ function drawRadar(
         const decVal = Math.floor((metrics[i].value * animProgress * 100) % 100);
         ctx.fillText(`${mainVal}`, lx - 8, ly + 10);
 
-        ctx.font = '600 11px Inter, system-ui, sans-serif';
+        ctx.font = '600 9px Inter, system-ui, sans-serif';
         ctx.fillStyle = `${metrics[i].color}99`;
         ctx.fillText(`.${decVal.toString().padStart(2, '0')}`, lx + 14, ly + 10);
     }
@@ -246,7 +245,7 @@ export function ProtocolRadar() {
 
     return (
         <div className="card" style={{
-            padding: 24,
+            padding: 16,
             background: 'rgba(232,146,124,0.04)',
             borderColor: 'rgba(232,146,124,0.15)',
             position: 'relative',
@@ -256,26 +255,26 @@ export function ProtocolRadar() {
             <div style={{
                 position: 'absolute', top: '50%', left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: 200, height: 200, borderRadius: '50%',
+                width: 140, height: 140, borderRadius: '50%',
                 background: 'rgba(232,146,124,0.06)',
-                filter: 'blur(60px)', pointerEvents: 'none',
+                filter: 'blur(50px)', pointerEvents: 'none',
             }} />
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div>
-                    <div className="section-title" style={{ marginBottom: 4 }}>
+                    <div className="section-title" style={{ marginBottom: 2, fontSize: '0.9rem' }}>
                         Protocol Performance
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 6px var(--success)', animation: 'pulseGlow 2s ease-in-out infinite' }} />
-                        Live — updates every 3s
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 6px var(--success)', animation: 'pulseGlow 2s ease-in-out infinite' }} />
+                        Real-time
                     </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Overall Score
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Score
                     </div>
-                    <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'rgb(232,146,124)' }}>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'rgb(232,146,124)' }}>
                         {(overallScore * animProgress).toFixed(1)}
                     </div>
                 </div>
@@ -283,23 +282,23 @@ export function ProtocolRadar() {
 
             <canvas
                 ref={canvasRef}
-                style={{ width: '100%', height: 320, display: 'block' }}
+                style={{ width: '100%', height: 220, display: 'block' }}
             />
 
-            {/* Bottom metric pills */}
+            {/* Compact metric pills */}
             <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16,
+                display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8,
                 justifyContent: 'center',
             }}>
                 {metrics.map((m) => (
                     <div key={m.label} style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '4px 10px', borderRadius: 12,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '2px 8px', borderRadius: 10,
                         background: 'var(--bg-glass)',
                         border: '1px solid var(--border-primary)',
-                        fontSize: '0.72rem',
+                        fontSize: '0.65rem',
                     }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: m.color }} />
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: m.color }} />
                         <span style={{ color: 'var(--text-muted)' }}>{m.label}</span>
                         <span style={{ color: m.color, fontWeight: 700 }}>{m.rawValue}</span>
                     </div>

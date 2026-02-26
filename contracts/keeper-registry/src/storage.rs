@@ -28,9 +28,7 @@ pub trait StorageModule {
     #[storage_mapper("authorizedCallers")]
     fn authorized_callers(&self) -> UnorderedSetMapper<ManagedAddress>;
 
-    /// Circuit breaker.
-    #[storage_mapper("paused")]
-    fn paused(&self) -> SingleValueMapper<bool>;
+    // NOTE: `paused` storage mapper is provided by common::pausable::PausableModule
 
     /// Contract version for safe upgrades.
     #[storage_mapper("version")]

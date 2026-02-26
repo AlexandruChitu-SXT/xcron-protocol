@@ -64,9 +64,7 @@ pub trait StorageModule {
     fn max_reward_per_exec(&self) -> SingleValueMapper<BigUint>;
 
     // ── Protocol safety ─────────────────────────────────────
-    /// Circuit breaker — pauses all user-facing endpoints.
-    #[storage_mapper("paused")]
-    fn paused(&self) -> SingleValueMapper<bool>;
+    // NOTE: `paused` storage mapper is provided by common::pausable::PausableModule
 
     /// Reentrancy guard for execute_task.
     #[storage_mapper("executingGuard")]

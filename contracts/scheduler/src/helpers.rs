@@ -148,4 +148,32 @@ pub trait HelpersModule: crate::storage::StorageModule {
         self.time_index(next_time).insert(new_id);
         self.owner_tasks(&new_task.owner).insert(new_id);
     }
+
+    // ── Cross-contract call helpers ─────────────────────────
+
+    /// Send protocol fee to the Rewards contract after a successful execution.
+    ///
+    /// Centralizes the cross-contract call to `receiveExecutionFee` so that
+    /// changes to the Rewards ABI only need updating in one place.
+    ///
+    /// NOTE: The SDK `#[multiversx_sc::proxy]` macro is the ideal long-term
+    /// solution, but requires SDK 0.64+ for full test compatibility.
+    fn forward_protocol_fee(
+        &self,
+        keeper: &ManagedAddress,
+        task_id: u64,
+        protocol_fee: &BigUint,
+    ) {
+        if protocol_fee > &BigUint::zero() {
+            let rewards_addr = self.rewards_addr().get();
+            self.tx()
+                .to(&rewards_addr)
+                .raw_call("receiveExecutionFee")
+                .argument(keeper)
+                .argument(&task_id)
+                .egld(protocol_fee)
+                .gas(5_000_000u64)
+                .transfer_execute();
+        }
+    }
 }

@@ -53,17 +53,20 @@ No servers needed. No cron jobs. Fully on-chain, trustless, and decentralized.
 | **KeeperRegistry** | Keeper registration, progressive slashing, reputation | `registerKeeper`, `requestUnstake`, `withdrawStake`, `recordExecution` |
 | **Rewards** | Fee distribution & claiming | `receiveExecutionFee`, `claimRewards` |
 
-Built with **MultiversX SC Framework v0.54.6** following the **Checks-Effects-Interactions (CEI)** pattern.
+Built with **MultiversX SC Framework v0.63.0** (Supernova-ready) following the **Checks-Effects-Interactions (CEI)** pattern.
 
 ## Key Features
 
 - **Async callbacks** — Keepers only get paid when the target contract execution succeeds
 - **On-chain oracle** — Price conditions verified directly on-chain via xExchange (no trust needed)
+- **Commit-reveal anti-MEV** — Prevents frontrunning of profitable tasks with hash-commit + bond
 - **Fair task distribution** — Round-robin assignment with 30s grace period
 - **Progressive slashing** — Strike 1: 5%, Strike 2: 15%, Strike 3: 20% + auto-expulsion
 - **Early exit penalty** — 5% if a keeper unstakes before 30 days
 - **Recurring tasks** — Auto-rescheduled with remaining deposit
+- **TTL expiration** — Stale tasks auto-expire with deposit refund
 - **Stuck task recovery** — Owner can recover tasks stuck in Executing state after 24h
+- **Deposit caps** — Configurable max deposit per task to limit exposure
 - **Circuit breaker** — Pause/unpause for emergency situations
 
 ## Trigger Types
@@ -93,13 +96,25 @@ Built with **MultiversX SC Framework v0.54.6** following the **Checks-Effects-In
 | Mechanism | Description |
 |-----------|-------------|
 | **Async Callbacks** | Keeper only paid on confirmed target success |
+| **Commit-Reveal Anti-MEV** | Hash-commit + bond prevents frontrunning |
 | **On-Chain Oracle** | Price verified on-chain, keepers can't fake conditions |
 | **Progressive Slashing** | Escalating penalties for consecutive failures |
 | **Reentrancy Guard** | Prevents recursive execution |
 | **CEI Pattern** | All contracts follow Checks-Effects-Interactions |
-| **Call Injection Protection** | Cannot target protocol contracts |
+| **Call Injection Protection** | Cannot target protocol contracts or dangerous endpoints |
+| **Target Auto-Blacklist** | Contracts failing ≥10 times are auto-blocked |
+| **Deposit Cap** | Configurable max EGLD per task |
+| **TTL Expiration** | Stale tasks expire with automatic refund |
 | **Circuit Breaker** | Emergency pause capability |
 | **Pre-commit Scanning** | Automated secret detection |
+
+## Testing
+
+**20 scenario tests** covering deployment, scheduling, execution, access control, security rules, circuit breaker, TTL expiration, and input validation.
+
+```bash
+cd contracts/scheduler && cargo test
+```
 
 ## Project Structure
 

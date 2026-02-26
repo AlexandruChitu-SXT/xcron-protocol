@@ -1,3 +1,19 @@
+//! XCron Scheduler Contract
+//!
+//! Core contract of the XCron protocol. Manages the full lifecycle of
+//! automation tasks: scheduling, validation, execution dispatch (via async
+//! callbacks), commit-reveal anti-MEV protection, and stuck task recovery.
+//!
+//! # Architecture
+//!
+//! The contract follows the **trait composition** pattern — `lib.rs` composes
+//! module traits (storage, config, events, helpers, validation, views) and
+//! exposes only the public endpoint implementations.
+//!
+//! # Security Model
+//!
+//! See [`validation::ValidationModule`] for the full S-1 to S-10 rule set.
+
 #![no_std]
 
 multiversx_sc::imports!();
@@ -9,10 +25,6 @@ pub mod storage;
 pub mod validation;
 pub mod views;
 
-/// XCron Scheduler Contract
-///
-/// Core contract managing task registration, queueing, and execution dispatch.
-/// Follows trait composition pattern: lib.rs composes module traits only.
 #[multiversx_sc::contract]
 pub trait SchedulerContract:
     storage::StorageModule
@@ -21,6 +33,7 @@ pub trait SchedulerContract:
     + config::ConfigModule
     + validation::ValidationModule
     + helpers::HelpersModule
+    + common::pausable::PausableModule
 {
     /// Initialize the Scheduler with protocol parameters.
     #[init]
@@ -51,23 +64,7 @@ pub trait SchedulerContract:
         self.version().set(self.version().get() + 1);
     }
 
-    // ── Circuit Breaker ─────────────────────────────────────
-
-    #[only_owner]
-    #[endpoint(pause)]
-    fn pause(&self) {
-        self.paused().set(true);
-    }
-
-    #[only_owner]
-    #[endpoint(unpause)]
-    fn unpause(&self) {
-        self.paused().set(false);
-    }
-
-    fn require_not_paused(&self) {
-        require!(!self.paused().get(), "Contract is paused");
-    }
+    // ── Circuit Breaker ── (provided by common::pausable::PausableModule)
 
     // ═══════════════════════════════════════════════════════════
     //  TASK SCHEDULING
@@ -337,18 +334,8 @@ pub trait SchedulerContract:
                     }
                 }
 
-                // Send protocol fee to Rewards contract
-                let rewards_addr = self.rewards_addr().get();
-                if protocol_fee > BigUint::zero() {
-                    self.tx()
-                        .to(&rewards_addr)
-                        .raw_call("receiveExecutionFee")
-                        .argument(&keeper)
-                        .argument(&task_id)
-                        .egld(&protocol_fee)
-                        .gas(5_000_000u64)
-                        .transfer_execute();
-                }
+                // Send protocol fee to Rewards contract via centralized helper
+                self.forward_protocol_fee(&keeper, task_id, &protocol_fee);
 
                 self.task_executed_event(task_id, &keeper, true);
             }

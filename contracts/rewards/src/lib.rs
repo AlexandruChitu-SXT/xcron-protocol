@@ -1,3 +1,8 @@
+//! XCron Rewards Contract
+//!
+//! Aggregates execution fees from Scheduler contracts, splits them between
+//! keeper rewards and protocol treasury, and handles reward claiming.
+
 #![no_std]
 
 multiversx_sc::imports!();
@@ -8,10 +13,6 @@ pub mod storage;
 pub mod validation;
 pub mod views;
 
-/// XCron Rewards Contract
-///
-/// Aggregates execution fees from Scheduler contracts, distributes keeper rewards,
-/// and manages the protocol treasury.
 #[multiversx_sc::contract]
 pub trait RewardsContract:
     storage::StorageModule
@@ -19,6 +20,7 @@ pub trait RewardsContract:
     + views::ViewsModule
     + config::ConfigModule
     + validation::ValidationModule
+    + common::pausable::PausableModule
 {
     #[init]
     fn init(
@@ -39,23 +41,7 @@ pub trait RewardsContract:
         self.version().set(self.version().get() + 1);
     }
 
-    // ── Circuit Breaker ─────────────────────────────────────
-
-    #[only_owner]
-    #[endpoint(pause)]
-    fn pause(&self) {
-        self.paused().set(true);
-    }
-
-    #[only_owner]
-    #[endpoint(unpause)]
-    fn unpause(&self) {
-        self.paused().set(false);
-    }
-
-    fn require_not_paused(&self) {
-        require!(!self.paused().get(), "Contract is paused");
-    }
+    // ── Circuit Breaker ── (provided by common::pausable::PausableModule)
 
     // ═══════════════════════════════════════════════════════════
     //  FEE RECEPTION

@@ -7,24 +7,47 @@ multiversx_sc::imports!();
 // ═══════════════════════════════════════════════════════════════════
 
 /// A scheduled automation task in the XCron protocol.
+///
+/// Lifecycle: `Pending → [Committed →] Executing → Completed | Failed | Expired | Cancelled`
+///
+/// Storage: one `SingleValueMapper<Task>` per `task_id` in the Scheduler contract.
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct Task<M: ManagedTypeApi> {
+    /// Unique, monotonically increasing task identifier (1-indexed).
     pub id: u64,
+    /// Address that scheduled (and funded) this task. Receives refunds on cancel/fail.
     pub owner: ManagedAddress<M>,
+    /// Smart contract to call when the trigger fires.
+    /// Validated against blacklist and self-call protection (S-1).
     pub target_contract: ManagedAddress<M>,
+    /// Endpoint name on the target contract (e.g. `"claimRewards"`).
+    /// Validated against dangerous endpoints like `upgradeContract` (S-1b).
     pub target_endpoint: ManagedBuffer<M>,
+    /// ABI-encoded arguments passed to the target endpoint.
     pub target_args: ManagedVec<M, ManagedBuffer<M>>,
+    /// When this task should fire — time-based or condition-based.
     pub trigger: Trigger<M>,
+    /// Maximum gas allocated for the target contract call.
+    /// Must be ≥ `MIN_GAS_LIMIT`. Cross-shard calls get +30% overhead (S-10).
     pub max_gas: u64,
+    /// EGLD deposited by the owner to cover keeper reward + protocol fee.
+    /// For recurring tasks, divided proportionally across executions.
     pub deposit: BigUint<M>,
+    /// Maximum retry attempts on failure before marking as Failed.
     pub max_retries: u8,
+    /// Current retry count. Incremented on each failed attempt.
     pub retry_count: u8,
+    /// Time-to-live in seconds from `created_at`. Task expires if not executed within this window.
     pub ttl_seconds: u64,
+    /// Block timestamp (seconds) when the task was created.
     pub created_at: u64,
+    /// Current lifecycle status. Updated atomically with state transitions.
     pub status: TaskStatus,
+    /// Keeper assigned via round-robin or commit-reveal. `None` while Pending.
     pub assigned_keeper: Option<ManagedAddress<M>>,
-    /// Timestamp when execution completed (for metrics / anomaly detection)
+    /// Block timestamp (seconds) when execution completed. 0 while pending.
+    /// Used for metrics, anomaly detection, and stuck task recovery (24h threshold).
     pub completed_at: u64,
 }
 

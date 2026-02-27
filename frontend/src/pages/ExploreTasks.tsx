@@ -280,14 +280,12 @@ export function ExploreTasks() {
                                             <span>{timeAgo(log.timestamp)}</span>
                                         </div>
                                     </div>
-                                    <a
-                                        href={`${NETWORK.explorerUrl}/transactions/${log.txHash}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{ color: 'var(--accent-light)', fontSize: '0.75rem', textDecoration: 'none', flexShrink: 0 }}
+                                    <span
+                                        onClick={() => window.open(`${NETWORK.explorerUrl}/transactions/${log.txHash}`, '_blank')}
+                                        style={{ color: 'var(--accent-light)', fontSize: '0.75rem', textDecoration: 'none', flexShrink: 0, cursor: 'pointer' }}
                                     >
                                         View Tx →
-                                    </a>
+                                    </span>
                                 </div>
                             ))}
                         </div>

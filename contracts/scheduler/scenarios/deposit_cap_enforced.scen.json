@@ -1,0 +1,137 @@
+{
+    "name": "deposit-cap-enforced",
+    "comment": "S-8: Task with deposit exceeding max_exec_value should be rejected",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:target_contract": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ],
+            "currentBlockInfo": {
+                "blockTimestamp": "1000"
+            }
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "set-max-deposit",
+            "comment": "Owner sets max deposit to 5 EGLD",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "setMaxExecValue",
+                "arguments": [
+                    "5,000,000,000,000,000,000"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "schedule-over-cap",
+            "comment": "User tries to deposit 10 EGLD (above 5 EGLD cap) — should fail with S-8",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:ping",
+                    "0x00000000",
+                    "0x0000000000000007d0",
+                    "10,000,000",
+                    "3",
+                    "604800"
+                ],
+                "egldValue": "10,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "status": "4",
+                "message": "str:S-8: Deposit exceeds maximum execution value"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "schedule-under-cap",
+            "comment": "User deposits 3 EGLD (under 5 EGLD cap) — should succeed",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:ping",
+                    "0x00000000",
+                    "0x0000000000000007d0",
+                    "10,000,000",
+                    "3",
+                    "604800"
+                ],
+                "egldValue": "3,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [
+                    "1"
+                ],
+                "status": "0"
+            }
+        }
+    ]
+}

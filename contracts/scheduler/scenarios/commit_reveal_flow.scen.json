@@ -1,0 +1,164 @@
+{
+    "name": "commit-reveal-flow",
+    "comment": "Test full commit-reveal anti-MEV flow: commit → reveal → execute",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000"
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "10,000,000,000,000,000,000"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:target_contract": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ],
+            "currentBlockInfo": {
+                "blockTimestamp": "1000"
+            }
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "comment": "Deploy Scheduler",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "whitelist-keeper",
+            "comment": "Whitelist keeper1",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "addWhitelistedKeeper",
+                "arguments": [
+                    "address:keeper1"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "schedule-task",
+            "comment": "User schedules a TimeOnce task ripe at timestamp 2000",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:ping",
+                    "0x00000000",
+                    "0x0000000000000007d0",
+                    "10,000,000",
+                    "3",
+                    "604800"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [
+                    "1"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "setState",
+            "comment": "Advance to ripe timestamp",
+            "currentBlockInfo": {
+                "blockTimestamp": "2000"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "commit-task",
+            "comment": "Keeper commits to execute task 1 with hash and bond",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:scheduler",
+                "function": "commitTask",
+                "arguments": [
+                    "1",
+                    "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                ],
+                "egldValue": "100,000,000,000,000,000",
+                "gasLimit": "15,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "reveal-task",
+            "comment": "Keeper reveals salt within the reveal window",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:scheduler",
+                "function": "revealTask",
+                "arguments": [
+                    "1",
+                    "str:my_secret_salt"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        }
+    ]
+}

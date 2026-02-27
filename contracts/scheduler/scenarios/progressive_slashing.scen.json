@@ -1,0 +1,171 @@
+{
+    "name": "progressive-slashing",
+    "comment": "Test progressive slashing: Strike 1 (5%), Strike 2 (15%), Strike 3 (20% + expulsion)",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "10,000,000,000,000,000,000"
+                },
+                "address:scheduler": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:treasury": {
+                    "nonce": "0",
+                    "balance": "0"
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:keeper_registry"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy-registry",
+            "comment": "Deploy KeeperRegistry with 1 EGLD min stake, 500 BPS slash, 12h cooldown",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:../keeper-registry/output/keeper-registry.mxsc.json",
+                "arguments": [
+                    "1,000,000,000,000,000,000",
+                    "500",
+                    "43200",
+                    "address:treasury"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "register-keeper",
+            "comment": "Keeper registers with 2 EGLD stake",
+            "tx": {
+                "from": "address:keeper1",
+                "to": "sc:keeper_registry",
+                "function": "registerKeeper",
+                "egldValue": "2,000,000,000,000,000,000",
+                "arguments": [],
+                "gasLimit": "15,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "authorize-scheduler",
+            "comment": "Owner authorizes the scheduler address to call recordExecution",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:keeper_registry",
+                "function": "addAuthorizedCaller",
+                "arguments": [
+                    "address:scheduler"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "strike-1",
+            "comment": "Strike 1: report failure — should slash 5% (0.1 EGLD from 2 EGLD)",
+            "tx": {
+                "from": "address:scheduler",
+                "to": "sc:keeper_registry",
+                "function": "recordExecution",
+                "arguments": [
+                    "address:keeper1",
+                    "false"
+                ],
+                "gasLimit": "15,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "strike-2",
+            "comment": "Strike 2: consecutive failure — should slash 15% (0.285 EGLD from 1.9 EGLD)",
+            "tx": {
+                "from": "address:scheduler",
+                "to": "sc:keeper_registry",
+                "function": "recordExecution",
+                "arguments": [
+                    "address:keeper1",
+                    "false"
+                ],
+                "gasLimit": "15,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "strike-3-expulsion",
+            "comment": "Strike 3: should slash 20% + auto-expel keeper (active = false)",
+            "tx": {
+                "from": "address:scheduler",
+                "to": "sc:keeper_registry",
+                "function": "recordExecution",
+                "arguments": [
+                    "address:keeper1",
+                    "false"
+                ],
+                "gasLimit": "15,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "verify-expelled",
+            "comment": "Verify keeper is no longer active after 3 strikes",
+            "tx": {
+                "to": "sc:keeper_registry",
+                "function": "isKeeperActive",
+                "arguments": [
+                    "address:keeper1"
+                ]
+            },
+            "expect": {
+                "out": [
+                    "false"
+                ],
+                "status": "0"
+            }
+        }
+    ]
+}

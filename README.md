@@ -8,7 +8,7 @@
 
 XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions — token swaps, DeFi harvests, governance votes, NFT mints — by posting tasks to a smart contract. A decentralized keeper network executes those tasks on time, earning rewards for reliable service.
 
-> **Status:** Testnet E2E Verified · 90+ Executions · 100% Success Rate
+> **Status:** Testnet Live · 27 Tasks Scheduled · 4 Executions · 100% Success Rate
 >
 > 🌐 **Live Demo:** [xcron.io](https://xcron.io) · [mvxcron.com](https://mvxcron.com)
 
@@ -87,9 +87,10 @@ Built with **MultiversX SC Framework v0.63.0** (Supernova-ready) following the *
 
 | Parameter | Value |
 |-----------|-------|
-| Keeper reward | 70% of task deposit |
-| Protocol fee | 30% of task deposit |
-| Max reward per exec | 0.05 EGLD |
+| Keeper reward | 85% of task deposit |
+| Protocol fee | 15% of task deposit |
+| Volume discount (5-25 EGLD) | 12% protocol / 88% keeper |
+| Volume discount (>25 EGLD) | 10% protocol / 90% keeper |
 | Min keeper stake | Configurable |
 | Early exit penalty | 5% (if unstake < 30 days) |
 | Slash Strike 1 | 5% of stake |
@@ -116,7 +117,7 @@ Built with **MultiversX SC Framework v0.63.0** (Supernova-ready) following the *
 
 ## Testing
 
-**20 scenario tests** covering deployment, scheduling, execution, access control, security rules, circuit breaker, TTL expiration, and input validation.
+**23 scenario tests** covering deployment, scheduling, execution, access control, security rules, circuit breaker, TTL expiration, commit-reveal, deposit caps, and input validation.
 
 ```bash
 cd contracts/scheduler && cargo test
@@ -134,9 +135,9 @@ xcron-protocol/
 │   └── ping/                # Test target contract
 ├── frontend/                # Web interface (React + Vite)
 │   └── src/
-│       ├── pages/           # Dashboard, ScheduleTask, MyTasks, KeeperPanel
-│       ├── hooks/           # useWallet, useContractQuery
-│       └── components/      # PriceTicker, Header, ConnectModal
+│       ├── pages/           # Dashboard, ScheduleTask, MyTasks, KeeperPanel, ExploreTasks, ProtocolStats
+│       ├── hooks/           # useWallet, useContractQuery, useExecutionNotifier
+│       └── components/      # PriceTicker, Header, ConnectModal, ProtocolRadar
 ├── sdk/                     # TypeScript SDK
 │   └── src/                 # XCronClient, types, addresses
 ├── docs/                    # Documentation

@@ -1,10 +1,16 @@
 # XCron Protocol
 
+[![CI](https://github.com/AlexandruChitu-SXT/xcron-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexandruChitu-SXT/xcron-protocol/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Testnet](https://img.shields.io/badge/MultiversX-Testnet-00e5ff)](https://testnet-explorer.multiversx.com)
+
 **Decentralized Task Automation on MultiversX**
 
 XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions — token swaps, DeFi harvests, governance votes, NFT mints — by posting tasks to a smart contract. A decentralized keeper network executes those tasks on time, earning rewards for reliable service.
 
-> **Status:** Live on MultiversX Devnet & Testnet · Economic Model Finalized
+> **Status:** Testnet E2E Verified · 90+ Executions · 100% Success Rate
+>
+> 🌐 **Live Demo:** [xcron.io](https://xcron.io) · [mvxcron.com](https://mvxcron.com)
 
 ---
 
@@ -147,6 +153,17 @@ cd frontend && npm install && npm run dev
 ```
 
 Opens at `http://localhost:5173`
+
+### Keeper Bot
+
+```bash
+cd keeper && npm install && npm run build
+cp keeper-config.example.json keeper-config.testnet.json
+# Edit keeper-config.testnet.json with your PEM path and contract addresses
+npm start
+```
+
+The keeper bot monitors pending tasks and executes them automatically. Requires a funded wallet (PEM) on the target network.
 
 ### Smart Contracts
 

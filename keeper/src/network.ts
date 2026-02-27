@@ -42,13 +42,18 @@ export class NetworkClient {
     async queryContract(
         contractAddr: string,
         func: string,
-        args: Buffer[] = []
+        args: Buffer[] = [],
+        caller?: string
     ): Promise<Buffer[]> {
-        const query = {
+        const query: any = {
             address: new Address(contractAddr),
             func: { toString: () => func },
             getEncodedArguments: () => args.map((a) => a.toString("hex")),
         };
+
+        if (caller) {
+            query.caller = new Address(caller);
+        }
 
         const response = await this.provider.queryContract(query as any);
         return response.getReturnDataParts().map((part: Uint8Array) => Buffer.from(part));

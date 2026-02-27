@@ -227,7 +227,7 @@ export function ConnectModal() {
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             fontFamily: "'Inter', sans-serif",
-            fontSize: '0.9rem',
+            fontSize: '1.0rem',
             fontWeight: 500,
             color: '#e8f5f0',
             width: '100%',
@@ -248,10 +248,10 @@ export function ConnectModal() {
         <div className="modal-overlay" onClick={onClose}>
             <div style={S.modal} onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 6, color: '#e8f5f0' }}>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 6, color: '#e8f5f0' }}>
                     Connect Wallet
                 </h2>
-                <p style={{ color: 'rgba(232,245,240,0.55)', fontSize: '0.82rem', marginBottom: 16 }}>
+                <p style={{ color: 'rgba(232,245,240,0.55)', fontSize: '0.92rem', marginBottom: 16 }}>
                     Choose a secure connection method
                 </p>
 
@@ -259,10 +259,10 @@ export function ConnectModal() {
                 <div style={S.securityBanner}>
                     <ShieldIcon />
                     <div>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#00ff88' }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#00ff88' }}>
                             Secure Connection
                         </div>
-                        <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.5)', lineHeight: 1.4, marginTop: 2 }}>
+                        <div style={{ fontSize: '0.78rem', color: 'rgba(232,245,240,0.5)', lineHeight: 1.4, marginTop: 2 }}>
                             XCron never requests or stores your private keys. All transactions
                             are signed securely through your wallet provider.
                         </div>
@@ -279,10 +279,10 @@ export function ConnectModal() {
                     }}>
                         <span style={{ fontSize: '1.2rem' }}>⚠️</span>
                         <div>
-                            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fbbf24' }}>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fbbf24' }}>
                                 {NETWORK.name.charAt(0).toUpperCase() + NETWORK.name.slice(1)} Environment
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.7)', lineHeight: 1.4, marginTop: 2 }}>
+                            <div style={{ fontSize: '0.78rem', color: 'rgba(251,191,36,0.7)', lineHeight: 1.4, marginTop: 2 }}>
                                 This is a test network. Do NOT use your mainnet wallet with real EGLD.
                                 Use a {NETWORK.name} wallet or Quick Connect for testing.
                             </div>
@@ -319,13 +319,15 @@ export function ConnectModal() {
                             <ExtensionIcon />
                         </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>DeFi Wallet</div>
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>DeFi Wallet</div>
+                            <div style={{ fontSize: '0.82rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
                                 Browser extension — instant & secure
                             </div>
-                            <div style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
-                                ⚠ {NETWORK.name}: may conflict with DeFi Wallet desktop app
-                            </div>
+                            {NETWORK.name !== 'mainnet' && (
+                                <div style={{ fontSize: '0.75rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
+                                    ⚠ {NETWORK.name}: may conflict with DeFi Wallet desktop app
+                                </div>
+                            )}
                         </div>
                         {loading === 'extension' && <span className="loading-spinner" />}
                     </button>
@@ -349,12 +351,14 @@ export function ConnectModal() {
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>xPortal Mobile</div>
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.82rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
                                 Scan QR code — WalletConnect v2
                             </div>
-                            <div style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
-                                ⚠ {NETWORK.name}: requires developer mode enabled in xPortal
-                            </div>
+                            {NETWORK.name !== 'mainnet' && (
+                                <div style={{ fontSize: '0.75rem', color: 'rgba(251,191,36,0.6)', marginTop: 3, lineHeight: 1.3 }}>
+                                    ⚠ {NETWORK.name}: requires developer mode enabled in xPortal
+                                </div>
+                            )}
                         </div>
                         {loading === 'xportal' && <span className="loading-spinner" />}
                     </button>
@@ -378,56 +382,58 @@ export function ConnectModal() {
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Web Wallet <span style={{ fontSize: '0.6rem', color: '#00ff88', fontWeight: 400, marginLeft: 6, padding: '1px 6px', background: 'rgba(0,255,136,0.1)', borderRadius: 4 }}>RECOMMENDED</span></div>
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.82rem', color: 'rgba(232,245,240,0.45)', marginTop: 2 }}>
                                 Official MultiversX web wallet — works on all networks
                             </div>
                         </div>
                         {loading === 'webwallet' && <span className="loading-spinner" />}
                     </button>
 
-                    {/* Devnet Quick Connect — generic demo wallet */}
-                    <div style={{
-                        borderTop: '1px solid rgba(255,255,255,0.06)',
-                        paddingTop: 8, marginTop: 4,
-                    }}>
+                    {/* Quick Connect — devnet/testnet only */}
+                    {NETWORK.name !== 'mainnet' && (
                         <div style={{
-                            fontSize: '0.62rem', fontWeight: 600, letterSpacing: '1px',
-                            color: 'rgba(232,245,240,0.3)', textTransform: 'uppercase',
-                            marginBottom: 6, paddingLeft: 4,
+                            borderTop: '1px solid rgba(255,255,255,0.06)',
+                            paddingTop: 8, marginTop: 4,
                         }}>
-                            Quick Access
+                            <div style={{
+                                fontSize: '0.72rem', fontWeight: 600, letterSpacing: '1px',
+                                color: 'rgba(232,245,240,0.3)', textTransform: 'uppercase',
+                                marginBottom: 6, paddingLeft: 4,
+                            }}>
+                                Quick Access
+                            </div>
+                            <button
+                                style={{
+                                    ...S.option,
+                                    opacity: 0.7,
+                                    border: '1px dashed rgba(251,191,36,0.2)',
+                                }}
+                                onClick={handleQuickConnect}
+                                disabled={!!loading}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.opacity = '1';
+                                    e.currentTarget.style.background = 'rgba(251,191,36,0.06)';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.opacity = '0.7';
+                                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                                }}
+                            >
+                                <div style={{ ...S.iconBox, background: 'rgba(251,191,36,0.1)' }}>
+                                    <TestIcon />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#fbbf24' }}>
+                                        Explore Demo
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem', color: 'rgba(232,245,240,0.4)', marginTop: 2 }}>
+                                        Preview the dashboard — read-only, no wallet needed
+                                    </div>
+                                </div>
+                                {loading === 'quick' && <span className="loading-spinner" />}
+                            </button>
                         </div>
-                        <button
-                            style={{
-                                ...S.option,
-                                opacity: 0.7,
-                                border: '1px dashed rgba(251,191,36,0.2)',
-                            }}
-                            onClick={handleQuickConnect}
-                            disabled={!!loading}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.opacity = '1';
-                                e.currentTarget.style.background = 'rgba(251,191,36,0.06)';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.opacity = '0.7';
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                            }}
-                        >
-                            <div style={{ ...S.iconBox, background: 'rgba(251,191,36,0.1)' }}>
-                                <TestIcon />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fbbf24' }}>
-                                    Explore Demo
-                                </div>
-                                <div style={{ fontSize: '0.68rem', color: 'rgba(232,245,240,0.4)', marginTop: 2 }}>
-                                    Preview the dashboard — read-only, no wallet needed
-                                </div>
-                            </div>
-                            {loading === 'quick' && <span className="loading-spinner" />}
-                        </button>
-                    </div>
+                    )}
 
                     {/* PEM Import — devnet/testnet only */}
                     {NETWORK.name !== 'mainnet' && (
@@ -436,7 +442,7 @@ export function ConnectModal() {
                             paddingTop: 8, marginTop: 4,
                         }}>
                             <div style={{
-                                fontSize: '0.62rem', fontWeight: 600, letterSpacing: '1px',
+                                fontSize: '0.72rem', fontWeight: 600, letterSpacing: '1px',
                                 color: 'rgba(232,245,240,0.3)', textTransform: 'uppercase',
                                 marginBottom: 6, paddingLeft: 4,
                             }}>
@@ -509,7 +515,7 @@ export function ConnectModal() {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(232,245,240,0.3)" strokeWidth="2">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
-                    <span style={{ fontSize: '0.62rem', color: 'rgba(232,245,240,0.3)', letterSpacing: '0.3px' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'rgba(232,245,240,0.3)', letterSpacing: '0.3px' }}>
                         Secured by MultiversX SDK • No private keys stored
                     </span>
                 </div>

@@ -35,21 +35,7 @@ const STATUS_CLASS: Record<string, string> = {
     Completed: 'badge-completed', Failed: 'badge-failed', Cancelled: 'badge-cancelled', Expired: 'badge-cancelled',
 };
 
-const DEMO_TASKS: TaskInfo[] = [
-    { id: 1, owner: 'erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnp1elg8a3...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqd77fnev2sthnczp2lnfx0y...hatom', targetEndpoint: 'claimRewards', status: 'Completed', triggerTime: Math.floor(Date.now() / 1000) - 3600, deposit: '5000000000000000' },
-    { id: 2, owner: 'erd1adfmxhyczrl48lqwz48v7qqt5lzphky3wqnm9n...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqa0fsfshnff4n76jhcye6k3...xexchange', targetEndpoint: 'swapTokensFixedInput', status: 'Pending', triggerTime: Math.floor(Date.now() / 1000) + 1800, deposit: '10000000000000000' },
-    { id: 3, owner: 'erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3z...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqeel2kumf0r8ffyhth7pqd...ashswap', targetEndpoint: 'harvestRewards', status: 'Committed', triggerTime: Math.floor(Date.now() / 1000) + 600, deposit: '8000000000000000' },
-    { id: 4, owner: 'erd1k2s324ww2cqfx7mn8v8ceqdrp4m32wd8sxaah5...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqd77fnev2sthnczp2lnfx0y...hatom', targetEndpoint: 'enterMarket', status: 'Completed', triggerTime: Math.floor(Date.now() / 1000) - 7200, deposit: '5000000000000000' },
-    { id: 5, owner: 'erd1cevsw7mq67tjvvnp56ccfmfj43ent08rk5mnqp...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqa7hv0nahgsl8tz0psat46x...onedex', targetEndpoint: 'limitOrder', status: 'Failed', triggerTime: Math.floor(Date.now() / 1000) - 1200, deposit: '3000000000000000' },
-    { id: 6, owner: 'erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnp1elg8a3...demo', targetContract: 'erd1qqqqqqqqqqqqqpgqzqvm5ywq05yj2ee55x3fz...xoxno', targetEndpoint: 'mint', status: 'Pending', triggerTime: Math.floor(Date.now() / 1000) + 86400, deposit: '15000000000000000' },
-];
 
-const DEMO_EXEC_HISTORY: ExecutionLog[] = [
-    { txHash: '0x4a8b...demo1', taskId: '1', status: 'success', timestamp: Math.floor(Date.now() / 1000) - 3600, sender: 'erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3z...keeper1' },
-    { txHash: '0x9f2c...demo2', taskId: '4', status: 'success', timestamp: Math.floor(Date.now() / 1000) - 7200, sender: 'erd1adfmxhyczrl48lqwz48v7qqt5lzphky3wqnm9n...keeper2' },
-    { txHash: '0x1d7e...demo3', taskId: '5', status: 'fail', timestamp: Math.floor(Date.now() / 1000) - 1200, sender: 'erd1cevsw7mq67tjvvnp56ccfmfj43ent08rk5mnqp...keeper1' },
-    { txHash: '0xb3f1...demo4', taskId: '3', status: 'success', timestamp: Math.floor(Date.now() / 1000) - 900, sender: 'erd1k2s324ww2cqfx7mn8v8ceqdrp4m32wd8sxaah5...keeper3' },
-];
 
 export function ExploreTasks() {
     const { query } = useContractQuery();
@@ -89,7 +75,7 @@ export function ExploreTasks() {
                         taskList.push(parseTaskData(i, res[0]));
                     }
                 } catch (err) {
-                    devError(`Task ${i} failed to decode:`, err);
+                    devWarn(`Task ${i} parse failed:`, err);
                 }
             }
 
@@ -216,12 +202,9 @@ export function ExploreTasks() {
         return `${Math.floor(diff / 86400)}d ago`;
     }
 
-    const isDemo = tasks.length === 0 && !loading;
-    const displayTasks = isDemo ? DEMO_TASKS : tasks;
-    const displayHistory = isDemo ? DEMO_EXEC_HISTORY : execHistory;
-    const displayStats = isDemo
-        ? { total: DEMO_TASKS.length, active: DEMO_TASKS.filter(t => t.status === 'Pending' || t.status === 'Committed').length, completed: DEMO_TASKS.filter(t => t.status === 'Completed').length, failed: DEMO_TASKS.filter(t => t.status === 'Failed').length }
-        : stats;
+    const displayTasks = tasks;
+    const displayHistory = execHistory;
+    const displayStats = stats;
 
     const filteredDisplay = statusFilter === 'all'
         ? displayTasks
@@ -234,21 +217,6 @@ export function ExploreTasks() {
                     <TypewriterTitle as="h1" text="Explore Tasks" speed={70} />
                     <TypewriterTitle as="p" text="Browse all tasks scheduled on XCron Protocol" speed={30} />
                 </div>
-
-                {isDemo && (
-                    <div style={{
-                        marginBottom: 14, padding: '10px 16px', borderRadius: 8,
-                        background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                    }}>
-                        <span style={{ fontSize: '0.82rem', color: 'rgb(251,191,36)' }}>
-                            ⚡ Showing demo tasks — no on-chain tasks found yet on testnet
-                        </span>
-                        <NavLink to="/schedule" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-light)', textDecoration: 'none' }}>
-                            Schedule your first task →
-                        </NavLink>
-                    </div>
-                )}
 
                 {/* Protocol overview stats — Dashboard style */}
                 <div className="stats-grid" style={{ marginBottom: 16 }}>

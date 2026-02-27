@@ -4,7 +4,7 @@ import { NETWORK } from '../config';
 
 // Backoff cache: remember failed 400 queries for 60s to stop browser console spam
 const failedQueryCache = new Map<string, number>(); // key → timestamp of last 400
-const BACKOFF_MS = 60_000; // don't retry failed queries for 60 seconds
+const BACKOFF_MS = 15_000; // don't retry failed queries for 15 seconds
 
 /**
  * Hook for read-only smart contract queries.

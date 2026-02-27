@@ -195,7 +195,7 @@ export function LiveActivityFeed() {
     // ── Styles ──
     const S = {
         root: {
-            background: 'linear-gradient(135deg, rgba(0,40,40,0.95), rgba(0,20,30,0.98))',
+            background: 'linear-gradient(135deg, rgba(7,54,66,0.95), rgba(0,43,54,0.98))',
             border: '1px solid rgba(0,255,180,0.2)',
             borderRadius: 12,
             overflow: 'hidden',

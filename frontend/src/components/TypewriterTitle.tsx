@@ -63,9 +63,14 @@ export function TypewriterTitle({ text, as: Tag = 'div', className = '', speed =
     }, [done, visible, repeatInterval, runTyping]);
 
     return (
-        <Tag ref={ref} className={className} style={{ minHeight: '1.2em', ...style }}>
-            {displayed}
-            {started && !done && <span className="typewriter-cursor">|</span>}
+        <Tag ref={ref} className={className} style={{ display: 'grid', ...style }}>
+            {/* Invisible full text to reserve exact space */}
+            <span style={{ visibility: 'hidden', gridArea: '1/1' }}>{text}</span>
+            {/* Visible typewriter text — same grid cell, overlaps exactly */}
+            <span style={{ gridArea: '1/1' }}>
+                {displayed}
+                {started && !done && <span className="typewriter-cursor">|</span>}
+            </span>
         </Tag>
     );
 }

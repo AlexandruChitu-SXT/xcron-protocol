@@ -463,13 +463,13 @@ export function ScheduleTask() {
     return (
         <div className="page">
             <div className="app-container" style={{ maxWidth: '100%', padding: '0 16px' }}>
-                <div className="page-header" style={{ marginBottom: 12 }}>
+                <div className="page-header" style={{ marginBottom: 28 }}>
                     <TypewriterTitle as="h1" text="Schedule a Task" speed={70} />
                     <TypewriterTitle as="p" text="Choose a template or build your own — XCron can automate any smart contract call" speed={25} />
                 </div>
 
                 {/* How It Works — compact inline */}
-                <div style={{ display: 'flex', gap: 24, marginBottom: 10, padding: '10px 24px', borderRadius: 6, background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.12)', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: 24, marginBottom: 28, padding: '10px 24px', borderRadius: 6, background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.12)', justifyContent: 'center' }}>
                     {[
                         { num: '1', label: 'Schedule', desc: 'Define what to call & when', color: 'rgb(251,191,36)' },
                         { num: '2', label: 'Deposit', desc: 'EGLD covers keeper gas', color: 'var(--accent-light)' },
@@ -483,7 +483,7 @@ export function ScheduleTask() {
                 </div>
 
                 {/* 3-Column Layout: Templates | Form | Templates */}
-                <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 220px', gap: 12, alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 220px', gap: 12, alignItems: 'start', marginBottom: 60 }}>
                     {/* Left sidebar — templates 1-4 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {(['quicktest', 'custom', 'compound', 'dca'] as TemplateType[]).map((key) => (
@@ -502,7 +502,7 @@ export function ScheduleTask() {
                     </div>
 
                     {/* Center — Form */}
-                    <div style={{ width: '100%' }}>
+                    <div style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
 
                         {/* Compact form card */}
                         <div className="card" style={{
@@ -510,9 +510,9 @@ export function ScheduleTask() {
                             borderColor: 'rgba(250,128,114,0.50)',
                             borderWidth: 1,
                             maxWidth: 'none',
-                            padding: 10,
+                            padding: 12,
                             boxShadow: '0 0 20px rgba(250,128,114,0.15), 0 0 40px rgba(250,128,114,0.08)',
-                            fontSize: '0.72rem',
+                            fontSize: '0.68rem',
                             position: 'relative',
                             overflow: 'hidden',
                         }}>
@@ -522,7 +522,7 @@ export function ScheduleTask() {
                                 background: 'linear-gradient(90deg, transparent, rgba(250,128,114,0.5), rgba(255,160,122,0.4), transparent)',
                             }} />
                             {/* Template Info */}
-                            <div className="template-info" style={{ marginBottom: 3, fontSize: '0.68rem' }}>
+                            <div className="template-info" style={{ marginBottom: 3, fontSize: '0.62rem' }}>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><TemplateIcon type={template} color={color} size={10} /> <strong>{tmpl.title}</strong></span> — {tmpl.description}
                             </div>
 
@@ -675,7 +675,7 @@ export function ScheduleTask() {
                                 </div>
 
                                 {/* Schedule + Budget — side by side */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 8 }}>
 
                                     {/* Section: Schedule */}
                                     <div className="form-section" style={{ marginBottom: 0, padding: 8, background: 'rgba(250,128,114,0.10)', border: '1px solid rgba(250,128,114,0.35)', borderRadius: 'var(--radius-md)', boxShadow: '0 0 12px rgba(250,128,114,0.08)' }}>

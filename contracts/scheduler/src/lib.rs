@@ -370,8 +370,9 @@ pub trait SchedulerContract:
     //  STUCK TASK RECOVERY
     // ═══════════════════════════════════════════════════════════
 
-    /// Recover tasks stuck in Executing state for over 24 hours.
-    /// This can happen if the async callback fails due to insufficient gas.
+    /// Recover tasks stuck in Executing state.
+    /// This can happen if the async callback fails due to insufficient gas
+    /// or if the target contract doesn't exist/has no matching endpoint.
     /// Only callable by owner. Refunds deposit to task owner.
     #[only_owner]
     #[endpoint(recoverStuckTask)]
@@ -383,18 +384,32 @@ pub trait SchedulerContract:
         );
 
         let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
-        let stuck_threshold = 24 * 60 * 60; // 24 hours
+        let stuck_threshold = 60 * 60; // 1 hour (reduced from 24h for operational agility)
         require!(
             current_time > task.created_at + stuck_threshold,
-            "Task not stuck yet (wait 24h)"
+            "Task not stuck yet (wait 1h)"
         );
 
         task.status = common::types::TaskStatus::Failed;
+        task.completed_at = current_time;
         self.tasks(task_id).set(&task);
+
+        // S-2: Record failure metrics
+        self.total_failed_execs().update(|v| *v += 1);
 
         // Refund deposit to user
         self.send().direct_egld(&task.owner, &task.deposit);
         self.task_expired_event(task_id);
+    }
+
+    /// Emergency cleanup for tasks with corrupted/incompatible storage format.
+    /// Only needed after struct migration (e.g., adding completed_at field).
+    /// Clears the task storage key directly without deserializing.
+    /// TEMPORARY: Remove after all legacy tasks are cleaned up.
+    #[only_owner]
+    #[endpoint(forceCleanupTask)]
+    fn force_cleanup_task(&self, task_id: u64) {
+        self.tasks(task_id).clear();
     }
 
     // ═══════════════════════════════════════════════════════════

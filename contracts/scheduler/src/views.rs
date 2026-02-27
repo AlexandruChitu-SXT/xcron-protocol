@@ -68,4 +68,25 @@ pub trait ViewsModule: crate::storage::StorageModule {
             self.task_metadata(task_id).get()
         }
     }
+
+    /// Returns all whitelisted keeper addresses.
+    #[view(getWhitelistedKeepers)]
+    fn get_whitelisted_keepers(&self) -> MultiValueEncoded<ManagedAddress> {
+        let mut result = MultiValueEncoded::new();
+        for keeper in self.whitelisted_keepers().iter() {
+            result.push(keeper);
+        }
+        result
+    }
+
+    /// Returns the ordered keeper list used for round-robin assignment.
+    #[view(getKeeperList)]
+    fn get_keeper_list(&self) -> MultiValueEncoded<ManagedAddress> {
+        let mut result = MultiValueEncoded::new();
+        let len = self.keeper_list().len();
+        for i in 1..=len {
+            result.push(self.keeper_list().get(i));
+        }
+        result
+    }
 }

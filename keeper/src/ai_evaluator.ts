@@ -220,7 +220,7 @@ Where "skipMinutes" is how many minutes to wait before asking again (0 means ask
                 throw new Error(`OpenAI API error: ${resp.status}`);
             }
 
-            const data = await resp.json();
+            const data: any = await resp.json();
             const content = data.choices?.[0]?.message?.content || "{}";
             return this.parseAIResponse(content);
         } finally {
@@ -254,7 +254,7 @@ Where "skipMinutes" is how many minutes to wait before asking again (0 means ask
                 throw new Error(`Anthropic API error: ${resp.status}`);
             }
 
-            const data = await resp.json();
+            const data: any = await resp.json();
             const content = data.content?.[0]?.text || "{}";
             return this.parseAIResponse(content);
         } finally {
@@ -333,6 +333,6 @@ Where "skipMinutes" is how many minutes to wait before asking again (0 means ask
     }
 
     private log(msg: string): void {
-        this.logger.info(`[AI] ${msg}`);
+        this.logger.info("AI", msg);
     }
 }

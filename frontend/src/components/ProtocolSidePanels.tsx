@@ -245,13 +245,13 @@ export function RightSidePanel() {
                     </div>
                 )}
             </div>
-            {/* Uptime */}
+            {/* Protocol Status */}
             <div style={{ ...widgetStyle, background: 'rgba(34,197,94,0.04)', borderColor: 'rgba(34,197,94,0.12)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                        <div style={{ ...labelStyle, color: 'rgb(34,197,94)' }}>Protocol Uptime</div>
-                        <div style={{ ...valueStyle, color: 'rgb(34,197,94)' }}>99.9%</div>
-                        <div style={subStyle}>Since deployment</div>
+                        <div style={{ ...labelStyle, color: 'rgb(34,197,94)' }}>Protocol Status</div>
+                        <div style={{ ...valueStyle, color: 'rgb(34,197,94)' }}>Active</div>
+                        <div style={subStyle}>Testnet deployment</div>
                     </div>
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(34,197,94,0.4)" strokeWidth="1.5" strokeLinecap="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

@@ -1,0 +1,5 @@
+[settings]
+main = "scheduler"
+
+[contracts.scheduler]
+allocator = "leaking"

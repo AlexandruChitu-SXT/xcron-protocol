@@ -52,6 +52,14 @@ export class Executor {
         "max_gas too low",
         "TTL too short",
         "not a payable",
+        // Task state errors — task cannot be executed in current state
+        "Task not Pending",
+        "Not authorized",
+        "Reentrancy blocked",
+        "Task expired (TTL exceeded)",
+        "Task not yet ripe",
+        "Task assigned to another keeper",
+        "Insufficient gas for full execution",
         // S-1: Security rules
         "S-1: Cannot target scheduler itself",
         "S-1: Cannot target KeeperRegistry",
@@ -378,7 +386,8 @@ export class Executor {
             await this.networkClient.queryContract(
                 this.contracts.scheduler,
                 "executeTask",
-                args
+                args,
+                this.keeperAddress.bech32()
             );
             return { ok: true };
         } catch (err: any) {

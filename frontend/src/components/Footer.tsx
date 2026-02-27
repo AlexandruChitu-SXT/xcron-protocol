@@ -38,7 +38,7 @@ export function Footer() {
                     <div className="footer-col">
                         <h4 className="footer-heading">Resources</h4>
                         <div className="footer-links">
-                            <a href="https://github.com/AlexandruChitu-SXT/xcron-protocol_v2_hackathon" target="_blank" rel="noopener noreferrer">GitHub</a>
+                            <a href="https://github.com/AlexandruChitu-SXT/xcron-protocol" target="_blank" rel="noopener noreferrer">GitHub</a>
                             <a href={NETWORK.explorerUrl} target="_blank" rel="noopener noreferrer">Explorer</a>
                             <a href="https://docs.multiversx.com" target="_blank" rel="noopener noreferrer">MultiversX Docs</a>
                         </div>
@@ -48,9 +48,8 @@ export function Footer() {
                     <div className="footer-col">
                         <h4 className="footer-heading">Community</h4>
                         <div className="footer-links">
-                            <a href="https://x.com" target="_blank" rel="noopener noreferrer">X (Twitter)</a>
-                            <a href="https://t.me" target="_blank" rel="noopener noreferrer">Telegram</a>
-                            <a href="https://discord.gg" target="_blank" rel="noopener noreferrer">Discord</a>
+                            <a href="https://x.com/AlejandroChitu" target="_blank" rel="noopener noreferrer">X (Twitter)</a>
+                            <a href="https://t.me/alexandruchituxcron" target="_blank" rel="noopener noreferrer">Telegram</a>
                         </div>
                     </div>
                 </div>

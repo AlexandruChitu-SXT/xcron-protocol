@@ -35,10 +35,12 @@ pub trait RewardsContract:
         self.version().set(1u32);
     }
 
-    /// Safe upgrade — preserves storage, bumps version.
+    /// Safe upgrade — preserves storage, bumps version, initializes new mappers.
     #[upgrade]
     fn upgrade(&self) {
-        self.version().set(self.version().get() + 1);
+        self.version().update(|v| *v += 1);
+        // set_if_empty: only sets values on first upgrade that adds them
+        self.treasury_balance().set_if_empty(BigUint::zero());
     }
 
     // ── Circuit Breaker ── (provided by common::pausable::PausableModule)

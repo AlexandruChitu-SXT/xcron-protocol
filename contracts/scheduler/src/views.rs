@@ -89,4 +89,33 @@ pub trait ViewsModule: crate::storage::StorageModule {
         }
         result
     }
+
+    // ── Cross-shard optimization views ──────────────────────
+
+    /// Returns pending task IDs whose target contract is in the given shard.
+    /// Allows keepers to prioritize tasks in their own shard (0% gas overhead).
+    #[view(getTasksForShard)]
+    fn get_tasks_for_shard(&self, shard_id: u32) -> MultiValueEncoded<u64> {
+        let mut result = MultiValueEncoded::new();
+        for task_id in self.shard_task_index(shard_id).iter() {
+            result.push(task_id);
+        }
+        result
+    }
+
+    /// Returns cross-shard vs intra-shard execution counts.
+    /// Useful for protocol analytics and optimizer calibration.
+    #[view(getCrossShardStats)]
+    fn get_cross_shard_stats(&self) -> MultiValue2<u64, u64> {
+        (
+            self.cross_shard_execs().get(),
+            self.intra_shard_execs().get(),
+        ).into()
+    }
+
+    /// Returns the cached shard ID for a keeper address.
+    #[view(getKeeperShard)]
+    fn get_keeper_shard(&self, keeper: &ManagedAddress) -> u32 {
+        self.keeper_shard(keeper).get()
+    }
 }

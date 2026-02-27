@@ -17,6 +17,8 @@ pub const DEFAULT_REVEAL_WINDOW_SECONDS: u64 = 60;
 
 /// Default cooldown period for keeper unstaking: 12 hours (43,200 seconds)
 pub const DEFAULT_COOLDOWN_SECONDS: u64 = 43_200;
+/// Alias for use in set_if_empty during contract upgrade
+pub const UNSTAKE_COOLDOWN_SECONDS: u64 = DEFAULT_COOLDOWN_SECONDS;
 
 /// Slash percentage: progressive per consecutive failure.
 /// Strike 1: 5% (500 BPS)
@@ -29,11 +31,17 @@ pub const SLASH_STRIKE_3_BPS: u64 = 2_000;
 /// 1 EGLD = 10^18 denomination units
 pub const EGLD_DECIMALS: u64 = 1_000_000_000_000_000_000;
 
-/// Gas reserved for callback execution
-pub const CALLBACK_GAS_RESERVE: u64 = 10_000_000;
+/// Gas reserved for callback execution.
+/// Must cover: 1 storage read+write (~2M), up to 3 direct_egld (~3M each = 9M),
+/// 1 forward_protocol_fee (~5M), 1 forward_keeper_result (~5M),
+/// 1 reschedule_recurring (~3M) = ~24M min. Set to 25M with safety margin.
+pub const CALLBACK_GAS_RESERVE: u64 = 25_000_000;
 
 /// Maximum tasks processed per batch in expire_stale_tasks
 pub const MAX_EXPIRE_BATCH: usize = 50;
+
+/// Maximum endpoint name length in bytes.
+pub const MAX_ENDPOINT_NAME_BYTES: usize = 64;
 
 /// Default max keeper reward per execution: 0.05 EGLD (in denomination units)
 /// At $4/EGLD this is $0.20. The fee is fixed in EGLD.
@@ -59,3 +67,14 @@ pub const MAX_TARGET_FAILURES: u64 = 10;
 
 /// Cross-shard gas overhead percentage (30 = 30% extra gas for cross-shard calls).
 pub const CROSS_SHARD_GAS_OVERHEAD_PCT: u64 = 30;
+
+// ── Anti-spam constants ──────────────────────────────────
+
+/// Maximum tasks any single address can schedule per block round (anti-spam burst protection).
+pub const MAX_TASKS_PER_ROUND: u32 = 10;
+
+/// Maximum number of arguments per scheduled task (prevents storage bloat).
+pub const MAX_TASK_ARGS: usize = 10;
+
+/// Maximum size of a single argument in bytes (prevents oversized payloads).
+pub const MAX_ARG_SIZE_BYTES: usize = 4_096;

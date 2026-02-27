@@ -144,3 +144,19 @@ fn admin_blacklist() {
     world().run("scenarios/admin_blacklist.scen.json");
 }
 
+// ═══════════════════════════════════════════════════════════
+//  CROSS-SHARD OPTIMIZATION
+// ═══════════════════════════════════════════════════════════
+
+/// Cross-shard views: getTasksForShard, getCrossShardStats
+#[test]
+fn cross_shard_views() {
+    world().run("scenarios/cross_shard_views.scen.json");
+}
+
+/// Dynamic gas calculation: verifies cross-shard overhead enforcement
+#[test]
+fn dynamic_gas_calculation() {
+    world().run("scenarios/dynamic_gas_calculation.scen.json");
+}
+

@@ -1,0 +1,139 @@
+{
+    "name": "cross-shard-views",
+    "comment": "Test cross-shard optimization views: getTasksForShard, getCrossShardStats, getKeeperShard",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000",
+                    "storage": {}
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000",
+                    "storage": {}
+                },
+                "address:keeper1": {
+                    "nonce": "0",
+                    "balance": "50,000,000,000,000,000,000",
+                    "storage": {}
+                },
+                "address:target_contract": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": "file:../demo/output/demo.wasm",
+                    "storage": {}
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "comment": "Deploy Scheduler",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "whitelist-keeper",
+            "comment": "Whitelist keeper1 for execution",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:scheduler",
+                "function": "addWhitelistedKeeper",
+                "arguments": [
+                    "address:keeper1"
+                ],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "schedule-task-1",
+            "comment": "Schedule a task targeting target_contract — should add to shard index",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "egldValue": "1,000,000,000,000,000,000",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:ping",
+                    "",
+                    "u8:0|u64:100",
+                    "10,000,000",
+                    "0",
+                    "3600"
+                ],
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [
+                    "1"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-cross-shard-stats-initial",
+            "comment": "Cross-shard stats should be 0,0 (no executions yet)",
+            "tx": {
+                "to": "sc:scheduler",
+                "function": "getCrossShardStats",
+                "arguments": []
+            },
+            "expect": {
+                "out": [
+                    "0",
+                    "0"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "check-task-nonce",
+            "comment": "Task nonce should be 1 after scheduling",
+            "tx": {
+                "to": "sc:scheduler",
+                "function": "getTaskNonce",
+                "arguments": []
+            },
+            "expect": {
+                "out": [
+                    "1"
+                ],
+                "status": "0"
+            }
+        }
+    ]
+}

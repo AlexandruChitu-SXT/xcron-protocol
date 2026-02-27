@@ -63,7 +63,10 @@ pub trait ConfigModule: crate::storage::StorageModule {
     fn remove_whitelisted_keeper(&self, keeper: ManagedAddress) {
         self.whitelisted_keepers().swap_remove(&keeper);
         // Remove from keeper_list by finding and swapping with last
+        // O(n) scan — acceptable for Phase 1 (≤50 keepers).
+        // Phase 2: switch to UnorderedSetMapper + separate index.
         let len = self.keeper_list().len();
+        require!(len <= 50, "Keeper list too large for linear scan");
         for i in 1..=len {
             if self.keeper_list().get(i) == keeper {
                 // Swap with last element and remove

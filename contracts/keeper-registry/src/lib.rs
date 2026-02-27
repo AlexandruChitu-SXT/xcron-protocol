@@ -39,10 +39,12 @@ pub trait KeeperRegistryContract:
         self.version().set(1u32);
     }
 
-    /// Safe upgrade — preserves storage, bumps version.
+    /// Safe upgrade — preserves storage, bumps version, initializes new mappers.
     #[upgrade]
     fn upgrade(&self) {
-        self.version().set(self.version().get() + 1);
+        self.version().update(|v| *v += 1);
+        // set_if_empty: only sets values on first upgrade that adds them
+        self.cooldown_seconds().set_if_empty(common::constants::UNSTAKE_COOLDOWN_SECONDS);
     }
 
     // ── Circuit Breaker ── (provided by common::pausable::PausableModule)
@@ -102,6 +104,7 @@ pub trait KeeperRegistryContract:
     /// Request unstake — triggers cooldown period.
     #[endpoint(requestUnstake)]
     fn request_unstake(&self) {
+        self.require_not_paused();
         let caller = self.blockchain().get_caller();
         let mut info = self.keepers(&caller).get();
 

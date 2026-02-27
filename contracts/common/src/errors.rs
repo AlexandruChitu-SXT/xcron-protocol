@@ -9,6 +9,11 @@ pub static ERR_S1_TARGET_BLACKLISTED: &[u8] = b"S-1: Target contract is blacklis
 pub static ERR_S1_DANGEROUS_ENDPOINT: &[u8] = b"S-1: Dangerous endpoint blocked";
 pub static ERR_S8_DEPOSIT_EXCEEDS_CAP: &[u8] = b"S-8: Deposit exceeds maximum execution value";
 pub static ERR_S9_TOO_MANY_TASKS: &[u8] = b"S-9: Too many active tasks (max 100)";
+pub static ERR_S11_RATE_LIMITED: &[u8] = b"S-11: Too many tasks this round (anti-spam)";
+pub static ERR_S12_TOO_MANY_ARGS: &[u8] = b"S-12: Too many arguments (max 10)";
+pub static ERR_S12_ARG_TOO_LARGE: &[u8] = b"S-12: Argument too large (max 4096 bytes)";
+pub static ERR_S13_ENDPOINT_LENGTH: &[u8] = b"S-13: Invalid endpoint name length (1-64 bytes)";
+pub static ERR_TASK_NOT_COMMITTED_STATE: &[u8] = b"Task not in Committed state";
 
 // ── Scheduler Errors ────────────────────────────────────────────────
 pub static ERR_DEPOSIT_BELOW_MIN: &[u8] = b"Deposit below minimum";

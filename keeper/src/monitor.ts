@@ -178,13 +178,33 @@ export class TaskMonitor {
             }
         }
 
-        // S-SHARD: Sort ripe tasks — same-shard targets first (lower latency)
+        // S-SHARD: Sort ripe tasks — same-shard targets first (lower gas, faster execution)
         if (this.keeperShard >= 0 && ripeTasks.length > 1) {
+            // Cache target shard per task for sorting
+            const shardCache = new Map<number, number>();
+            for (const task of ripeTasks) {
+                try {
+                    const shard = await this.networkClient.getShardOfAddress(task.targetContract);
+                    shardCache.set(task.id, shard);
+                } catch {
+                    shardCache.set(task.id, -1); // Unknown shard
+                }
+            }
+
             ripeTasks.sort((a, b) => {
-                const aIsSameShard = a.targetContract === this.contracts.scheduler ? 1 : 0;
-                const bIsSameShard = b.targetContract === this.contracts.scheduler ? 1 : 0;
-                return bIsSameShard - aIsSameShard; // Same-shard first
+                const aShard = shardCache.get(a.id) ?? -1;
+                const bShard = shardCache.get(b.id) ?? -1;
+                const aIsSameShard = aShard === this.keeperShard ? 1 : 0;
+                const bIsSameShard = bShard === this.keeperShard ? 1 : 0;
+                if (aIsSameShard !== bIsSameShard) return bIsSameShard - aIsSameShard;
+                // Secondary sort: higher deposit = more keeper reward
+                return Number(b.depositEgld - a.depositEgld);
             });
+
+            const sameShard = ripeTasks.filter(t => shardCache.get(t.id) === this.keeperShard).length;
+            if (sameShard > 0) {
+                this.log(`S-SHARD: ${sameShard}/${ripeTasks.length} ripe tasks in keeper's shard (priority)`);
+            }
         }
 
         this.log(`Scan complete: ${this.knownTasks.size} tracked, ${ripeTasks.length} ripe`);

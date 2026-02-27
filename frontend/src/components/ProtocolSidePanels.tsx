@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useContractQuery, bufferToNumber, bufferToBigInt, formatEgld } from '../hooks/useContractQuery';
+import { formatEgld } from '../hooks/useContractQuery';
 import { CONTRACTS, NETWORK } from '../config';
 import { AnimatedCounter } from './AnimatedCounter';
 

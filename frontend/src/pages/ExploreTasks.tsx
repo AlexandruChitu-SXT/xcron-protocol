@@ -1,7 +1,6 @@
 import { devError, devWarn } from '../utils/devLog';
 import { useEffect, useState } from 'react';
 import { Address } from '@multiversx/sdk-core';
-import { NavLink } from 'react-router-dom';
 import { useContractQuery, bufferToNumber, formatEgld, shortenAddress } from '../hooks/useContractQuery';
 import { CONTRACTS, NETWORK } from '../config';
 import { AnimatedCounter } from '../components/AnimatedCounter';

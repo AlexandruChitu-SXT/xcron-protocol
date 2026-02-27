@@ -1,4 +1,4 @@
-import { devError, devWarn } from '../utils/devLog';
+import { devError } from '../utils/devLog';
 import { useEffect, useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '../hooks/useContractQuery';
@@ -66,19 +66,10 @@ export function Dashboard() {
                 totalFailed,
             });
 
-            // Fetch transaction count stats
-            try {
-                const oneDayAgo = Math.floor(Date.now() / 1000) - 86400;
-                const [lifetimeRes, dailyRes] = await Promise.all([
-                    fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions/count?status=success`),
-                    fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions/count?after=${oneDayAgo}&status=success`)
-                ]);
-                const lifetimeCount = Number(await lifetimeRes.text()) || 0;
-                const dailyCount = Number(await dailyRes.text()) || 0;
-                setTxStats({ lifetime: lifetimeCount, daily: dailyCount });
-            } catch (err) {
-                devWarn('Could not fetch tx counts:', err);
-            }
+            // Use on-chain metrics for tx stats (API /transactions/count times out on testnet)
+            const lifetimeExecs = totalSuccessful + totalFailed;
+            setTxStats({ lifetime: lifetimeExecs, daily: lifetimeExecs > 0 ? totalSuccessful : 0 });
+
 
             // Fetch protocol balance
             try {
@@ -111,7 +102,7 @@ export function Dashboard() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-glass)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-primary)' }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Past 24H: <span style={{ color: 'var(--text-primary)' }}>{txStats.daily.toLocaleString()}</span></span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Successful: <span style={{ color: 'var(--text-primary)' }}>{txStats.daily.toLocaleString()}</span></span>
                         </div>
                     </div>
                     {!wallet.connected && (

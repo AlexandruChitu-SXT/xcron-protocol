@@ -1,6 +1,7 @@
 import { ApiNetworkProvider } from "@multiversx/sdk-network-providers";
 import { Address } from "@multiversx/sdk-core";
 import { NetworkConfig } from "./config";
+import { RateLimiter } from "./rate_limiter";
 
 /**
  * NetworkClient — wraps MultiversX API for the keeper bot.
@@ -9,10 +10,12 @@ import { NetworkConfig } from "./config";
 export class NetworkClient {
     private provider: ApiNetworkProvider;
     private chainId: string;
+    private rateLimiter: RateLimiter;
 
     constructor(config: NetworkConfig) {
         this.provider = new ApiNetworkProvider(config.apiUrl, { timeout: 15000 });
         this.chainId = config.chainId;
+        this.rateLimiter = new RateLimiter(10); // 10 req/sec
     }
 
     getProvider(): ApiNetworkProvider {
@@ -55,6 +58,7 @@ export class NetworkClient {
             query.caller = new Address(caller);
         }
 
+        await this.rateLimiter.acquire();
         const response = await this.provider.queryContract(query as any);
         return response.getReturnDataParts().map((part: Uint8Array) => Buffer.from(part));
     }
@@ -63,6 +67,7 @@ export class NetworkClient {
      * Get account nonce for transaction sequencing.
      */
     async getAccountNonce(address: string): Promise<number> {
+        await this.rateLimiter.acquire();
         const account = await this.provider.getAccount(new Address(address));
         return account.nonce;
     }
@@ -71,6 +76,7 @@ export class NetworkClient {
      * Get account balance in smallest EGLD denomination.
      */
     async getAccountBalance(address: string): Promise<bigint> {
+        await this.rateLimiter.acquire();
         const account = await this.provider.getAccount(new Address(address));
         return BigInt(account.balance.toString());
     }
@@ -81,6 +87,7 @@ export class NetworkClient {
      */
     async getShardOfAddress(address: string): Promise<number> {
         try {
+            await this.rateLimiter.acquire();
             const account = await this.provider.getAccount(new Address(address));
             return (account as any).shard ?? 0;
         } catch {

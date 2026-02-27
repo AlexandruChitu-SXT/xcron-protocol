@@ -8,6 +8,7 @@ import { ConnectModal } from './components/ConnectModal';
 import { ToastContainer } from './components/ToastContainer';
 import { TubesBackground } from './components/TubesBackground';
 import { NetworkBadge } from './components/NetworkBadge';
+import { useExecutionNotifier } from './hooks/useExecutionNotifier';
 
 // ── Code splitting: lazy-load pages for smaller initial bundle ──
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -46,6 +47,11 @@ function PageLoader() {
   );
 }
 
+function ExecutionNotifier() {
+  useExecutionNotifier();
+  return null;
+}
+
 function App() {
   return (
     <WalletProvider>
@@ -55,6 +61,7 @@ function App() {
         <ConnectModal />
         <ToastContainer />
         <NetworkBadge />
+        <ExecutionNotifier />
         <main style={{ flex: 1, position: 'relative', zIndex: 2 }}>
           <Suspense fallback={<PageLoader />}>
             <Routes>

@@ -134,10 +134,18 @@ export function ProtocolStats() {
                 gap: 14,
                 marginBottom: 24,
             }}>
-                <StatCard label="Total Tasks" value={data?.totalTasks ?? 0} icon="📋" color="#00e5ff" loading={loading} />
-                <StatCard label="Lifetime Executions" value={totalExecs} icon="⚡" color="#ffa726" loading={loading} />
-                <StatCard label="Success Rate" value={`${successRate}%`} icon="✅" color={successRate >= 90 ? '#00e676' : successRate >= 50 ? '#ffa726' : '#ff5252'} loading={loading} />
-                <StatCard label="Active Keepers" value={data?.activeKeepers ?? 0} icon="🤖" color="#ab47bc" loading={loading} />
+                <StatCard label="Total Tasks" value={data?.totalTasks ?? 0} icon={
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="9" y1="4" x2="9" y2="10" /></svg>
+                } color="#00e5ff" loading={loading} />
+                <StatCard label="Lifetime Executions" value={totalExecs} icon={
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" /></svg>
+                } color="#ffa726" loading={loading} />
+                <StatCard label="Success Rate" value={`${successRate}%`} icon={
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M12 2L3 7v6c0 5.25 3.85 10.15 9 11.35C17.15 23.15 21 18.25 21 13V7L12 2z" /><polyline points="9,12 11,14 15,10" /></svg>
+                } color={successRate >= 90 ? '#00e676' : successRate >= 50 ? '#ffa726' : '#ff5252'} loading={loading} />
+                <StatCard label="Active Keepers" value={data?.activeKeepers ?? 0} icon={
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="3" /><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" /></svg>
+                } color="#ab47bc" loading={loading} />
             </div>
 
             {/* Detailed Metrics Grid */}
@@ -284,7 +292,7 @@ export function ProtocolStats() {
 // ── Sub-components ────────────────────────────────────
 
 function StatCard({ label, value, icon, color, loading }: {
-    label: string; value: number | string; icon: string; color: string; loading: boolean;
+    label: string; value: number | string; icon: React.ReactNode; color: string; loading: boolean;
 }) {
     return (
         <div className="glass-card" style={{
@@ -305,7 +313,7 @@ function StatCard({ label, value, icon, color, loading }: {
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: '1.2rem' }}>{icon}</span>
+                <span style={{ color, display: 'flex', alignItems: 'center' }}>{icon}</span>
                 <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--text-secondary)', fontWeight: 600 }}>
                     {label}
                 </span>

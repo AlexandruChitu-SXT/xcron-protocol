@@ -9,6 +9,7 @@ import { ToastContainer } from './components/ToastContainer';
 import { TubesBackground } from './components/TubesBackground';
 import { NetworkBadge } from './components/NetworkBadge';
 import { useExecutionNotifier } from './hooks/useExecutionNotifier';
+import AiChat from './components/AiChat';
 
 // ── Code splitting: lazy-load pages for smaller initial bundle ──
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -77,6 +78,7 @@ function App() {
           </Suspense>
         </main>
         <Footer />
+        <AiChat />
       </BrowserRouter>
       <Analytics />
     </WalletProvider>

@@ -402,16 +402,6 @@ pub trait SchedulerContract:
         self.task_expired_event(task_id);
     }
 
-    /// Emergency cleanup for tasks with corrupted/incompatible storage format.
-    /// Only needed after struct migration (e.g., adding completed_at field).
-    /// Clears the task storage key directly without deserializing.
-    /// TEMPORARY: Remove after all legacy tasks are cleaned up.
-    #[only_owner]
-    #[endpoint(forceCleanupTask)]
-    fn force_cleanup_task(&self, task_id: u64) {
-        self.tasks(task_id).clear();
-    }
-
     // ═══════════════════════════════════════════════════════════
     //  TIMEOUT HANDLING
     // ═══════════════════════════════════════════════════════════

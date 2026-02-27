@@ -80,3 +80,36 @@ Collects and distributes protocol fees:
 | **Cooldown** | 12-hour unstaking period prevents quick exits |
 | **TTL expiration** | Tasks auto-expire with full refund if not executed |
 | **Circuit breaker** | Owner can pause/unpause all contracts |
+
+## Commit-Reveal Anti-MEV Protocol
+
+For high-value tasks, XCron uses a commit-reveal scheme to prevent frontrunning:
+
+1. **Commit**: Keeper submits `hash(task_id, salt)` + bond
+2. **Reveal**: Keeper reveals `salt` within the reveal window
+3. **Execute**: If hash matches, task executes normally and bond is returned
+4. **Slash**: If keeper doesn't reveal in time, bond is slashed
+
+This prevents MEV bots from frontrunning profitable task executions.
+
+## Hybrid Oracle (AI Evaluator)
+
+Tasks can include metadata with price conditions:
+
+```json
+{"price": {"token": "EGLD", "condition": "above", "threshold": 50}}
+```
+
+The keeper bot's AI evaluator checks real-time prices from CoinGecko before executing. This enables hybrid triggers — time-based on-chain scheduling with off-chain condition evaluation.
+
+## Deployed Contracts
+
+### Testnet
+
+| Contract | Address |
+|:--|:--|
+| Scheduler | `erd1qqqqqqqqqqqqqpgqkchuk2w2nsmsrdqkd4s2t7z4m7wq6st27k8sqwqdju` |
+| KeeperRegistry | `erd1qqqqqqqqqqqqqpgqhxvdt2c5y0c4g4aj8fsaar4f9v2ejque7k8ss6c2xs` |
+| Rewards | `erd1qqqqqqqqqqqqqpgq7ql3hm76nyun0mmfq0kw2gacspjm63q97k8s6w5xzs` |
+| Ping (test) | `erd1qqqqqqqqqqqqqpgqw7rlhmu4jfxc8jy2p8hkkfghy6x0kvzc7k8sg0dwqk` |
+

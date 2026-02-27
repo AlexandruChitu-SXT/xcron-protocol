@@ -201,9 +201,11 @@ export function ConnectModal() {
             background: 'linear-gradient(145deg, #0a2020, #0d2a2a)',
             border: '1px solid rgba(0,255,180,0.15)',
             borderRadius: 20,
-            padding: '28px 28px 20px',
-            width: '92%',
-            maxWidth: 440,
+            padding: '24px 28px 18px',
+            width: '94%',
+            maxWidth: 640,
+            maxHeight: '80vh',
+            overflowY: 'auto' as const,
             boxShadow: '0 24px 80px rgba(0,0,0,0.5), 0 0 40px rgba(0,255,120,0.05)',
         } as React.CSSProperties,
         securityBanner: {
@@ -300,7 +302,7 @@ export function ConnectModal() {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     {/* DeFi Wallet Extension */}
                     <button
                         style={S.option}

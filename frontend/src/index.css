@@ -2762,6 +2762,125 @@ a:hover {
   cursor: not-allowed;
 }
 
+/* ── Quick Action Chips ── */
+.cron-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.cron-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: rgba(0, 155, 119, 0.12);
+  border: 1px solid rgba(0, 155, 119, 0.25);
+  border-radius: 20px;
+  color: #4ade80;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+}
+
+.cron-chip:hover {
+  background: rgba(0, 155, 119, 0.25);
+  border-color: rgba(0, 155, 119, 0.5);
+  transform: translateY(-1px);
+}
+
+.cron-chip-icon {
+  font-size: 0.8rem;
+}
+
+/* ── Streaming Cursor ── */
+.cron-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #4ade80;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cronBlink 0.8s ease-in-out infinite;
+}
+
+@keyframes cronBlink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── TX Status Spinner ── */
+.cron-status-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(251, 191, 36, 0.3);
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+  animation: cronSpin 0.8s linear infinite;
+}
+
+@keyframes cronSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Explorer Link ── */
+.cron-action-explorer {
+  display: block;
+  padding: 5px 12px 8px;
+  font-size: 0.7rem;
+  color: #4ade80;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.cron-action-explorer:hover {
+  text-decoration: underline;
+}
+
+/* ── FAB Text Branding ── */
+.cron-fab-text {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 0.7rem;
+  color: white;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.cron-fab-text span {
+  color: #4ade80;
+  font-size: 0.6rem;
+}
+
+.cron-header-icon {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: white;
+  letter-spacing: -0.5px;
+}
+
+.cron-header-icon span {
+  color: #4ade80;
+  font-size: 0.65rem;
+}
+
 /* ── Mobile ── */
 @media (max-width: 480px) {
   .cron-chat {
@@ -2776,6 +2895,10 @@ a:hover {
     right: 16px;
     width: 48px;
     height: 48px;
-    font-size: 1.2rem;
+  }
+
+  .cron-chip {
+    font-size: 0.68rem;
+    padding: 4px 10px;
   }
 }

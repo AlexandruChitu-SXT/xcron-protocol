@@ -3,8 +3,8 @@
 /// Basis points denominator (100% = 10,000 BPS)
 pub const BPS_DENOMINATOR: u64 = 10_000;
 
-/// Protocol fee: 15% (1,500 BPS) — protocol keeps 15%, keeper gets 85%.
-pub const DEFAULT_PROTOCOL_FEE_BPS: u64 = 1_500;
+/// Protocol fee: 30% (3,000 BPS) — protocol keeps 30%, keeper gets 70%.
+pub const DEFAULT_PROTOCOL_FEE_BPS: u64 = 3_000;
 
 /// Minimum gas limit for task execution (5 million)
 pub const MIN_GAS_LIMIT: u64 = 5_000_000;

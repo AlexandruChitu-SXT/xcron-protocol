@@ -87,10 +87,9 @@ Built with **MultiversX SC Framework v0.63.0** (Supernova-ready) following the *
 
 | Parameter | Value |
 |-----------|-------|
-| Keeper reward | 85% of task deposit |
-| Protocol fee | 15% of task deposit |
-| Volume discount (5-25 EGLD) | 12% protocol / 88% keeper |
-| Volume discount (>25 EGLD) | 10% protocol / 90% keeper |
+| Keeper reward | 70% of task deposit |
+| Protocol fee | 30% of task deposit |
+| Max reward per exec | 0.05 EGLD |
 | Min keeper stake | Configurable |
 | Early exit penalty | 5% (if unstake < 30 days) |
 | Slash Strike 1 | 5% of stake |

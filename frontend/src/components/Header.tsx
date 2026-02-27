@@ -46,6 +46,7 @@ export function Header() {
         { to: '/schedule', label: 'Schedule' },
         { to: '/tasks', label: 'My Tasks' },
         { to: '/explore', label: 'Explore' },
+        { to: '/stats', label: 'Stats' },
         { to: '/keeper', label: 'Keeper Nodes' },
     ];
 

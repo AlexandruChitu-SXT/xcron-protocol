@@ -16,6 +16,7 @@ const ScheduleTask = lazy(() => import('./pages/ScheduleTask').then(m => ({ defa
 const MyTasks = lazy(() => import('./pages/MyTasks').then(m => ({ default: m.MyTasks })));
 const KeeperPanel = lazy(() => import('./pages/KeeperPanel').then(m => ({ default: m.KeeperPanel })));
 const ExploreTasks = lazy(() => import('./pages/ExploreTasks').then(m => ({ default: m.ExploreTasks })));
+const ProtocolStats = lazy(() => import('./pages/ProtocolStats').then(m => ({ default: m.ProtocolStats })));
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
 // Loading spinner shown while a page chunk loads
@@ -70,6 +71,7 @@ function App() {
               <Route path="/tasks" element={<MyTasks />} />
               <Route path="/keeper" element={<KeeperPanel />} />
               <Route path="/explore" element={<ExploreTasks />} />
+              <Route path="/stats" element={<ProtocolStats />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

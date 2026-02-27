@@ -386,6 +386,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 version: 1,
             });
 
+            // Save current page so we can restore it after redirect
+            sessionStorage.setItem('xcron_pre_redirect_path', window.location.pathname);
+
             // Redirects to web wallet
             await provider.signTransaction(transaction, {
                 callbackUrl: `${window.location.origin}${window.location.pathname}`,
@@ -399,16 +402,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    /* ── Web Wallet return splash state ── */
+    const [showReturnSplash, setShowReturnSplash] = useState(false);
+    const [splashMessage, setSplashMessage] = useState('');
+
     /* ── Web Wallet callback handling ── */
     useEffect(() => {
         const url = new URL(window.location.href);
         const address = url.searchParams.get('address');
+        const hasWalletCallback = address?.startsWith('erd1') || url.searchParams.has('status');
+
+        // Show splash immediately if returning from Web Wallet
+        if (hasWalletCallback) {
+            setShowReturnSplash(true);
+            setSplashMessage('Processing wallet response...');
+        }
 
         if (address && address.startsWith('erd1')) {
             // Login callback from Web Wallet
+            setSplashMessage('Connecting wallet...');
             localStorage.setItem('xcron_wallet_provider', 'webwallet');
             connect(address).then(() => {
-                addToast('Connected via Web Wallet!', 'success');
+                setSplashMessage('Connected!');
+                addToast('✅ Connected via Web Wallet!', 'success');
+                // Fade out splash after a moment
+                setTimeout(() => setShowReturnSplash(false), 1200);
             });
             // Clean URL
             url.searchParams.delete('address');
@@ -422,12 +440,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             const status = url.searchParams.get('status');
             const txHash = url.searchParams.get('txHash');
             if (status === 'success' && txHash) {
-                addToast(`Transaction confirmed! ${txHash.slice(0, 12)}...`, 'success');
+                setSplashMessage('Transaction confirmed! ✅');
+                addToast(`✅ Transaction confirmed! ${txHash.slice(0, 12)}...`, 'success');
+                // Refresh balance after successful tx
+                setTimeout(() => refreshBalance(), 3000);
             } else if (status === 'failed') {
-                addToast('Transaction failed in Web Wallet', 'error');
+                setSplashMessage('Transaction failed ❌');
+                addToast('❌ Transaction failed in Web Wallet', 'error');
             } else if (status === 'cancelled') {
+                setSplashMessage('Transaction cancelled');
                 addToast('Transaction cancelled', 'info');
             }
+            // Fade out splash
+            setTimeout(() => setShowReturnSplash(false), 1500);
             // Clean URL
             url.searchParams.delete('status');
             url.searchParams.delete('txHash');
@@ -508,6 +533,47 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }}
         >
             {children}
+            {/* Web Wallet return splash overlay */}
+            {showReturnSplash && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 10000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(6, 14, 30, 0.95)',
+                    backdropFilter: 'blur(12px)',
+                    animation: 'fadeIn 0.3s ease',
+                }}>
+                    <div style={{
+                        width: 56, height: 56,
+                        border: '3px solid rgba(0,229,255,0.2)',
+                        borderTop: '3px solid #00e5ff',
+                        borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite',
+                        marginBottom: 20,
+                    }} />
+                    <div style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 700,
+                        background: 'linear-gradient(135deg, #00e5ff, #00e676)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        marginBottom: 8,
+                    }}>
+                        XCron Protocol
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                        {splashMessage}
+                    </div>
+                    <style>{`
+                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                        @keyframes spin { to { transform: rotate(360deg); } }
+                    `}</style>
+                </div>
+            )}
         </WalletContext.Provider>
     );
 }

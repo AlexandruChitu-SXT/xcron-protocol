@@ -29,7 +29,7 @@ export function useContractQuery() {
                 return [];
             }
 
-            const response = await fetch(`${NETWORK.apiUrl}/query`, {
+            const response = await fetch(`${NETWORK.gatewayUrl}/vm-values/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -55,7 +55,8 @@ export function useContractQuery() {
                 throw new Error(`Query failed: ${response.status}`);
             }
 
-            const data = await response.json();
+            const json = await response.json();
+            const data = json.data?.data || json;
 
             if (data.returnCode !== 'ok') {
                 devWarn(`Query ${funcName} returned: ${data.returnCode} - ${data.returnMessage}`);

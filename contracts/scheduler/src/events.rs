@@ -40,4 +40,30 @@ pub trait EventsModule {
     /// Emitted when a commit expires or is slashed.
     #[event("commitVoided")]
     fn commit_voided_event(&self, #[indexed] task_id: u64, #[indexed] keeper: &ManagedAddress);
+
+    /// Emitted when a keeper is paid for successful execution.
+    #[event("keeperPaid")]
+    fn keeper_paid_event(
+        &self,
+        #[indexed] task_id: u64,
+        #[indexed] keeper: &ManagedAddress,
+        amount: &BigUint,
+    );
+
+    /// Emitted when a task owner receives a refund (failure or remaining deposit).
+    #[event("userRefunded")]
+    fn user_refunded_event(
+        &self,
+        #[indexed] task_id: u64,
+        #[indexed] owner: &ManagedAddress,
+        amount: &BigUint,
+    );
+
+    /// Emitted when protocol fee is forwarded to the Rewards contract.
+    #[event("protocolFeePaid")]
+    fn protocol_fee_paid_event(
+        &self,
+        #[indexed] task_id: u64,
+        amount: &BigUint,
+    );
 }

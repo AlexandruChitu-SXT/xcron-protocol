@@ -169,7 +169,7 @@ export class XCronClient {
      * Query the MultiversX API gateway for smart contract view functions.
      * Returns decoded hex results from the VM.
      */
-    private async vmQuery(funcName: string, args: string[] = []): Promise<string[]> {
+    public async vmQuery(funcName: string, args: string[] = []): Promise<string[]> {
         const apiUrl = this.getApiUrl();
         const response = await fetch(`${apiUrl}/vm-values/query`, {
             method: "POST",

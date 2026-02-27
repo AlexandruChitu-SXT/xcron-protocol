@@ -150,6 +150,7 @@ pub trait ExecutionModule:
 
                 // Pay keeper
                 self.send().direct_egld(&keeper, &reward);
+                self.keeper_paid_event(task_id, &keeper, &reward);
 
                 // Calculate remaining deposit
                 let total_spent = &reward + &protocol_fee;
@@ -171,15 +172,18 @@ pub trait ExecutionModule:
                         self.reschedule_recurring(&task, *interval, *remaining_execs - 1, remaining_deposit);
                     } else if remaining_deposit > BigUint::zero() {
                         self.send().direct_egld(&task.owner, &remaining_deposit);
+                        self.user_refunded_event(task_id, &task.owner, &remaining_deposit);
                     }
                 } else {
                     if remaining_deposit > BigUint::zero() {
                         self.send().direct_egld(&task.owner, &remaining_deposit);
+                        self.user_refunded_event(task_id, &task.owner, &remaining_deposit);
                     }
                 }
 
                 // Send protocol fee to Rewards contract
                 self.forward_protocol_fee(&keeper, task_id, &protocol_fee);
+                self.protocol_fee_paid_event(task_id, &protocol_fee);
 
                 // P5: Notify KeeperRegistry of success (resets consecutive failures)
                 self.forward_keeper_result(&keeper, true);
@@ -208,6 +212,7 @@ pub trait ExecutionModule:
 
                 // Refund entire deposit to task owner
                 self.send().direct_egld(&task.owner, &task.deposit);
+                self.user_refunded_event(task_id, &task.owner, &task.deposit);
 
                 // P5: Notify KeeperRegistry of failure (triggers progressive slashing)
                 self.forward_keeper_result(&keeper, false);

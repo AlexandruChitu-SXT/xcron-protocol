@@ -1,6 +1,6 @@
 {
-    "name": "xcron-sdk",
-    "version": "0.2.0",
+    "name": "xcron-protocol",
+    "version": "0.3.0",
     "description": "SDK for integrating with XCron Protocol — Decentralized Task Automation on MultiversX",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -27,7 +27,11 @@
         "cron",
         "scheduler",
         "keeper",
-        "smart-contract"
+        "smart-contract",
+        "ai-agent",
+        "elizaos",
+        "defi",
+        "cross-shard"
     ],
     "repository": {
         "type": "git",

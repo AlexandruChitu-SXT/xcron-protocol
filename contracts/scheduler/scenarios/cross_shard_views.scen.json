@@ -20,7 +20,7 @@
                     "balance": "50,000,000,000,000,000,000",
                     "storage": {}
                 },
-                "address:target_contract": {
+                "sc:target_contract": {
                     "nonce": "0",
                     "balance": "0",
                     "code": "file:../demo/output/demo.wasm",
@@ -84,7 +84,7 @@
                 "egldValue": "1,000,000,000,000,000,000",
                 "function": "scheduleTask",
                 "arguments": [
-                    "address:target_contract",
+                    "sc:target_contract",
                     "str:ping",
                     "",
                     "u8:0|u64:100",

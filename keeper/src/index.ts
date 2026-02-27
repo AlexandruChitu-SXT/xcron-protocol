@@ -9,6 +9,7 @@ import { Logger, HealthTracker, withRetry } from "./logger";
 import { XPortalClaimer } from "./xportal_claim";
 import { AIEvaluator } from "./ai_evaluator";
 import { CommitRevealManager } from "./commit_reveal";
+import { KeeperDashboard } from "./dashboard";
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -86,8 +87,14 @@ async function main(): Promise<void> {
         logger
     );
 
-    logger.info("Main", `Scheduler: ${config.contracts.scheduler}`);
     logger.info("Main", `Poll interval: ${config.keeper.pollIntervalMs}ms`);
+
+    // Start monitoring dashboard
+    const dashboard = new KeeperDashboard(health, () => ({
+        pending: monitor.getPendingCount(),
+        tracked: monitor.getTrackedCount(),
+    }));
+    dashboard.start(3300);
 
     // 5. Initialize xPortal XP Auto-Claimer (if enabled)
     let xportalClaimer: XPortalClaimer | null = null;

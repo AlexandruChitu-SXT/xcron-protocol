@@ -1041,10 +1041,17 @@ RULES:
                     protocol: 'XCron', icon: '✦', color: '#009b77',
                     description: `Cancel Task #${match[1]}`,
                     details: [{ label: 'Task ID', value: `#${match[1]}` }],
-                    buttonLabel: t('Confirm Cancel', 'Confirmar cancelación'),
-                    tx: { endpoint: 'cancelTask', args: [match[1]], value: '0' },
+                    status: 'signing',
                 };
-                return { reply: t(`Cancel task #${match[1]}?`, `¿Cancelar tarea #${match[1]}?`), newState: EMPTY_STATE, action: cancelAction };
+                try {
+                    const txHash = await signAndSendTransaction({
+                        receiver: CONTRACTS.scheduler,
+                        data: `cancelTask@${numToHex(parseInt(match[1]))}`,
+                        value: '0', gasLimit: GAS_CANCEL_TASK,
+                    });
+                    if (txHash) { cancelAction.status = 'pending'; cancelAction.txHash = txHash; return { reply: t('Cancellation submitted.', 'Cancelación enviada.'), newState: EMPTY_STATE, action: cancelAction }; }
+                    cancelAction.status = 'failed'; return { reply: t('Transaction rejected.', 'Transacción rechazada.'), newState: EMPTY_STATE, action: cancelAction };
+                } catch { cancelAction.status = 'failed'; return { reply: t('Cancellation failed.', 'Error al cancelar.'), newState: EMPTY_STATE, action: cancelAction }; }
             }
             return { reply: t('Which task? Use: cancel #ID', '¿Cuál tarea? Usa: cancelar #ID'), newState: EMPTY_STATE };
         }

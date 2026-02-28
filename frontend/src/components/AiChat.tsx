@@ -1205,11 +1205,14 @@ RULES:
 
     // ── Send handler ──
     // ── 🎤 Voice Input Handler ──
+    const voiceRetryRef = useRef(0);
+    const pendingTranscriptRef = useRef('');
+
     const handleVoiceToggle = useCallback(() => {
         if (!voiceSupported) return;
 
         if (isListening) {
-            // Stop listening
+            // Stop listening — send whatever we have
             recognitionRef.current?.stop();
             setIsListening(false);
             if (voiceTimeoutRef.current) {
@@ -1219,37 +1222,69 @@ RULES:
             return;
         }
 
-        // Start listening
+        voiceRetryRef.current = 0;
+        startVoiceRecognition();
+    }, [voiceSupported, isListening, messages]);
+
+    const startVoiceRecognition = useCallback(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+
         const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        // Detect language from last user message or default to English
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        // Detect language from last user message or default to Spanish
         const lastUserMsg = messages.filter(m => m.role === 'user').pop();
-        recognition.lang = lastUserMsg?.content && /[áéíóúñ¿¡]/i.test(lastUserMsg.content) ? 'es-ES' : 'en-US';
+        recognition.lang = lastUserMsg?.content && /[a-zA-Z]{3,}/.test(lastUserMsg.content) && !/[áéíóúñ¿¡]/.test(lastUserMsg.content) ? 'en-US' : 'es-ES';
+
+        let finalTranscript = '';
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            const transcript = event.results[0][0].transcript;
-            if (transcript.trim()) {
-                // Set the transcript as input — it will go through handleSend's
-                // full security pipeline (sanitize → injection check → rate limit)
-                setInput(transcript);
-                // Small delay to let React update the input state before sending
-                setTimeout(() => {
-                    const sendBtn = document.querySelector('.cron-input-bar button:last-of-type') as HTMLButtonElement;
-                    sendBtn?.click();
-                }, 100);
+            let interim = '';
+            for (let i = event.resultIndex; i < Object.keys(event.results).length; i++) {
+                const result = event.results[i];
+                if (result[0]) {
+                    // Check if this is a final result (isFinal property)
+                    const isFinal = (result as unknown as { isFinal: boolean }).isFinal;
+                    if (isFinal) {
+                        finalTranscript += result[0].transcript + ' ';
+                    } else {
+                        interim = result[0].transcript;
+                    }
+                }
+            }
+            // Show live preview in input field
+            const display = (finalTranscript + interim).trim();
+            if (display) {
+                pendingTranscriptRef.current = display;
+                setInput(display);
             }
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             console.warn('🎤 Voice error:', event.error);
+
+            if (event.error === 'network' && voiceRetryRef.current < 2) {
+                // Retry on network error (Chrome speech services can be flaky)
+                voiceRetryRef.current++;
+                console.log(`🎤 Retrying... attempt ${voiceRetryRef.current}/2`);
+                setTimeout(() => startVoiceRecognition(), 500);
+                return;
+            }
+
             setIsListening(false);
-            if (event.error === 'not-allowed') {
+            const errorMessages: Record<string, string> = {
+                'not-allowed': '🎤 Microphone access denied. Please allow mic permissions in your browser settings.',
+                'network': '🎤 Speech service unavailable. Check your internet connection and try again.',
+                'no-speech': '🎤 No speech detected. Click the mic and speak clearly.',
+                'audio-capture': '🎤 No microphone found. Please connect a microphone.',
+                'aborted': '', // User cancelled — no message needed
+            };
+            const msg = errorMessages[event.error] || `🎤 Voice error: ${event.error}. Please try again.`;
+            if (msg) {
                 setMessages(prev => [...prev, {
                     id: `voice-${Date.now()}`, role: 'bot' as const,
-                    content: '🎤 Microphone access denied. Please allow microphone permissions in your browser settings.',
-                    timestamp: new Date(),
+                    content: msg, timestamp: new Date(),
                 }]);
             }
         };
@@ -1260,19 +1295,35 @@ RULES:
                 clearTimeout(voiceTimeoutRef.current);
                 voiceTimeoutRef.current = null;
             }
+            // If we have a final transcript, send it
+            const transcript = pendingTranscriptRef.current.trim();
+            if (transcript) {
+                pendingTranscriptRef.current = '';
+                setInput(transcript);
+                // Trigger send after React updates input state
+                setTimeout(() => {
+                    const sendBtn = document.querySelector('.cron-input-bar button:last-of-type') as HTMLButtonElement;
+                    if (sendBtn && !sendBtn.disabled) sendBtn.click();
+                }, 150);
+            }
         };
 
         recognitionRef.current = recognition;
-        recognition.start();
-        setIsListening(true);
-        playSound('send');
+        try {
+            recognition.start();
+            setIsListening(true);
+            pendingTranscriptRef.current = '';
+            playSound('send');
 
-        // 🔒 Security: max 30 seconds recording (anti-DoS)
-        voiceTimeoutRef.current = setTimeout(() => {
-            recognition.stop();
+            // 🔒 Security: max 30 seconds recording (anti-DoS)
+            voiceTimeoutRef.current = setTimeout(() => {
+                recognition.stop();
+                voiceTimeoutRef.current = null;
+            }, SECURITY.MAX_VOICE_DURATION_MS);
+        } catch (err) {
+            console.error('🎤 Failed to start recognition:', err);
             setIsListening(false);
-            voiceTimeoutRef.current = null;
-        }, SECURITY.MAX_VOICE_DURATION_MS);
+        }
     }, [voiceSupported, isListening, messages]);
 
     // ── 🔊 Text-to-Speech for bot replies ──

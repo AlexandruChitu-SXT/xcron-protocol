@@ -1024,32 +1024,36 @@ RULES:
         const lower = text.toLowerCase();
         const s = { ...state };
 
+        // ── Language detection (check full conversation context) ──
+        const recentUserTexts = messages.filter(m => m.role === 'user').slice(-3).map(m => m.content).join(' ') + ' ' + text;
+        const esWords = /\b(quiero|programar|cada|horas|días|semanal|mensual|cuánto|cuanto|cancelar|mostrar|tareas|hola|puedes|protocolo|reclamar)\b/i;
+        const isES = esWords.test(recentUserTexts);
+
+        // ── Bilingual response helper ──
+        const t = (en: string, es: string) => isES ? es : en;
+
         // Cancel
-        if (lower.includes('cancel')) {
+        if (lower.includes('cancel') || lower.includes('cancelar')) {
             const match = text.match(/#?(\d+)/);
             if (match) {
-                if (!wallet.connected) return { reply: `Connect your wallet first.`, newState: EMPTY_STATE };
+                if (!wallet.connected) return { reply: t('Connect your wallet first.', 'Conecta tu wallet primero.'), newState: EMPTY_STATE };
                 const cancelAction: ActionCard = {
                     protocol: 'XCron', icon: '✦', color: '#009b77',
                     description: `Cancel Task #${match[1]}`,
                     details: [{ label: 'Task ID', value: `#${match[1]}` }],
-                    status: 'signing',
+                    buttonLabel: t('Confirm Cancel', 'Confirmar cancelación'),
+                    tx: { endpoint: 'cancelTask', args: [match[1]], value: '0' },
                 };
-                try {
-                    const txHash = await signAndSendTransaction({
-                        receiver: CONTRACTS.scheduler,
-                        data: `cancelTask@${numToHex(parseInt(match[1]))}`,
-                        value: '0', gasLimit: GAS_CANCEL_TASK,
-                    });
-                    if (txHash) { cancelAction.status = 'pending'; cancelAction.txHash = txHash; return { reply: 'Cancellation submitted.', newState: EMPTY_STATE, action: cancelAction }; }
-                    cancelAction.status = 'failed'; return { reply: 'Transaction rejected.', newState: EMPTY_STATE, action: cancelAction };
-                } catch { cancelAction.status = 'failed'; return { reply: 'Cancellation failed.', newState: EMPTY_STATE, action: cancelAction }; }
+                return { reply: t(`Cancel task #${match[1]}?`, `¿Cancelar tarea #${match[1]}?`), newState: EMPTY_STATE, action: cancelAction };
             }
+            return { reply: t('Which task? Use: cancel #ID', '¿Cuál tarea? Usa: cancelar #ID'), newState: EMPTY_STATE };
         }
 
         // Stats
-        if (lower.includes('stat')) {
+        if (lower.includes('stat') || lower.includes('stats') || lower.includes('estadísticas') || lower.includes('status')) {
             try {
+                // Assuming fetchProtocolStats is defined elsewhere or this is a placeholder for the original fetch logic
+                // For now, re-using the original fetch logic
                 const res = await fetch(`${NETWORK.gatewayUrl}/vm-values/query`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ scAddress: CONTRACTS.scheduler, funcName: 'getTaskNonce', args: [] }),
@@ -1057,46 +1061,74 @@ RULES:
                 const data = await res.json();
                 const rd = data?.data?.data?.returnData || [];
                 const tasks = rd[0] ? parseInt(atob(rd[0]), 16) || 0 : 0;
-                return { reply: `• Total tasks: ${tasks}\n• Network: ${NETWORK.name}\n• Status: Active ✅`, newState: EMPTY_STATE, quickActions: [{ label: 'Schedule task', value: 'schedule a new task', icon: '⚡' }] };
-            } catch { return { reply: "Can't reach network.", newState: EMPTY_STATE }; }
+                // const { totalTasks, activeTasks, tasks } = await fetchProtocolStats(); // Original diff line
+                // void totalTasks; void activeTasks; // Original diff line
+                return { reply: `• Total tasks: ${tasks}\n• Network: ${NETWORK.name}\n• Status: Active ✅`, newState: EMPTY_STATE, quickActions: [{ label: t('Schedule task', 'Programar tarea'), value: 'schedule a new task', icon: '⚡' }] };
+            } catch { return { reply: t("Can't reach network.", "No puedo conectar a la red."), newState: EMPTY_STATE }; }
         }
 
         // History
-        if (lower.includes('history') || lower.includes('my task')) {
+        if (lower.includes('history') || lower.includes('my task') || lower.includes('mis tarea') || lower.includes('historial')) {
             const mem = loadMemory();
-            if (mem.txHistory.length === 0) return { reply: "No transactions yet.", newState: EMPTY_STATE, quickActions: WELCOME_QUICK_ACTIONS };
+            if (mem.txHistory.length === 0) return { reply: t("No transactions yet.", "Aún no hay transacciones."), newState: EMPTY_STATE, quickActions: WELCOME_QUICK_ACTIONS };
             const list = mem.txHistory.slice(0, 5).map(tx => `• ${new Date(tx.timestamp).toLocaleDateString()} — ${tx.action} → ${tx.hash.slice(0, 12)}...`).join('\n');
-            return { reply: `Recent:\n\n${list}`, newState: EMPTY_STATE };
+            return { reply: `${t('Recent:', 'Recientes:')}\n\n${list}`, newState: EMPTY_STATE };
         }
 
         // Schedule (multi-turn)
         if (s.awaitingField === 'amount') {
-            const amount = detectAmount(text); if (amount) { s.amount = amount; s.awaitingField = null; return executeSchedule(s); }
-            return { reply: "How much EGLD?", newState: s, quickActions: AMOUNT_QUICK_ACTIONS };
+            const amount = detectAmount(text); if (amount) {
+                const amountNum = parseFloat(amount);
+                // Smart amount advice — warn if too small for gas costs
+                if (amountNum < 0.05) {
+                    return {
+                        reply: t(
+                            `⚠️ ${amount} EGLD is very small — gas fees would eat most of the rewards. I'd recommend at least 0.1 EGLD for auto-compound to be worthwhile. Want to proceed anyway?`,
+                            `⚠️ ${amount} EGLD es muy poco — las comisiones de gas consumirían la mayoría de las recompensas. Recomiendo al menos 0.1 EGLD para que el auto-compound sea rentable. ¿Quieres continuar de todos modos?`
+                        ), newState: s, quickActions: AMOUNT_QUICK_ACTIONS
+                    };
+                }
+                if (amountNum < 0.1) {
+                    s.amount = amount; s.awaitingField = null;
+                    return {
+                        ...executeSchedule(s), reply: t(
+                            `⚡ Heads up: with ${amount} EGLD, auto-compound gains will be modest after gas. But let's set it up!`,
+                            `⚡ Aviso: con ${amount} EGLD, las ganancias del auto-compound serán modestas después del gas. ¡Pero vamos a configurarlo!`
+                        )
+                    };
+                }
+                s.amount = amount; s.awaitingField = null; return executeSchedule(s);
+            }
+            return { reply: t("How much EGLD?", "¿Cuánto EGLD?"), newState: s, quickActions: AMOUNT_QUICK_ACTIONS };
         }
         if (s.awaitingField === 'interval') {
-            const interval = detectInterval(text); if (interval) { s.interval = JSON.stringify(interval); s.awaitingField = 'amount'; return { reply: `${interval.label}. How much EGLD?`, newState: s, quickActions: AMOUNT_QUICK_ACTIONS }; }
-            return { reply: "How often?", newState: s, quickActions: INTERVAL_QUICK_ACTIONS };
+            const interval = detectInterval(text); if (interval) { s.interval = JSON.stringify(interval); s.awaitingField = 'amount'; return { reply: `${interval.label}. ${t('How much EGLD?', '¿Cuánto EGLD?')}`, newState: s, quickActions: AMOUNT_QUICK_ACTIONS }; }
+            return { reply: t("How often?", "¿Cada cuánto?"), newState: s, quickActions: INTERVAL_QUICK_ACTIONS };
         }
         if (s.awaitingField === 'protocol') {
-            const p = detectProtocol(text); if (p) { s.protocol = p; if (!s.action) s.action = 'claim-rewards'; s.awaitingField = 'interval'; return { reply: `${PROTOCOLS[p].name}. How often?`, newState: s, quickActions: INTERVAL_QUICK_ACTIONS }; }
-            return { reply: "Which protocol?", newState: s, quickActions: PROTOCOL_QUICK_ACTIONS };
+            const p = detectProtocol(text); if (p) { s.protocol = p; if (!s.action) s.action = 'claim-rewards'; s.awaitingField = 'interval'; return { reply: `${PROTOCOLS[p].name}. ${t('How often?', '¿Cada cuánto?')}`, newState: s, quickActions: INTERVAL_QUICK_ACTIONS }; }
+            return { reply: t("Which protocol?", "¿Qué protocolo?"), newState: s, quickActions: PROTOCOL_QUICK_ACTIONS };
         }
 
         const protocol = detectProtocol(text); const action = detectAction(text); const interval = detectInterval(text); const amount = detectAmount(text);
-        if (protocol || action || lower.includes('schedule') || lower.includes('automat')) {
+        if (protocol || action || lower.includes('schedule') || lower.includes('automat') || lower.includes('programar')) {
             s.intent = 'schedule'; if (protocol) s.protocol = protocol; if (action) s.action = action; if (interval) s.interval = JSON.stringify(interval); if (amount) s.amount = amount;
             if (s.protocol && !s.action) s.action = lower.includes('compound') ? 'auto-compound' : 'claim-rewards';
             if (s.action === 'auto-compound' && !s.protocol) s.protocol = 'xexchange';
             if (!s.executions) s.executions = 52;
-            if (!s.protocol) { s.awaitingField = 'protocol'; return { reply: "Which protocol?", newState: s, quickActions: PROTOCOL_QUICK_ACTIONS }; }
-            if (!s.interval) { s.awaitingField = 'interval'; return { reply: `How often?`, newState: s, quickActions: INTERVAL_QUICK_ACTIONS }; }
-            if (!s.amount) { s.awaitingField = 'amount'; return { reply: `How much EGLD?`, newState: s, quickActions: AMOUNT_QUICK_ACTIONS }; }
+            if (!s.protocol) { s.awaitingField = 'protocol'; return { reply: t("Which protocol?", "¿Qué protocolo?"), newState: s, quickActions: PROTOCOL_QUICK_ACTIONS }; }
+            if (!s.interval) { s.awaitingField = 'interval'; return { reply: t('How often?', '¿Cada cuánto?'), newState: s, quickActions: INTERVAL_QUICK_ACTIONS }; }
+            if (!s.amount) { s.awaitingField = 'amount'; return { reply: t('How much EGLD?', '¿Cuánto EGLD?'), newState: s, quickActions: AMOUNT_QUICK_ACTIONS }; }
             return executeSchedule(s);
         }
 
         // Default — local mode, no LLM
-        return { reply: `I'm in offline mode. I can still schedule tasks, show stats, or cancel tasks. Try one of these:`, newState: EMPTY_STATE, quickActions: WELCOME_QUICK_ACTIONS };
+        return {
+            reply: t(
+                `I'm in offline mode. I can still schedule tasks, show stats, or cancel tasks. Try one of these:`,
+                `Estoy en modo offline. Puedo programar tareas, mostrar estadísticas o cancelar tareas. Prueba una de estas:`
+            ), newState: EMPTY_STATE, quickActions: WELCOME_QUICK_ACTIONS
+        };
     };
 
     // ── Execute the schedule ──

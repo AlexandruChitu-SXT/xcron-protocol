@@ -10,11 +10,14 @@ pub trait SchedulingModule:
     + crate::events::EventsModule
     + crate::validation::ValidationModule
     + crate::helpers::HelpersModule
+    + crate::clone_keys::CloneKeysModule
     + common::pausable::PausableModule
 {
     /// Schedule a new automation task.
     ///
     /// Payment: EGLD deposit covering gas budget + protocol fee.
+    /// For Clone-Keys: pass deposit amount as `requested_deposit` (EGLD is pre-deposited).
+    /// For normal wallets: send EGLD with the transaction (requested_deposit is ignored).
     #[payable("EGLD")]
     #[endpoint(scheduleTask)]
     fn schedule_task(
@@ -26,9 +29,27 @@ pub trait SchedulingModule:
         max_gas: u64,
         max_retries: u8,
         ttl_seconds: u64,
+        requested_deposit: OptionalValue<BigUint>,
     ) -> u64 {
         self.require_not_paused();
-        let deposit = self.call_value().egld().clone_value();
+
+        // Resolve caller: if Clone-Key, get main wallet; otherwise use caller directly
+        let raw_caller = self.blockchain().get_caller();
+        let (effective_owner, is_clone_key) = self.resolve_caller();
+        let caller = effective_owner;
+
+        // Determine deposit: Clone-Key uses pre-deposited funds, normal wallet uses payment
+        let deposit = if is_clone_key {
+            let req = match requested_deposit {
+                OptionalValue::Some(val) => val,
+                OptionalValue::None => sc_panic!("Clone-Key must specify requested_deposit"),
+            };
+            // Charge the clone key's spend limit
+            self.charge_clone_key(&raw_caller, &req);
+            req
+        } else {
+            self.call_value().egld().clone_value()
+        };
 
         // Checks
         require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
@@ -48,7 +69,6 @@ pub trait SchedulingModule:
         self.require_deposit_within_cap(&deposit);
 
         // S-9: Rate limiting — max 100 active tasks per address
-        let caller = self.blockchain().get_caller();
         let caller_active = self.owner_tasks(&caller).len();
         require!(caller_active < 100, "S-9: Too many active tasks (max 100)");
 
@@ -84,7 +104,7 @@ pub trait SchedulingModule:
 
         let task = common::types::Task {
             id: task_id,
-            owner: self.blockchain().get_caller(),
+            owner: caller.clone(),
             target_contract,
             target_endpoint,
             target_args,
@@ -98,6 +118,7 @@ pub trait SchedulingModule:
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
             completed_at: 0,
+            post_task_id: None,
         };
 
         self.tasks(task_id).set(&task);
@@ -116,20 +137,24 @@ pub trait SchedulingModule:
     fn cancel_task(&self, task_id: u64) {
         self.require_not_paused();
         let mut task = self.tasks(task_id).get();
-        let caller = self.blockchain().get_caller();
+        let raw_caller = self.blockchain().get_caller();
+        let (effective_owner, _is_clone_key) = self.resolve_caller();
 
-        // Checks
-        require!(task.owner == caller, "Not task owner");
+        // Checks: allow task owner OR the resolved clone-key owner to cancel
+        require!(
+            task.owner == raw_caller || task.owner == effective_owner,
+            "Not task owner"
+        );
         require!(task.status == common::types::TaskStatus::Pending, "Can only cancel Pending tasks");
 
         // Effects
         task.status = common::types::TaskStatus::Cancelled;
         self.tasks(task_id).set(&task);
         self.remove_from_indices(task_id, &task);
-        self.owner_tasks(&caller).swap_remove(&task_id);
+        self.owner_tasks(&task.owner).swap_remove(&task_id);
 
-        // Interactions
-        self.send().direct_egld(&caller, &task.deposit);
+        // Interactions — refund goes to task.owner (always the main wallet)
+        self.send().direct_egld(&task.owner, &task.deposit);
 
         self.task_cancelled_event(task_id);
     }
@@ -145,5 +170,58 @@ pub trait SchedulingModule:
         require!(metadata.len() <= 512, "Metadata too large (max 512 bytes)");
 
         self.task_metadata(task_id).set(&metadata);
+    }
+
+    /// Link two tasks: when `task_id` completes successfully, `post_task_id` is activated.
+    ///
+    /// Both tasks must belong to the same owner and be in Pending status.
+    /// Maximum chain depth: 5 (prevents gas-bomb chains).
+    #[endpoint(setPostTask)]
+    fn set_post_task(&self, task_id: u64, post_task_id: u64) {
+        self.require_not_paused();
+
+        require!(task_id != post_task_id, "Cannot chain a task to itself");
+
+        let mut task = self.tasks(task_id).get();
+        let post_task = self.tasks(post_task_id).get();
+        let (effective_owner, _is_clone_key) = self.resolve_caller();
+        let raw_caller = self.blockchain().get_caller();
+
+        // Both tasks must belong to the caller
+        require!(
+            task.owner == raw_caller || task.owner == effective_owner,
+            "Not owner of source task"
+        );
+        require!(
+            post_task.owner == task.owner,
+            "Post-task must belong to same owner"
+        );
+
+        // Both must be Pending
+        require!(
+            task.status == common::types::TaskStatus::Pending,
+            "Source task must be Pending"
+        );
+        require!(
+            post_task.status == common::types::TaskStatus::Pending,
+            "Post-task must be Pending"
+        );
+
+        // Prevent circular chains — walk the chain, max depth 5
+        let max_chain_depth: u64 = 5;
+        let mut current_id = post_task_id;
+        for _ in 0..max_chain_depth {
+            let t = self.tasks(current_id).get();
+            match t.post_task_id {
+                Some(next_id) => {
+                    require!(next_id != task_id, "Circular chain detected");
+                    current_id = next_id;
+                }
+                None => break,
+            }
+        }
+
+        task.post_task_id = Some(post_task_id);
+        self.tasks(task_id).set(&task);
     }
 }

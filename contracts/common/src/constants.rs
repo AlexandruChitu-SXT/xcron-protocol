@@ -78,3 +78,20 @@ pub const MAX_TASK_ARGS: usize = 10;
 
 /// Maximum size of a single argument in bytes (prevents oversized payloads).
 pub const MAX_ARG_SIZE_BYTES: usize = 4_096;
+
+// ── Clone-Key (Burner Wallet) constants ─────────────────
+// Gas costs in MultiversX are fixed in EGLD regardless of EGLD price,
+// so these limits are based on actual protocol usage, not fiat value.
+
+/// Maximum spend limit for a single Clone-Key: 2 EGLD.
+/// DCA diario × 1 año ≈ 0.73 EGLD — 2 EGLD cubre de sobra con margen.
+pub const MAX_CLONE_KEY_SPEND_LIMIT: u64 = 2 * EGLD_DECIMALS;
+
+/// Maximum Clone-Keys a single main wallet can have active simultaneously.
+pub const MAX_CLONE_KEYS_PER_WALLET: usize = 3;
+
+/// Maximum Clone-Key validity: 30 days. Forces renewal = more secure.
+pub const MAX_CLONE_KEY_TTL_SECONDS: u64 = 30 * 24 * 60 * 60; // 2,592,000s
+
+/// Minimum Clone-Key validity: 1 hour.
+pub const MIN_CLONE_KEY_TTL_SECONDS: u64 = 3_600;

@@ -49,6 +49,9 @@ pub struct Task<M: ManagedTypeApi> {
     /// Block timestamp (seconds) when execution completed. 0 while pending.
     /// Used for metrics, anomaly detection, and stuck task recovery (24h threshold).
     pub completed_at: u64,
+    /// Optional ID of a task to activate upon successful completion (task chaining).
+    /// The chained task must exist, belong to the same owner, and be in Pending status.
+    pub post_task_id: Option<u64>,
 }
 
 /// Current status of a task in its lifecycle.
@@ -138,4 +141,25 @@ pub struct KeeperInfo<M: ManagedTypeApi> {
     pub active: bool,
     /// Consecutive failures — resets on success. 3 strikes = auto-expulsion.
     pub consecutive_failures: u64,
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CLONE-KEY TYPES (Burner Wallets)
+// ═══════════════════════════════════════════════════════════════════
+
+/// Properties of a Clone-Key (Burner Wallet) authorized by a main wallet.
+///
+/// A Clone-Key allows automated task scheduling without exposing the main
+/// wallet's private keys. Spend limits and expiry provide hard security caps.
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct CloneKeyProperties<M: ManagedTypeApi> {
+    /// The main wallet that authorized this clone key.
+    pub main_address: ManagedAddress<M>,
+    /// Maximum EGLD the clone key can spend (set at authorization time).
+    pub spend_limit: BigUint<M>,
+    /// Total EGLD already spent by this clone key (incremented on each task).
+    pub spent_amount: BigUint<M>,
+    /// Unix timestamp when this clone key expires. After this, all operations fail.
+    pub expiry_timestamp: u64,
 }

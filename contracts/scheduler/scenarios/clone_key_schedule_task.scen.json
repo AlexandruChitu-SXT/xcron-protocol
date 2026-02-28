@@ -1,0 +1,152 @@
+{
+    "name": "clone-key-schedule-task",
+    "comment": "Test that a Clone-Key can schedule a task and the task.owner is the main wallet",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:user1": {
+                    "nonce": "0",
+                    "balance": "10,000,000,000,000,000,000"
+                },
+                "address:clone1": {
+                    "nonce": "0",
+                    "balance": "0"
+                },
+                "address:keeper_registry": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:rewards": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                },
+                "address:target_contract": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": ""
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:scheduler"
+                }
+            ],
+            "currentBlockInfo": {
+                "blockTimestamp": "1000",
+                "blockRound": "100"
+            }
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "arguments": [
+                    "address:keeper_registry",
+                    "address:rewards",
+                    "100,000,000,000,000,000",
+                    "500"
+                ],
+                "gasLimit": "50,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "authorize-clone-key",
+            "comment": "User1 authorizes clone1 with 1 EGLD and 1 day TTL",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "authorizeCloneKey",
+                "arguments": [
+                    "address:clone1",
+                    "86400"
+                ],
+                "egldValue": "1,000,000,000,000,000,000",
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "clone-schedules-task",
+            "comment": "Clone-Key schedules a task requesting 0.2 EGLD from pre-deposited pool",
+            "tx": {
+                "from": "address:clone1",
+                "to": "sc:scheduler",
+                "function": "scheduleTask",
+                "arguments": [
+                    "address:target_contract",
+                    "str:myFunction",
+                    "0x00000000",
+                    "0x0000000000000000c8",
+                    "10,000,000",
+                    "3",
+                    "1000",
+                    "200,000,000,000,000,000"
+                ],
+                "egldValue": "0",
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [
+                    "1"
+                ],
+                "status": "0"
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "main-wallet-cancels-task",
+            "comment": "Main wallet (user1) cancels the task — refund goes to user1",
+            "tx": {
+                "from": "address:user1",
+                "to": "sc:scheduler",
+                "function": "cancelTask",
+                "arguments": [
+                    "1"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "0"
+            }
+        },
+        {
+            "step": "checkState",
+            "comment": "Verify the 0.2 EGLD refund went to user1, not clone1",
+            "accounts": {
+                "address:user1": {
+                    "nonce": "*",
+                    "balance": "9,200,000,000,000,000,000"
+                },
+                "address:clone1": {
+                    "nonce": "*",
+                    "balance": "0"
+                }
+            }
+        }
+    ]
+}

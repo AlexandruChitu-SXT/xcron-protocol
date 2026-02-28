@@ -160,3 +160,37 @@ fn dynamic_gas_calculation() {
     world().run("scenarios/dynamic_gas_calculation.scen.json");
 }
 
+// ═══════════════════════════════════════════════════════════
+//  CLONE-KEYS (Burner Wallets)
+// ═══════════════════════════════════════════════════════════
+
+/// Clone-Key authorization: main wallet creates a clone key with spend limit
+#[test]
+fn clone_key_authorize() {
+    world().run("scenarios/clone_key_authorize.scen.json");
+}
+
+/// Clone-Key scheduling: clone schedules task, task.owner = main wallet
+#[test]
+fn clone_key_schedule_task() {
+    world().run("scenarios/clone_key_schedule_task.scen.json");
+}
+
+/// Clone-Key spend limit enforcement: second task exceeds limit and fails
+#[test]
+fn clone_key_spend_limit() {
+    world().run("scenarios/clone_key_spend_limit.scen.json");
+}
+
+/// Clone-Key expiry: expired key cannot schedule tasks
+#[test]
+fn clone_key_expired() {
+    world().run("scenarios/clone_key_expired.scen.json");
+}
+
+/// Clone-Key revoke: main wallet revokes key and gets refund
+#[test]
+fn clone_key_revoke() {
+    world().run("scenarios/clone_key_revoke.scen.json");
+}
+

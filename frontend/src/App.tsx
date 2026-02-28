@@ -19,6 +19,7 @@ const KeeperPanel = lazy(() => import('./pages/KeeperPanel').then(m => ({ defaul
 const ExploreTasks = lazy(() => import('./pages/ExploreTasks').then(m => ({ default: m.ExploreTasks })));
 const ProtocolStats = lazy(() => import('./pages/ProtocolStats').then(m => ({ default: m.ProtocolStats })));
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
+const CloneKeyManager = lazy(() => import('./components/CloneKeyManager').then(m => ({ default: m.CloneKeyManager })));
 
 // Loading spinner shown while a page chunk loads
 function PageLoader() {
@@ -73,6 +74,7 @@ function App() {
               <Route path="/keeper" element={<KeeperPanel />} />
               <Route path="/explore" element={<ExploreTasks />} />
               <Route path="/stats" element={<ProtocolStats />} />
+              <Route path="/clone-keys" element={<CloneKeyManager />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

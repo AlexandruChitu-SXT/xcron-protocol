@@ -433,6 +433,14 @@ export class TaskMonitor {
                 offset += 8; // Skip completed_at — not needed for scheduling
             }
 
+            // 16. post_task_id: Option<u64> (1b flag + optional 8b)
+            if (offset < data.length) {
+                const hasPostTask = data[offset]; offset += 1;
+                if (hasPostTask === 1 && offset + 8 <= data.length) {
+                    offset += 8; // Skip post_task_id — chaining is handled on-chain
+                }
+            }
+
             // Convert hex to bech32 for target contract
             let targetContract = targetHex;
             try {

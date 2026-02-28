@@ -155,6 +155,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
             completed_at: 0,
+            post_task_id: None,
         };
 
         self.tasks(new_id).set(&new_task);

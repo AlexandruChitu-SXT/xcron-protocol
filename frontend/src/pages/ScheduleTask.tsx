@@ -940,6 +940,20 @@ export function ScheduleTask() {
                                     </div>
                                 </details>
 
+                                {/* Task Chaining hint */}
+                                <div style={{
+                                    padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                                    background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
+                                    marginBottom: 8, fontSize: '0.72rem', color: 'rgba(34,197,94,0.85)',
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                }}>
+                                    <span style={{ fontSize: '1rem' }}>🔗</span>
+                                    <span>
+                                        <strong>Task Chaining:</strong> After creating multiple tasks, link them in{' '}
+                                        <a href="/tasks" style={{ color: 'rgb(34,197,94)', textDecoration: 'underline' }}>My Tasks</a>
+                                        {' '}so they execute sequentially — Step B only runs if Step A succeeds.
+                                    </span>
+                                </div>
 
                                 {error && (
                                     <div className="toast-error" style={{ position: 'relative', marginBottom: 16, padding: 12, borderRadius: 8 }}>

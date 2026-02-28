@@ -25,6 +25,7 @@
 multiversx_sc::imports!();
 
 pub mod admin;
+pub mod clone_keys;
 pub mod commit_reveal;
 pub mod config;
 pub mod events;
@@ -46,6 +47,7 @@ pub trait SchedulerContract:
     + scheduling::SchedulingModule
     + execution::ExecutionModule
     + commit_reveal::CommitRevealModule
+    + clone_keys::CloneKeysModule
     + admin::AdminModule
     + common::pausable::PausableModule
 {

@@ -189,6 +189,32 @@ pub trait ExecutionModule:
                 self.forward_keeper_result(&keeper, true);
 
                 self.task_executed_event(task_id, &keeper, true);
+
+                // ── Task Chaining: activate post-task if configured ──
+                if let Some(post_id) = task.post_task_id {
+                    if !self.tasks(post_id).is_empty() {
+                        let mut post_task = self.tasks(post_id).get();
+                        // Only activate if same owner and still Pending
+                        if post_task.owner == task.owner
+                            && post_task.status == common::types::TaskStatus::Pending
+                        {
+                            // Update trigger time to NOW so keeper picks it up immediately
+                            let now = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+                            match &mut post_task.trigger {
+                                common::types::Trigger::TimeOnce { target_time } => {
+                                    *target_time = now;
+                                }
+                                common::types::Trigger::TimeRecurring { start_time, .. } => {
+                                    *start_time = now;
+                                }
+                                _ => {} // ConditionOnChain keeps its original condition
+                            }
+                            self.tasks(post_id).set(&post_task);
+                            // Re-index for immediate discovery
+                            self.time_index(now).insert(post_id);
+                        }
+                    }
+                }
             }
             ManagedAsyncCallResult::Err(_) => {
                 // ❌ Target execution failed — refund user, no keeper payment

@@ -50,6 +50,7 @@ export function Header() {
         { to: '/explore', label: 'Explore' },
         { to: '/stats', label: 'Stats' },
         { to: '/keeper', label: 'Keeper Nodes' },
+        { to: '/clone-keys', label: 'Clone-Keys' },
     ];
 
     return (

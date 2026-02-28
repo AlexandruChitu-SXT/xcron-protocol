@@ -87,6 +87,9 @@ export const GAS_REGISTER_KEEPER = 10_000_000;
 export const GAS_CLAIM_REWARDS = 10_000_000;
 export const GAS_REQUEST_UNSTAKE = 10_000_000;
 export const GAS_WITHDRAW_STAKE = 10_000_000;
+export const GAS_AUTHORIZE_CLONE_KEY = 10_000_000;
+export const GAS_REVOKE_CLONE_KEY = 10_000_000;
+export const GAS_FUND_CLONE_KEY = 10_000_000;
 
 // WalletConnect (xPortal)
 export const WALLETCONNECT = {

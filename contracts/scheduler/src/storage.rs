@@ -137,4 +137,13 @@ pub trait StorageModule {
 
     #[storage_mapper("intraShardExecs")]
     fn intra_shard_execs(&self) -> SingleValueMapper<u64>;
+
+    // ── Clone-Keys (Burner Wallets) ─────────────────────────
+    /// Clone-Key address → its properties (main wallet link, limits, expiry).
+    #[storage_mapper("cloneKeyProps")]
+    fn clone_key_props(&self, clone: &ManagedAddress) -> SingleValueMapper<common::types::CloneKeyProperties<Self::Api>>;
+
+    /// Main Wallet → set of authorized Clone-Key addresses.
+    #[storage_mapper("walletCloneKeys")]
+    fn wallet_clone_keys(&self, main_wallet: &ManagedAddress) -> UnorderedSetMapper<ManagedAddress>;
 }

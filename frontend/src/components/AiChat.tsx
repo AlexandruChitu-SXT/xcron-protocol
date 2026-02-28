@@ -2,32 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { CONTRACTS, NETWORK, GAS_SCHEDULE_TASK, GAS_CANCEL_TASK, EXPLORER_TX } from '../config';
 
-// ── Voice types (Web Speech API) ──
-interface SpeechRecognitionEvent {
-    results: { [index: number]: { [index: number]: { transcript: string } } };
-    resultIndex: number;
-}
-interface SpeechRecognitionErrorEvent {
-    error: string;
-}
-interface SpeechRecognitionInstance {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    start(): void;
-    stop(): void;
-    abort(): void;
-    onresult: ((event: SpeechRecognitionEvent) => void) | null;
-    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-    onend: (() => void) | null;
-}
-declare global {
-    interface Window {
-        SpeechRecognition: new () => SpeechRecognitionInstance;
-        webkitSpeechRecognition: new () => SpeechRecognitionInstance;
-    }
-}
-
 /* ═══════════════════════════════════════════════════════════════
    XCron AI — Security Hardened Chat Interface
    
@@ -439,10 +413,9 @@ const AMOUNT_QUICK_ACTIONS: QuickAction[] = [
     { label: '0.1 EGLD', value: '0.1', icon: '⬡' },
 ];
 
-// ── Voice support detection ──
+// ── Voice support detection (MediaRecorder) ──
 const getVoiceSupport = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    return !!SpeechRecognition;
+    return typeof MediaRecorder !== 'undefined' && typeof navigator.mediaDevices?.getUserMedia === 'function';
 };
 
 export default function AiChat() {
@@ -459,8 +432,11 @@ export default function AiChat() {
     const [isListening, setIsListening] = useState(false);
     const [voiceSupported] = useState(getVoiceSupport);
     const [ttsEnabled, setTtsEnabled] = useState(false);
-    const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
     const voiceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -1204,16 +1180,13 @@ RULES:
     };
 
     // ── Send handler ──
-    // ── 🎤 Voice Input Handler ──
-    const voiceRetryRef = useRef(0);
-    const pendingTranscriptRef = useRef('');
-
-    const handleVoiceToggle = useCallback(() => {
+    // ── 🎤 Voice Input Handler (MediaRecorder + Gemini transcription) ──
+    const handleVoiceToggle = useCallback(async () => {
         if (!voiceSupported) return;
 
         if (isListening) {
-            // Stop listening — send whatever we have
-            recognitionRef.current?.stop();
+            // Stop recording
+            mediaRecorderRef.current?.stop();
             setIsListening(false);
             if (voiceTimeoutRef.current) {
                 clearTimeout(voiceTimeoutRef.current);
@@ -1222,109 +1195,125 @@ RULES:
             return;
         }
 
-        voiceRetryRef.current = 0;
-        startVoiceRecognition();
-    }, [voiceSupported, isListening, messages]);
-
-    const startVoiceRecognition = useCallback(() => {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
-
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        // Detect language from last user message or default to Spanish
-        const lastUserMsg = messages.filter(m => m.role === 'user').pop();
-        recognition.lang = lastUserMsg?.content && /[a-zA-Z]{3,}/.test(lastUserMsg.content) && !/[áéíóúñ¿¡]/.test(lastUserMsg.content) ? 'en-US' : 'es-ES';
-
-        let finalTranscript = '';
-
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let interim = '';
-            for (let i = event.resultIndex; i < Object.keys(event.results).length; i++) {
-                const result = event.results[i];
-                if (result[0]) {
-                    // Check if this is a final result (isFinal property)
-                    const isFinal = (result as unknown as { isFinal: boolean }).isFinal;
-                    if (isFinal) {
-                        finalTranscript += result[0].transcript + ' ';
-                    } else {
-                        interim = result[0].transcript;
-                    }
-                }
-            }
-            // Show live preview in input field
-            const display = (finalTranscript + interim).trim();
-            if (display) {
-                pendingTranscriptRef.current = display;
-                setInput(display);
-            }
-        };
-
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-            console.warn('🎤 Voice error:', event.error);
-
-            if (event.error === 'network' && voiceRetryRef.current < 2) {
-                // Retry on network error (Chrome speech services can be flaky)
-                voiceRetryRef.current++;
-                console.log(`🎤 Retrying... attempt ${voiceRetryRef.current}/2`);
-                setTimeout(() => startVoiceRecognition(), 500);
-                return;
-            }
-
-            setIsListening(false);
-            const errorMessages: Record<string, string> = {
-                'not-allowed': '🎤 Microphone access denied. Please allow mic permissions in your browser settings.',
-                'network': '🎤 Speech service unavailable. Check your internet connection and try again.',
-                'no-speech': '🎤 No speech detected. Click the mic and speak clearly.',
-                'audio-capture': '🎤 No microphone found. Please connect a microphone.',
-                'aborted': '', // User cancelled — no message needed
-            };
-            const msg = errorMessages[event.error] || `🎤 Voice error: ${event.error}. Please try again.`;
-            if (msg) {
-                setMessages(prev => [...prev, {
-                    id: `voice-${Date.now()}`, role: 'bot' as const,
-                    content: msg, timestamp: new Date(),
-                }]);
-            }
-        };
-
-        recognition.onend = () => {
-            setIsListening(false);
-            if (voiceTimeoutRef.current) {
-                clearTimeout(voiceTimeoutRef.current);
-                voiceTimeoutRef.current = null;
-            }
-            // If we have a final transcript, send it
-            const transcript = pendingTranscriptRef.current.trim();
-            if (transcript) {
-                pendingTranscriptRef.current = '';
-                setInput(transcript);
-                // Trigger send after React updates input state
-                setTimeout(() => {
-                    const sendBtn = document.querySelector('.cron-input-bar button:last-of-type') as HTMLButtonElement;
-                    if (sendBtn && !sendBtn.disabled) sendBtn.click();
-                }, 150);
-            }
-        };
-
-        recognitionRef.current = recognition;
+        // Request microphone access
         try {
-            recognition.start();
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaStreamRef.current = stream;
+
+            // Choose best supported format
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                ? 'audio/webm;codecs=opus'
+                : MediaRecorder.isTypeSupported('audio/webm')
+                    ? 'audio/webm'
+                    : 'audio/mp4';
+
+            const recorder = new MediaRecorder(stream, { mimeType });
+            audioChunksRef.current = [];
+
+            recorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            recorder.onstop = async () => {
+                // Stop all tracks
+                stream.getTracks().forEach(t => t.stop());
+                mediaStreamRef.current = null;
+
+                const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+                audioChunksRef.current = [];
+
+                if (audioBlob.size < 100) {
+                    // Too short — no audio captured
+                    return;
+                }
+
+                // Convert to base64 and send to Gemini for transcription
+                setIsTranscribing(true);
+                setInput('Transcribiendo...');
+                try {
+                    const reader = new FileReader();
+                    const base64 = await new Promise<string>((resolve, reject) => {
+                        reader.onload = () => {
+                            const result = reader.result as string;
+                            // Remove the data URL prefix (data:audio/webm;base64,...)
+                            const base64Data = result.split(',')[1];
+                            resolve(base64Data);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(audioBlob);
+                    });
+
+                    // Send to our transcription endpoint
+                    const apiBase = import.meta.env.DEV ? '' : '';
+                    const response = await fetch(`${apiBase}/api/transcribe`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ audio: base64, mimeType }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Transcription failed: ${response.status}`);
+                    }
+
+                    const { text } = await response.json();
+
+                    if (text && text.trim()) {
+                        // Set the transcribed text as input — goes through handleSend's
+                        // full security pipeline (sanitize → injection check → rate limit)
+                        setInput(text.trim());
+                        // Trigger send after React updates input state
+                        setTimeout(() => {
+                            const sendBtn = document.querySelector('.cron-input-bar button:last-of-type') as HTMLButtonElement;
+                            if (sendBtn && !sendBtn.disabled) sendBtn.click();
+                        }, 150);
+                    } else {
+                        setInput('');
+                        setMessages(prev => [...prev, {
+                            id: `voice-${Date.now()}`, role: 'bot' as const,
+                            content: '🎤 No speech detected. Click the mic and speak clearly.',
+                            timestamp: new Date(),
+                        }]);
+                    }
+                } catch (err) {
+                    console.error('🎤 Transcription error:', err);
+                    setInput('');
+                    setMessages(prev => [...prev, {
+                        id: `voice-${Date.now()}`, role: 'bot' as const,
+                        content: '🎤 Could not transcribe audio. Please try again.',
+                        timestamp: new Date(),
+                    }]);
+                } finally {
+                    setIsTranscribing(false);
+                }
+            };
+
+            mediaRecorderRef.current = recorder;
+            recorder.start();
             setIsListening(true);
-            pendingTranscriptRef.current = '';
             playSound('send');
 
             // 🔒 Security: max 30 seconds recording (anti-DoS)
             voiceTimeoutRef.current = setTimeout(() => {
-                recognition.stop();
+                recorder.stop();
+                setIsListening(false);
                 voiceTimeoutRef.current = null;
             }, SECURITY.MAX_VOICE_DURATION_MS);
+
         } catch (err) {
-            console.error('🎤 Failed to start recognition:', err);
+            console.error('🎤 Microphone error:', err);
             setIsListening(false);
+            const errMsg = (err as Error).message || '';
+            setMessages(prev => [...prev, {
+                id: `voice-${Date.now()}`, role: 'bot' as const,
+                content: errMsg.includes('Permission')
+                    ? '🎤 Microphone access denied. Please allow mic permissions in your browser settings.'
+                    : '🎤 Could not access microphone. Please check your device.',
+                timestamp: new Date(),
+            }]);
         }
-    }, [voiceSupported, isListening, messages]);
+    }, [voiceSupported, isListening]);
 
     // ── 🔊 Text-to-Speech for bot replies ──
     const speakText = useCallback((text: string) => {
@@ -1580,18 +1569,18 @@ RULES:
                             ref={inputRef}
                             type="text"
                             maxLength={SECURITY.MAX_INPUT_LENGTH}
-                            placeholder={isListening ? 'Speak now...' : (wallet.connected ? 'Type or tap 🎤 to talk...' : 'Connect wallet to start')}
+                            placeholder={isTranscribing ? 'Transcribing...' : isListening ? '🔴 Recording... tap 🎤 to stop' : (wallet.connected ? 'Type or tap 🎤 to talk...' : 'Connect wallet to start')}
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            disabled={isThinking || isListening}
+                            disabled={isThinking || isListening || isTranscribing}
                         />
                         {voiceSupported && (
                             <button
                                 className={`cron-mic-btn ${isListening ? 'cron-mic-active' : ''}`}
                                 onClick={handleVoiceToggle}
-                                disabled={isThinking}
-                                title={isListening ? 'Stop listening' : 'Voice input'}
+                                disabled={isThinking || isTranscribing}
+                                title={isListening ? 'Stop recording' : 'Voice input'}
                             >
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />

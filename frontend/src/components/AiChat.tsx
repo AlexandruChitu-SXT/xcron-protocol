@@ -22,7 +22,7 @@ const PROTOCOLS: Record<string, {
 }> = {
     hatom: {
         name: 'Hatom',
-        icon: '🟢',
+        icon: '⚛️',
         color: '#00c48c',
         contracts: {
             'liquid-stake': {
@@ -39,7 +39,7 @@ const PROTOCOLS: Record<string, {
     },
     xexchange: {
         name: 'xExchange',
-        icon: '🔄',
+        icon: '⇄',
         color: '#23f7dd',
         contracts: {
             'auto-compound': {
@@ -56,7 +56,7 @@ const PROTOCOLS: Record<string, {
     },
     ashswap: {
         name: 'AshSwap',
-        icon: '🔥',
+        icon: '◈',
         color: '#ff6b35',
         contracts: {
             'claim-rewards': {
@@ -193,28 +193,28 @@ const EMPTY_STATE: ConversationState = {
 
 // ── Quick action presets ──
 const WELCOME_QUICK_ACTIONS: QuickAction[] = [
-    { label: 'Auto-compound', value: 'auto-compound xExchange weekly', icon: '🔄' },
-    { label: 'Claim rewards', value: 'claim Hatom rewards daily', icon: '🟢' },
-    { label: 'Show stats', value: 'show stats', icon: '📊' },
-    { label: 'My tasks', value: 'show my tasks', icon: '📋' },
+    { label: 'Auto-compound', value: 'auto-compound xExchange weekly', icon: '⇄' },
+    { label: 'Claim rewards', value: 'claim Hatom rewards daily', icon: '⚛️' },
+    { label: 'Show stats', value: 'show stats', icon: '◎' },
+    { label: 'My tasks', value: 'show my tasks', icon: '▤' },
 ];
 
 const PROTOCOL_QUICK_ACTIONS: QuickAction[] = [
-    { label: 'Hatom', value: 'hatom', icon: '🟢' },
-    { label: 'xExchange', value: 'xexchange', icon: '🔄' },
-    { label: 'AshSwap', value: 'ashswap', icon: '🔥' },
+    { label: 'Hatom', value: 'hatom', icon: '⚛️' },
+    { label: 'xExchange', value: 'xexchange', icon: '⇄' },
+    { label: 'AshSwap', value: 'ashswap', icon: '◈' },
 ];
 
 const INTERVAL_QUICK_ACTIONS: QuickAction[] = [
-    { label: 'Daily', value: 'daily', icon: '📅' },
-    { label: 'Weekly', value: 'weekly', icon: '🗓️' },
-    { label: 'Monthly', value: 'monthly', icon: '📆' },
+    { label: 'Daily', value: 'daily', icon: '⏳' },
+    { label: 'Weekly', value: 'weekly', icon: '⏳' },
+    { label: 'Monthly', value: 'monthly', icon: '⏳' },
 ];
 
 const AMOUNT_QUICK_ACTIONS: QuickAction[] = [
-    { label: '0.01 EGLD', value: '0.01', icon: '💎' },
-    { label: '0.05 EGLD', value: '0.05', icon: '💎' },
-    { label: '0.1 EGLD', value: '0.1', icon: '💎' },
+    { label: '0.01 EGLD', value: '0.01', icon: '◇' },
+    { label: '0.05 EGLD', value: '0.05', icon: '◆' },
+    { label: '0.1 EGLD', value: '0.1', icon: '⬡' },
 ];
 
 export default function AiChat() {
@@ -395,7 +395,7 @@ export default function AiChat() {
                     return { reply: `Connect your wallet first, and I'll cancel task #${match[1]} for you.`, newState: EMPTY_STATE };
                 }
                 const cancelAction: ActionCard = {
-                    protocol: 'XCron', icon: '⏱️', color: '#009b77',
+                    protocol: 'XCron', icon: '✦', color: '#009b77',
                     description: `Cancel Task #${match[1]}`,
                     details: [{ label: 'Task ID', value: `#${match[1]}` }],
                     status: 'signing',
@@ -450,8 +450,8 @@ export default function AiChat() {
                     reply: `Here's how the protocol is doing:\n\n• Total tasks: ${tasks}\n• Network: ${NETWORK.name}\n• Status: Active ✅\n• Scheduler: ${CONTRACTS.scheduler.slice(0, 16)}...`,
                     newState: EMPTY_STATE,
                     quickActions: [
-                        { label: 'Schedule task', value: 'schedule a new task', icon: '📋' },
-                        { label: 'Cross-shard', value: 'cross-shard stats', icon: '🔗' },
+                        { label: 'Schedule task', value: 'schedule a new task', icon: '⚡' },
+                        { label: 'Cross-shard', value: 'cross-shard stats', icon: '⟐' },
                     ],
                 };
             } catch {
@@ -629,7 +629,7 @@ export default function AiChat() {
                     reply: 'Transaction sent! Tracking confirmation...',
                     newState: EMPTY_STATE,
                     action: card,
-                    quickActions: [{ label: 'View on Explorer', value: `explorer:${txHash}`, icon: '🔍' }],
+                    quickActions: [{ label: 'View on Explorer', value: `explorer:${txHash}`, icon: '↗' }],
                 };
             } else {
                 card.status = 'failed';
@@ -736,7 +736,7 @@ export default function AiChat() {
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label="Chat with XCron AI"
             >
-                {isOpen ? '✕' : <span className="cron-fab-text">X<span>AI</span></span>}
+                {isOpen ? '✕' : '🤖'}
             </button>
 
             {/* ── Chat Panel ── */}
@@ -745,7 +745,7 @@ export default function AiChat() {
                     {/* Header */}
                     <div className="cron-header">
                         <div className="cron-header-info">
-                            <span className="cron-header-icon">X<span>AI</span></span>
+                            <span className="cron-header-icon">🤖</span>
                             <div>
                                 <div className="cron-header-name">XCron AI</div>
                                 <div className="cron-header-sub">
@@ -791,7 +791,7 @@ export default function AiChat() {
                                         </div>
                                         <div className={`cron-action-status cron-action-${msg.action.status}`}>
                                             {msg.action.status === 'success' && '✓ Successfully processed'}
-                                            {msg.action.status === 'confirmed' && '🔄 Confirmed — awaiting execution...'}
+                                            {msg.action.status === 'confirmed' && '⟳ Confirmed — awaiting execution...'}
                                             {msg.action.status === 'pending' && (
                                                 <>⏳ Pending on-chain...
                                                     <span className="cron-status-spinner" />

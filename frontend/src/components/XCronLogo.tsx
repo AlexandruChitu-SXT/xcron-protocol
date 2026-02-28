@@ -50,7 +50,7 @@ export default function XCronLogo({ size = 200 }: XCronLogoProps) {
                 </defs>
 
                 {/* ═══ X Star Shape ═══ */}
-                <g filter="url(#neonGlow)" className="logo-x-star">
+                <g className="logo-x-star">
                     {/* Top-right spike */}
                     <polygon
                         points="100,72 140,28 130,55 168,32 120,70"
@@ -83,7 +83,7 @@ export default function XCronLogo({ size = 200 }: XCronLogoProps) {
                 </g>
 
                 {/* ═══ Chain Circle ═══ */}
-                <g filter="url(#softGlow)" className="logo-chain-circle">
+                <g className="logo-chain-circle">
                     {/* Main circle ring */}
                     <circle
                         cx="100" cy="100" r="40"
@@ -145,7 +145,7 @@ export default function XCronLogo({ size = 200 }: XCronLogoProps) {
                     textAnchor="middle"
                     dominantBaseline="middle"
                     className="logo-cron-text"
-                    filter="url(#softGlow)"
+
                 >
                     cron
                 </text>

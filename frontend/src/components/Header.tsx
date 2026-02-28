@@ -24,11 +24,13 @@ export function Header() {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
             for (let p = 0; p < data.length; p += 4) {
-                const brightness = data[p] * 0.299 + data[p + 1] * 0.587 + data[p + 2] * 0.114;
-                if (brightness < 40) {
+                const r = data[p], g = data[p + 1], b = data[p + 2];
+                const brightness = r * 0.299 + g * 0.587 + b * 0.114;
+                // Remove dark background and dim glow halo
+                if (brightness < 80) {
                     data[p + 3] = 0;
-                } else if (brightness < 70) {
-                    data[p + 3] = Math.round(((brightness - 40) / 30) * 255);
+                } else if (brightness < 120) {
+                    data[p + 3] = Math.round(((brightness - 80) / 40) * 255);
                 }
             }
             ctx.putImageData(imageData, 0, 0);

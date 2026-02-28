@@ -23,8 +23,8 @@ export default function SlicedLogo3D() {
             const d = ctx.getImageData(0, 0, off.width, off.height);
             for (let p = 0; p < d.data.length; p += 4) {
                 const b = d.data[p] * 0.299 + d.data[p + 1] * 0.587 + d.data[p + 2] * 0.114;
-                if (b < 40) d.data[p + 3] = 0;
-                else if (b < 70) d.data[p + 3] = Math.round(((b - 40) / 30) * 255);
+                if (b < 80) d.data[p + 3] = 0;
+                else if (b < 120) d.data[p + 3] = Math.round(((b - 80) / 40) * 255);
             }
             ctx.putImageData(d, 0, 0);
             const processed = new Image();
@@ -45,7 +45,6 @@ export default function SlicedLogo3D() {
         const ctx = canvas.getContext('2d')!;
         ctx.scale(dpr, dpr);
 
-        const cx = CONTAINER / 2;
         const logoOffset = (CONTAINER - LOGO_SIZE) / 2;
 
         const start = performance.now();
@@ -57,16 +56,6 @@ export default function SlicedLogo3D() {
             const floatY = Math.sin(t * 0.8) * 6;
 
             if (logoReadyRef.current && logoImgRef.current) {
-                // Subtle glow behind logo
-                const glowAlpha = 0.08 + 0.04 * Math.sin(t * 1.2);
-                const g = ctx.createRadialGradient(cx, cx + floatY, LOGO_SIZE * 0.2, cx, cx + floatY, LOGO_SIZE * 0.6);
-                g.addColorStop(0, `rgba(35,247,221,${glowAlpha})`);
-                g.addColorStop(1, 'rgba(35,247,221,0)');
-                ctx.beginPath();
-                ctx.arc(cx, cx + floatY, LOGO_SIZE * 0.6, 0, Math.PI * 2);
-                ctx.fillStyle = g;
-                ctx.fill();
-
                 ctx.drawImage(logoImgRef.current, logoOffset, logoOffset + floatY, LOGO_SIZE, LOGO_SIZE);
             }
 

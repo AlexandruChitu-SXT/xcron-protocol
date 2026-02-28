@@ -1237,7 +1237,6 @@ RULES:
                     const base64 = await new Promise<string>((resolve, reject) => {
                         reader.onload = () => {
                             const result = reader.result as string;
-                            // Remove the data URL prefix (data:audio/webm;base64,...)
                             const base64Data = result.split(',')[1];
                             resolve(base64Data);
                         };
@@ -1245,24 +1244,48 @@ RULES:
                         reader.readAsDataURL(audioBlob);
                     });
 
-                    // Send to our transcription endpoint
-                    const apiBase = import.meta.env.DEV ? '' : '';
-                    const response = await fetch(`${apiBase}/api/transcribe`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ audio: base64, mimeType }),
-                    });
+                    // Call Gemini directly from frontend (same pattern as chat fallback)
+                    let transcribedText = '';
+                    const clientKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-                    if (!response.ok) {
-                        throw new Error(`Transcription failed: ${response.status}`);
+                    if (clientKey) {
+                        // Direct client-side call to Gemini multimodal API
+                        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${clientKey}`;
+                        const geminiRes = await fetch(geminiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [
+                                        { inlineData: { mimeType, data: base64 } },
+                                        { text: 'Transcribe this audio exactly as spoken. Return ONLY the transcribed text, nothing else. If silent, return empty string.' },
+                                    ],
+                                }],
+                                generationConfig: { temperature: 0.1, maxOutputTokens: 500 },
+                            }),
+                        });
+                        if (geminiRes.ok) {
+                            const data = await geminiRes.json();
+                            transcribedText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+                        } else {
+                            throw new Error(`Gemini API: ${geminiRes.status}`);
+                        }
+                    } else {
+                        // Fallback: try server endpoint
+                        const response = await fetch('/api/transcribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ audio: base64, mimeType }),
+                        });
+                        if (!response.ok) throw new Error(`Server: ${response.status}`);
+                        const { text } = await response.json();
+                        transcribedText = text || '';
                     }
 
-                    const { text } = await response.json();
-
-                    if (text && text.trim()) {
+                    if (transcribedText && transcribedText.trim()) {
                         // Set the transcribed text as input — goes through handleSend's
                         // full security pipeline (sanitize → injection check → rate limit)
-                        setInput(text.trim());
+                        setInput(transcribedText.trim());
                         // Trigger send after React updates input state
                         setTimeout(() => {
                             const sendBtn = document.querySelector('.cron-input-bar button:last-of-type') as HTMLButtonElement;

@@ -824,25 +824,30 @@ RULES:
 
             const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const needsFunctionCalling = DEFI_INTENTS.test(text);
+            const hasClientKey = !!import.meta.env.VITE_GEMINI_API_KEY;
 
-            if (isDev) {
+            // ── Try server first in production, then fall back to client-side LLMs ──
+            const callClientSideLLM = async () => {
                 if (needsFunctionCalling) {
-                    // ── DeFi intent detected → use Gemini (function calling) ──
                     console.log('🧠 Routing to Gemini (DeFi intent detected)');
-                    data = await callGemini(text, history);
+                    return await callGemini(text, history);
                 } else {
-                    // ── General chat → try Groq first (ultra-fast), fallback to Gemini ──
                     try {
                         console.log('⚡ Routing to Groq (fast conversational)');
                         const reply = await callGroq(text, history);
-                        data = { reply };
+                        return { reply };
                     } catch (groqErr) {
                         console.warn('⚡ Groq failed, falling back to Gemini:', groqErr);
-                        data = await callGemini(text, history);
+                        return await callGemini(text, history);
                     }
                 }
+            };
+
+            if (isDev || hasClientKey) {
+                // ── Dev or has client key: use client-side LLMs directly ──
+                data = await callClientSideLLM();
             } else {
-                // ── Production: call serverless function ──
+                // ── Production without client key: try server, then offline ──
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

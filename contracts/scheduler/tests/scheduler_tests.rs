@@ -6,6 +6,10 @@ fn world() -> ScenarioWorld {
         "mxsc:output/scheduler.mxsc.json",
         scheduler::ContractBuilder,
     );
+    blockchain.register_contract(
+        "mxsc:../keeper-registry/output/keeper-registry.mxsc.json",
+        keeper_registry::ContractBuilder,
+    );
     blockchain
 }
 
@@ -18,9 +22,6 @@ fn deploy_scenario() {
     world().run("scenarios/deploy.scen.json");
 }
 
-// ═══════════════════════════════════════════════════════════
-//  TASK SCHEDULING
-// ═══════════════════════════════════════════════════════════
 
 #[test]
 fn schedule_and_cancel() {

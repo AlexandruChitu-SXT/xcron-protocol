@@ -238,7 +238,7 @@ export function RightSidePanel() {
                                     {k.address.slice(0, 8)}...{k.address.slice(-4)}
                                 </span>
                                 <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgb(232,146,124)' }}>
-                                    {k.execs} exec{k.execs !== 1 ? 's' : ''}
+                                    {k.execs} tx
                                 </span>
                             </div>
                         ))}

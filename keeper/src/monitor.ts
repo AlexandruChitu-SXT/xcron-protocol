@@ -119,7 +119,10 @@ export class TaskMonitor {
             }
 
             // Time-based: is the trigger time reached?
-            if (task.triggerTime <= currentTime) {
+            // Add 6s safety margin — blockchain block timestamp can lag behind local clock
+            // NOTE: After Supernova (block time 6s → 0.6s), reduce this to ~1s
+            const RIPE_MARGIN_SECONDS = 6;
+            if (task.triggerTime + RIPE_MARGIN_SECONDS <= currentTime) {
                 // Hybrid price check: if task has a price condition, verify it
                 if (task.priceCondition) {
                     const priceMet = await this.priceService.checkCondition(task.priceCondition);

@@ -1327,14 +1327,9 @@ RULES:
                     }
 
                     if (transcribedText && transcribedText.trim()) {
-                        // Set the transcribed text as input — goes through handleSend's
-                        // full security pipeline (sanitize → injection check → rate limit)
-                        setInput(transcribedText.trim());
-                        // Trigger send after React updates input state
-                        setTimeout(() => {
-                            const sendBtn = document.querySelector('.cron-input-bar button:last-of-type') as HTMLButtonElement;
-                            if (sendBtn && !sendBtn.disabled) sendBtn.click();
-                        }, 150);
+                        // Send directly — avoid setInput + click race condition
+                        setInput('');
+                        handleSendDirect(transcribedText.trim());
                     } else {
                         setInput('');
                         setMessages(prev => [...prev, {
@@ -1403,6 +1398,44 @@ RULES:
         utterance.lang = isSpanish ? 'es-ES' : 'en-US';
         window.speechSynthesis.speak(utterance);
     }, [ttsEnabled]);
+
+    // ── Direct send (for voice input — avoids setInput race conditions) ──
+    const handleSendDirect = async (text: string) => {
+        if (!text.trim() || isThinking) return;
+        const userText = sanitizeInput(text);
+        if (!userText) return;
+        if (!rateLimiter.canSend()) return;
+        if (detectPromptInjection(userText)) {
+            setMessages(prev => [...prev,
+            { id: `usr-${Date.now()}`, role: 'user' as const, content: userText, timestamp: new Date() },
+            { id: `sec-${Date.now() + 1}`, role: 'bot' as const, content: '🔒 I detected a prompt injection attempt.', timestamp: new Date(), quickActions: WELCOME_QUICK_ACTIONS },
+            ]);
+            return;
+        }
+        rateLimiter.record();
+        const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: userText, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg]);
+        setIsThinking(true);
+        playSound('send');
+        try {
+            const { reply, newState, action, quickActions } = await callLLM(userText);
+            setConvo(newState);
+            const botMsgId = `b-${Date.now()}`;
+            const botMsg: ChatMessage = { id: botMsgId, role: 'bot', content: reply, timestamp: new Date(), action, quickActions, isStreaming: true };
+            setMessages(prev => [...prev, botMsg]);
+            setIsThinking(false);
+            playSound('receive');
+            streamText(botMsgId, reply, () => {
+                setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, isStreaming: false } : m));
+                speakText(reply);
+            });
+            if (action?.txHash && action.status === 'pending') trackTxStatus(action.txHash, botMsgId);
+        } catch {
+            setMessages(prev => [...prev, { id: `e-${Date.now()}`, role: 'bot', content: "Oops, something broke. Try again.", timestamp: new Date() }]);
+            setIsThinking(false);
+            playSound('error');
+        }
+    };
 
     const handleSend = async () => {
         if (!input.trim() || isThinking) return;

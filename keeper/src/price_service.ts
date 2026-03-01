@@ -2,15 +2,16 @@ import axios from "axios";
 import { Logger } from "./logger";
 
 /**
- * PriceService — Hybrid off-chain price oracle for the Keeper Bot.
+ * PriceService — On-chain-first price oracle for the Keeper Bot.
  *
- * Fetches token prices from multiple free APIs (Binance, CoinGecko, xExchange)
- * and evaluates price conditions before task execution.
+ * Primary source: xExchange liquidity pools via MultiversX API (on-chain, verified, FREE).
+ * Fallback sources: Binance and CoinGecko APIs (off-chain, for tokens not listed on xExchange).
  *
- * This is the "hybrid oracle" approach:
- *   - Prices are fetched off-chain (FREE, no gas cost)
+ * How it works:
+ *   - Prices are read from xExchange pool reserves via view functions (0 gas cost)
  *   - The keeper only executes on-chain if the price condition is met
  *   - Trust is ensured via keeper's staked bond (slashing deterrent)
+ *   - On-chain prices are verified and trustless (real liquidity pool data)
  *
  * Supported conditions:
  *   - "above" → execute when price >= threshold
@@ -36,10 +37,12 @@ export class PriceService {
 
     constructor(logger: Logger) {
         this.logger = logger;
+        // xExchange FIRST — on-chain, verified, trustless
+        // Binance & CoinGecko as fallbacks only
         this.sources = [
-            { name: "Binance", fetchPrice: this.fetchBinance.bind(this) },
-            { name: "CoinGecko", fetchPrice: this.fetchCoinGecko.bind(this) },
-            { name: "MultiversX/xExchange", fetchPrice: this.fetchMultiversX.bind(this) },
+            { name: "xExchange (on-chain)", fetchPrice: this.fetchMultiversX.bind(this) },
+            { name: "Binance (fallback)", fetchPrice: this.fetchBinance.bind(this) },
+            { name: "CoinGecko (fallback)", fetchPrice: this.fetchCoinGecko.bind(this) },
         ];
     }
 

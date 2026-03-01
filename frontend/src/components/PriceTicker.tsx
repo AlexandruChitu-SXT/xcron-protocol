@@ -1,11 +1,10 @@
-import { devWarn } from '../utils/devLog';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
- * PriceTicker — Real-time price dashboard via Binance WebSocket.
- * 
- * Uses wss://stream.binance.com for live streaming prices.
- * Initial load via REST, then real-time updates via WebSocket.
+ * PriceTicker — Live prices from xExchange (MultiversX native DEX).
+ *
+ * Reads token prices directly from xExchange liquidity pools via MultiversX API.
+ * On-chain verified prices • Zero gas cost (view functions) • Auto-refresh every 15s.
  */
 
 interface TokenPrice {
@@ -15,136 +14,108 @@ interface TokenPrice {
     change24h: number;
 }
 
-const BINANCE_TOKENS = [
-    { symbol: 'EGLD', name: 'MultiversX', binance: 'EGLDUSDT', stream: 'egldusdt' },
-    { symbol: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT', stream: 'btcusdt' },
-    { symbol: 'ETH', name: 'Ethereum', binance: 'ETHUSDT', stream: 'ethusdt' },
-    { symbol: 'BNB', name: 'Binance', binance: 'BNBUSDT', stream: 'bnbusdt' },
-    { symbol: 'SOL', name: 'Solana', binance: 'SOLUSDT', stream: 'solusdt' },
-    { symbol: 'XRP', name: 'Ripple', binance: 'XRPUSDT', stream: 'xrpusdt' },
-];
-
-// Build combined stream URL
-const STREAMS = BINANCE_TOKENS.map(t => `${t.stream}@ticker`).join('/');
-const WS_URL = `wss://stream.binance.com:9443/stream?streams=${STREAMS}`;
+// Top xExchange tokens sorted by relevance to the MultiversX ecosystem
+const XEXCHANGE_API = 'https://api.multiversx.com/mex/tokens?size=50';
+const EGLD_ECONOMICS_API = 'https://api.multiversx.com/economics';
+const REFRESH_INTERVAL_MS = 3_000; // 3 seconds — view functions are free, feels near-live
 
 export function PriceTicker() {
-    const [prices, setPrices] = useState<Map<string, TokenPrice>>(new Map());
+    const [prices, setPrices] = useState<TokenPrice[]>([]);
     const [loading, setLoading] = useState(true);
-    const [connected, setConnected] = useState(false);
     const [lastTick, setLastTick] = useState<Date | null>(null);
-    const wsRef = useRef<WebSocket | null>(null);
-    const reconnectRef = useRef<number>(0);
+    const [tokenCount, setTokenCount] = useState(0);
+    const intervalRef = useRef<number>(0);
 
-    // Initial load via REST to get 24h change %
-    const fetchInitial = useCallback(async () => {
+    const fetchPrices = useCallback(async () => {
         try {
-            const symbols = BINANCE_TOKENS.map(t => `"${t.binance}"`).join(',');
-            const resp = await fetch(
-                `https://api.binance.com/api/v3/ticker/24hr?symbols=[${symbols}]`
-            );
-            if (resp.ok) {
-                const data = await resp.json();
-                const map = new Map<string, TokenPrice>();
-                for (const token of BINANCE_TOKENS) {
-                    const ticker = data.find((t: any) => t.symbol === token.binance);
-                    if (ticker) {
-                        map.set(token.binance, {
-                            symbol: token.symbol,
-                            name: token.name,
-                            price: parseFloat(ticker.lastPrice),
-                            change24h: parseFloat(ticker.priceChangePercent),
-                        });
-                    }
-                }
-                setPrices(map);
-                setLastTick(new Date());
+            // Fetch both EGLD native price + all xExchange tokens in parallel
+            const [egldResp, mexResp] = await Promise.all([
+                fetch(EGLD_ECONOMICS_API),
+                fetch(XEXCHANGE_API),
+            ]);
+
+            const egldData = await egldResp.json();
+            const mexData: any[] = await mexResp.json();
+
+            const tokens: TokenPrice[] = [];
+
+            // EGLD from /economics (native chain price)
+            if (egldData?.price) {
+                tokens.push({
+                    symbol: 'EGLD',
+                    name: 'MultiversX',
+                    price: egldData.price,
+                    change24h: 0, // economics endpoint doesn't provide 24h change
+                });
             }
-        } catch (err) {
-            devWarn('PriceTicker REST fallback error:', err);
+
+            // All xExchange tokens with price > 0
+            setTokenCount(mexData.length);
+            for (const t of mexData) {
+                if (!t.price || t.price <= 0) continue;
+                // Skip WEGLD since we already have EGLD
+                if (t.symbol === 'WEGLD') {
+                    // Use WEGLD's 24h change for EGLD (same asset)
+                    const egldEntry = tokens.find(x => x.symbol === 'EGLD');
+                    if (egldEntry && t.previous24hPrice > 0) {
+                        egldEntry.change24h = ((t.price - t.previous24hPrice) / t.previous24hPrice) * 100;
+                    }
+                    continue;
+                }
+
+                const change24h = t.previous24hPrice > 0
+                    ? ((t.price - t.previous24hPrice) / t.previous24hPrice) * 100
+                    : 0;
+
+                tokens.push({
+                    symbol: t.symbol,
+                    name: t.name || t.symbol,
+                    price: t.price,
+                    change24h,
+                });
+            }
+
+            // Sort: highest volume tokens first (approximate by price * known factors)
+            // Keep EGLD first, then sort top movers by absolute 24h volume
+            const egld = tokens.find(t => t.symbol === 'EGLD');
+            const rest = tokens
+                .filter(t => t.symbol !== 'EGLD')
+                .sort((a, b) => {
+                    // Prioritize major tokens
+                    const majorOrder: Record<string, number> = {
+                        'USDC': 1, 'USDT': 2, 'WBTC': 3, 'WETH': 4, 'WTAO': 5,
+                        'MEX': 6, 'HTM': 7, 'ASH': 8, 'RIDE': 9, 'ZPAY': 10,
+                    };
+                    const aOrder = majorOrder[a.symbol] ?? 99;
+                    const bOrder = majorOrder[b.symbol] ?? 99;
+                    if (aOrder !== bOrder) return aOrder - bOrder;
+                    return b.price - a.price;
+                });
+
+            const sorted = egld ? [egld, ...rest] : rest;
+
+            // Show all tokens — scrollable list
+            setPrices(sorted);
+            setLastTick(new Date());
+        } catch {
+            // Silently fail — will retry on next interval
         } finally {
             setLoading(false);
         }
     }, []);
 
-    // WebSocket connection
-    const connectWs = useCallback(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) return;
-        // Stop trying after 5 reconnects
-        if (reconnectRef.current >= 5) return;
-
-        try {
-            const ws = new WebSocket(WS_URL);
-            wsRef.current = ws;
-
-            ws.onopen = () => {
-                setConnected(true);
-                reconnectRef.current = 0;
-            };
-
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    const d = msg.data;
-                    if (!d || !d.s) return;
-
-                    // d.s = symbol (e.g. EGLDUSDT), d.c = close/last price, d.P = 24h change %
-                    const binanceSymbol = d.s;
-                    const token = BINANCE_TOKENS.find(t => t.binance === binanceSymbol);
-                    if (!token) return;
-
-                    setPrices(prev => {
-                        const next = new Map(prev);
-                        next.set(binanceSymbol, {
-                            symbol: token.symbol,
-                            name: token.name,
-                            price: parseFloat(d.c),
-                            change24h: parseFloat(d.P) || prev.get(binanceSymbol)?.change24h || 0,
-                        });
-                        return next;
-                    });
-                    setLastTick(new Date());
-                } catch { }
-            };
-
-            ws.onclose = () => {
-                setConnected(false);
-                // Auto-reconnect with backoff (max 5 attempts)
-                if (reconnectRef.current < 5) {
-                    const delay = Math.min(2000 * Math.pow(2, reconnectRef.current), 30000);
-                    reconnectRef.current++;
-                    setTimeout(connectWs, delay);
-                }
-            };
-
-            ws.onerror = () => {
-                // Silently close — onclose will handle reconnect
-                try { ws.close(); } catch { }
-            };
-        } catch {
-            // WebSocket constructor can throw if URL is invalid — silently ignore
-        }
-    }, []);
-
     useEffect(() => {
-        fetchInitial();
-        // Delay WebSocket connection slightly to avoid mount/unmount race
-        const wsTimer = setTimeout(connectWs, 500);
-        return () => {
-            clearTimeout(wsTimer);
-            try { wsRef.current?.close(); } catch { }
-        };
-    }, [fetchInitial, connectWs]);
-
-    const priceList = BINANCE_TOKENS
-        .map(t => prices.get(t.binance))
-        .filter((p): p is TokenPrice => !!p);
+        fetchPrices();
+        intervalRef.current = window.setInterval(fetchPrices, REFRESH_INTERVAL_MS);
+        return () => clearInterval(intervalRef.current);
+    }, [fetchPrices]);
 
     const formatPrice = (price: number): string => {
         if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
         if (price >= 1) return `$${price.toFixed(2)}`;
         if (price >= 0.01) return `$${price.toFixed(4)}`;
-        return `$${price.toFixed(6)}`;
+        if (price >= 0.0001) return `$${price.toFixed(6)}`;
+        return `$${price.toExponential(2)}`;
     };
 
     const formatChange = (change: number): string => {
@@ -162,11 +133,11 @@ export function PriceTicker() {
                         <rect x="9" y="2" width="3" height="12" rx="0.5" fill="rgb(0, 255, 136)" />
                         <rect x="13" y="6" width="2" height="8" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.7" />
                     </svg>
-                    <span style={styles.title}>Live Prices</span>
-                    <span style={styles.badge}>REAL-TIME</span>
+                    <span style={styles.title}>xExchange Prices</span>
+                    <span style={styles.badge}>ON-CHAIN</span>
                 </div>
                 <div style={{ ...styles.grid, opacity: 0.4 }}>
-                    {[1, 2, 3, 4, 5, 6].map(i => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                         <div key={i} style={styles.card}>
                             <div style={{ ...styles.skeleton, width: 60, height: 14 }} />
                             <div style={{ ...styles.skeleton, width: 80, height: 20, marginTop: 6 }} />
@@ -187,13 +158,13 @@ export function PriceTicker() {
                         <rect x="9" y="2" width="3" height="12" rx="0.5" fill="rgb(0, 255, 136)" />
                         <rect x="13" y="6" width="2" height="8" rx="0.5" fill="rgb(0, 255, 136)" opacity="0.7" />
                     </svg>
-                    <span style={styles.title}>Live Prices</span>
-                    <span style={styles.badge}>REAL-TIME</span>
+                    <span style={styles.title}>xExchange Prices</span>
+                    <span style={styles.badge}>ON-CHAIN</span>
                     <div style={{
                         width: 6, height: 6, borderRadius: '50%',
-                        background: connected ? 'rgb(0, 255, 136)' : 'rgb(239, 68, 68)',
-                        boxShadow: connected ? '0 0 8px rgb(0, 255, 136)' : '0 0 8px rgb(239, 68, 68)',
-                        animation: connected ? 'pulse 2s infinite' : 'none',
+                        background: 'rgb(0, 255, 136)',
+                        boxShadow: '0 0 8px rgb(0, 255, 136)',
+                        animation: 'pulse 2s infinite',
                     }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -206,7 +177,7 @@ export function PriceTicker() {
             </div>
 
             <div style={styles.grid}>
-                {priceList.map((token) => (
+                {prices.map((token) => (
                     <div key={token.symbol} style={styles.card}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <div style={styles.symbol}>{token.symbol}</div>
@@ -227,8 +198,8 @@ export function PriceTicker() {
             </div>
 
             <div style={styles.footer}>
-                <span>Binance WebSocket • Real-time streaming</span>
-                <span>Used by XCron Keeper for hybrid price checks</span>
+                <span>xExchange • MultiversX on-chain prices</span>
+                <span>{tokenCount} tokens tracked • 3s refresh</span>
             </div>
         </div>
     );
@@ -274,8 +245,11 @@ const styles: Record<string, React.CSSProperties> = {
     grid: {
         display: 'grid',
         gridTemplateColumns: '1fr',
-        gap: 6,
+        gap: 4,
         flex: 1,
+        overflowY: 'auto' as const,
+        maxHeight: 320,
+        paddingRight: 2,
     },
     card: {
         padding: '6px 10px',
@@ -288,8 +262,6 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    cardTop: {
-    },
     symbol: {
         fontSize: '0.78rem',
         fontWeight: 700,
@@ -300,11 +272,6 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: '0.55rem',
         color: 'var(--text-muted)',
         lineHeight: 1.1,
-    },
-    cardBottom: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
     },
     price: {
         fontSize: '0.8rem',

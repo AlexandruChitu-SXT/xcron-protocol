@@ -125,192 +125,253 @@ export function CloneKeyManager() {
 
     if (!wallet.connected) {
         return (
-            <div style={cardStyle}>
-                <div style={shimmerLine} />
-                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="1.5" style={{ marginBottom: 16, opacity: 0.6 }}>
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        Connect your wallet to manage Clone-Keys
-                    </p>
+            <div className="page">
+                <div className="app-container">
+                    {/* Header */}
+                    <div style={{ marginBottom: 20 }}>
+                        <TypewriterTitle as="h2" text="Clone-Keys" speed={60} />
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: 4 }}>
+                            Burner wallets with spending limits — your main wallet stays safe
+                        </p>
+                    </div>
+
+                    {/* Explanation */}
+                    <div style={{
+                        marginBottom: 24, lineHeight: 1.7,
+                        fontSize: '0.82rem', color: 'var(--text-secondary)',
+                        maxWidth: 720,
+                    }}>
+                        <p style={{ marginBottom: 12 }}>
+                            <strong style={{ color: 'var(--text-primary)' }}>What is a Clone-Key?</strong>{' '}
+                            It's a secondary wallet (burner) that you authorize to act on your behalf with a limited budget.
+                            Your main wallet is never exposed to the keeper or any external agent — it only signs the initial authorization.
+                        </p>
+                        <p style={{ marginBottom: 12 }}>
+                            <strong style={{ color: 'var(--text-primary)' }}>How does it work?</strong>{' '}
+                            1) Create a new wallet (burner) and copy its address.{' '}
+                            2) Authorize it here with an EGLD spending limit and an expiration date.{' '}
+                            3) The keeper uses that Clone-Key to execute your automated tasks. If the budget runs out or it expires, it stops automatically.
+                        </p>
+                        <p style={{ marginBottom: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            <strong style={{ color: 'var(--text-secondary)' }}>Benefits:</strong>{' '}
+                            Your main wallet is never at risk • You control exactly how much it can spend • Revoke instantly and get your funds back • Auto-expires if you forget about it.
+                        </p>
+                    </div>
+
+                    {/* Connect prompt */}
+                    <div style={cardStyle}>
+                        <div style={shimmerLine} />
+                        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="1.5" style={{ marginBottom: 16, opacity: 0.6 }}>
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                Connect your wallet to manage Clone-Keys
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <div>
-                    <TypewriterTitle as="h2" text="Clone-Keys" speed={60} />
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: 4 }}>
-                        Burner wallets with spending limits — your main wallet stays safe
+        <div className="page">
+            <div className="app-container">
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <div>
+                        <TypewriterTitle as="h2" text="Clone-Keys" speed={60} />
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: 4 }}>
+                            Burner wallets with spending limits — your main wallet stays safe
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={badgeStyle('var(--text-muted)')}>
+                            {cloneKeys.length}/{MAX_CLONE_KEYS} keys
+                        </span>
+                        {cloneKeys.length < MAX_CLONE_KEYS && (
+                            <button
+                                onClick={() => setShowForm(!showForm)}
+                                style={{
+                                    ...btnPrimary,
+                                    padding: '8px 16px',
+                                    fontSize: '0.82rem',
+                                    opacity: loading ? 0.5 : 1,
+                                }}
+                                disabled={loading}
+                            >
+                                {showForm ? '✕ Cancel' : '+ New Clone-Key'}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Explanation */}
+                <div style={{
+                    marginBottom: 24, lineHeight: 1.7,
+                    fontSize: '0.82rem', color: 'var(--text-secondary)',
+                    maxWidth: 720,
+                }}>
+                    <p style={{ marginBottom: 12 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>What is a Clone-Key?</strong>{' '}
+                        It's a secondary wallet (burner) that you authorize to act on your behalf with a limited budget.
+                        Your main wallet is never exposed to the keeper or any external agent — it only signs the initial authorization.
+                    </p>
+                    <p style={{ marginBottom: 12 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>How does it work?</strong>{' '}
+                        1) Create a new wallet (burner) and copy its address.{' '}
+                        2) Authorize it here with an EGLD spending limit and an expiration date.{' '}
+                        3) The keeper uses that Clone-Key to execute your automated tasks. If the budget runs out or it expires, it stops automatically.
+                    </p>
+                    <p style={{ marginBottom: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        <strong style={{ color: 'var(--text-secondary)' }}>Benefits:</strong>{' '}
+                        Your main wallet is never at risk • You control exactly how much it can spend • Revoke instantly and get your funds back • Auto-expires if you forget about it.
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span style={badgeStyle('var(--text-muted)')}>
-                        {cloneKeys.length}/{MAX_CLONE_KEYS} keys
-                    </span>
-                    {cloneKeys.length < MAX_CLONE_KEYS && (
+
+                {/* Create Form */}
+                {showForm && (
+                    <div style={{ ...cardStyle, marginBottom: 20 }}>
+                        <div style={shimmerLine} />
+                        <h3 style={{ fontSize: '0.95rem', marginBottom: 16, color: ACCENT }}>
+                            Authorize New Clone-Key
+                        </h3>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                                    Clone-Key Address
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="erd1... (your burner wallet)"
+                                    value={cloneAddress}
+                                    onChange={(e) => setCloneAddress(e.target.value)}
+                                    style={{ ...inputStyle, gridColumn: '1 / -1' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                                    Spend Limit (EGLD)
+                                </label>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder={`Max ${MAX_SPEND_LIMIT_EGLD}`}
+                                    value={spendLimit}
+                                    onChange={(e) => setSpendLimit(e.target.value.replace(/,/g, '.'))}
+                                    style={inputStyle}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                                Validity (days) — max {MAX_TTL_DAYS}
+                            </label>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                {[1, 7, 14, 30].map((d) => (
+                                    <button
+                                        key={d}
+                                        type="button"
+                                        onClick={() => setTtlDays(d.toString())}
+                                        style={{
+                                            padding: '6px 14px', borderRadius: 6,
+                                            background: ttlDays === d.toString() ? `${ACCENT}20` : 'var(--bg-secondary)',
+                                            color: ttlDays === d.toString() ? ACCENT : 'var(--text-secondary)',
+                                            border: `1px solid ${ttlDays === d.toString() ? `${ACCENT}50` : 'var(--border-primary)'}`,
+                                            cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        {d}d
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Summary */}
+                        <div style={{
+                            padding: '12px 16px', borderRadius: 8,
+                            background: 'rgba(6,182,212,0.05)',
+                            border: '1px solid rgba(6,182,212,0.12)',
+                            marginBottom: 16, fontSize: '0.78rem',
+                            color: 'var(--text-secondary)',
+                        }}>
+                            <strong style={{ color: 'var(--text-primary)' }}>Summary:</strong>{' '}
+                            Authorize a Clone-Key with <strong style={{ color: GREEN }}>{spendLimit || '0'} EGLD</strong> budget,
+                            valid for <strong>{ttlDays || '0'} days</strong>.
+                            Your EGLD is deposited into the contract and refundable on revoke.
+                        </div>
+
                         <button
-                            onClick={() => setShowForm(!showForm)}
+                            onClick={handleAuthorize}
+                            disabled={loading || !cloneAddress.trim()}
                             style={{
                                 ...btnPrimary,
-                                padding: '8px 16px',
-                                fontSize: '0.82rem',
-                                opacity: loading ? 0.5 : 1,
+                                width: '100%',
+                                opacity: (loading || !cloneAddress.trim()) ? 0.5 : 1,
                             }}
-                            disabled={loading}
                         >
-                            {showForm ? '✕ Cancel' : '+ New Clone-Key'}
+                            {loading ? 'Authorizing...' : `Authorize Clone-Key (${spendLimit} EGLD)`}
                         </button>
-                    )}
-                </div>
-            </div>
+                    </div>
+                )}
 
-            {/* Create Form */}
-            {showForm && (
-                <div style={{ ...cardStyle, marginBottom: 20 }}>
-                    <div style={shimmerLine} />
-                    <h3 style={{ fontSize: '0.95rem', marginBottom: 16, color: ACCENT }}>
-                        Authorize New Clone-Key
-                    </h3>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
-                                Clone-Key Address
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="erd1... (your burner wallet)"
-                                value={cloneAddress}
-                                onChange={(e) => setCloneAddress(e.target.value)}
-                                style={{ ...inputStyle, gridColumn: '1 / -1' }}
+                {/* Clone-Key List */}
+                {cloneKeys.length === 0 && !showForm ? (
+                    <div style={cardStyle}>
+                        <div style={shimmerLine} />
+                        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" style={{ marginBottom: 16, opacity: 0.4 }}>
+                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                            </svg>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 8 }}>
+                                No Clone-Keys yet
+                            </p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                Create a burner wallet and authorize it to automate tasks
+                                without exposing your main wallet.
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {cloneKeys.map((ck, idx) => (
+                            <CloneKeyCard
+                                key={idx}
+                                ck={ck}
+                                loading={loading}
+                                fundingKey={fundingKey}
+                                fundAmount={fundAmount}
+                                onRevoke={handleRevoke}
+                                onStartFund={(addr) => { setFundingKey(addr); setFundAmount('0.1'); }}
+                                onCancelFund={() => setFundingKey(null)}
+                                onFund={handleFund}
+                                onFundAmountChange={setFundAmount}
                             />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
-                                Spend Limit (EGLD)
-                            </label>
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder={`Max ${MAX_SPEND_LIMIT_EGLD}`}
-                                value={spendLimit}
-                                onChange={(e) => setSpendLimit(e.target.value.replace(/,/g, '.'))}
-                                style={inputStyle}
-                            />
-                        </div>
+                        ))}
                     </div>
+                )}
 
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
-                            Validity (days) — max {MAX_TTL_DAYS}
-                        </label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            {[1, 7, 14, 30].map((d) => (
-                                <button
-                                    key={d}
-                                    type="button"
-                                    onClick={() => setTtlDays(d.toString())}
-                                    style={{
-                                        padding: '6px 14px', borderRadius: 6,
-                                        background: ttlDays === d.toString() ? `${ACCENT}20` : 'var(--bg-secondary)',
-                                        color: ttlDays === d.toString() ? ACCENT : 'var(--text-secondary)',
-                                        border: `1px solid ${ttlDays === d.toString() ? `${ACCENT}50` : 'var(--border-primary)'}`,
-                                        cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
-                                        transition: 'all 0.15s',
-                                    }}
-                                >
-                                    {d}d
-                                </button>
-                            ))}
-                        </div>
+                {/* Security Notice */}
+                <div style={{
+                    marginTop: 20, padding: '12px 16px', borderRadius: 8,
+                    background: 'rgba(34,197,94,0.05)',
+                    border: '1px solid rgba(34,197,94,0.12)',
+                    fontSize: '0.75rem', color: 'var(--text-secondary)',
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <div>
+                        <strong style={{ color: GREEN }}>Security:</strong> Your main wallet only signs to authorize/revoke.
+                        Clone-Keys can only spend within their assigned budget. Revoke anytime for instant refund.
+                        Max {MAX_SPEND_LIMIT_EGLD} EGLD per key, auto-expires after {MAX_TTL_DAYS} days.
                     </div>
-
-                    {/* Summary */}
-                    <div style={{
-                        padding: '12px 16px', borderRadius: 8,
-                        background: 'rgba(6,182,212,0.05)',
-                        border: '1px solid rgba(6,182,212,0.12)',
-                        marginBottom: 16, fontSize: '0.78rem',
-                        color: 'var(--text-secondary)',
-                    }}>
-                        <strong style={{ color: 'var(--text-primary)' }}>Summary:</strong>{' '}
-                        Authorize a Clone-Key with <strong style={{ color: GREEN }}>{spendLimit || '0'} EGLD</strong> budget,
-                        valid for <strong>{ttlDays || '0'} days</strong>.
-                        Your EGLD is deposited into the contract and refundable on revoke.
-                    </div>
-
-                    <button
-                        onClick={handleAuthorize}
-                        disabled={loading || !cloneAddress.trim()}
-                        style={{
-                            ...btnPrimary,
-                            width: '100%',
-                            opacity: (loading || !cloneAddress.trim()) ? 0.5 : 1,
-                        }}
-                    >
-                        {loading ? 'Authorizing...' : `Authorize Clone-Key (${spendLimit} EGLD)`}
-                    </button>
-                </div>
-            )}
-
-            {/* Clone-Key List */}
-            {cloneKeys.length === 0 && !showForm ? (
-                <div style={cardStyle}>
-                    <div style={shimmerLine} />
-                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" style={{ marginBottom: 16, opacity: 0.4 }}>
-                            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-                        </svg>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 8 }}>
-                            No Clone-Keys yet
-                        </p>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                            Create a burner wallet and authorize it to automate tasks
-                            without exposing your main wallet.
-                        </p>
-                    </div>
-                </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {cloneKeys.map((ck, idx) => (
-                        <CloneKeyCard
-                            key={idx}
-                            ck={ck}
-                            loading={loading}
-                            fundingKey={fundingKey}
-                            fundAmount={fundAmount}
-                            onRevoke={handleRevoke}
-                            onStartFund={(addr) => { setFundingKey(addr); setFundAmount('0.1'); }}
-                            onCancelFund={() => setFundingKey(null)}
-                            onFund={handleFund}
-                            onFundAmountChange={setFundAmount}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Security Notice */}
-            <div style={{
-                marginTop: 20, padding: '12px 16px', borderRadius: 8,
-                background: 'rgba(34,197,94,0.05)',
-                border: '1px solid rgba(34,197,94,0.12)',
-                fontSize: '0.75rem', color: 'var(--text-secondary)',
-                display: 'flex', alignItems: 'flex-start', gap: 10,
-            }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                <div>
-                    <strong style={{ color: GREEN }}>Security:</strong> Your main wallet only signs to authorize/revoke.
-                    Clone-Keys can only spend within their assigned budget. Revoke anytime for instant refund.
-                    Max {MAX_SPEND_LIMIT_EGLD} EGLD per key, auto-expires after {MAX_TTL_DAYS} days.
                 </div>
             </div>
         </div>

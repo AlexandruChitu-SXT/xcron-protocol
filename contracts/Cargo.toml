@@ -18,6 +18,12 @@ members = [
     "ping/meta",
     "noop",
     "noop/wasm",
+    "vault",
+    "vault/meta",
+    "test-dex",
+    "test-dex/meta",
+    "test-nft",
+    "test-nft/meta",
 ]
 
 [workspace.dependencies]

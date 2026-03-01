@@ -42,7 +42,7 @@ export function ExploreTasks() {
     const [execHistory, setExecHistory] = useState<ExecutionLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [stats, setStats] = useState({ total: 0, active: 0, completed: 0, failed: 0 });
+    const [stats, setStats] = useState({ total: 0, lifetime: 0, active: 0, completed: 0, failed: 0 });
 
     useEffect(() => {
         loadAll();
@@ -85,7 +85,7 @@ export function ExploreTasks() {
             const active = taskList.filter(t => t.status === 'Pending' || t.status === 'Committed').length;
             const completed = taskList.filter(t => t.status === 'Completed').length;
             const failed = taskList.filter(t => t.status === 'Failed').length;
-            setStats({ total: taskList.length, active, completed, failed });
+            setStats({ total: taskList.length, lifetime: totalTasks, active, completed, failed });
         } catch (err) {
             devError('Failed to load tasks:', err);
         }
@@ -222,8 +222,8 @@ export function ExploreTasks() {
                     <div className="stat-card" style={{ background: 'rgba(59,130,246,0.12)', borderColor: 'rgba(59,130,246,0.25)', boxShadow: '0 0 25px rgba(59,130,246,0.25)' }}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(59,130,246,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" /><line x1="12" y1="2" x2="12" y2="22" /></svg>
                         <div className="stat-label" style={{ color: 'rgb(59,130,246)' }}>Total Tasks</div>
-                        <div className="stat-value"><AnimatedCounter value={displayStats.total} /></div>
-                        <div className="stat-sub">Scheduled on-chain</div>
+                        <div className="stat-value"><AnimatedCounter value={displayStats.lifetime} /></div>
+                        <div className="stat-sub">{displayStats.total} visible on-chain</div>
                     </div>
                     <div className="stat-card" style={{ background: 'rgba(251,191,36,0.1)', borderColor: 'rgba(251,191,36,0.2)', boxShadow: '0 0 25px rgba(251,191,36,0.25)' }}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,0.5)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>

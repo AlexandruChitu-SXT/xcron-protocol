@@ -46,24 +46,28 @@ const CONTRACT_ADDRESSES: Record<NetworkId, {
     keeperRegistry: string;
     rewards: string;
     ping: string;
+    vault: string;
 }> = {
     devnet: {
         scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqsmmpmp7hh6cqrnng0vp9ywgre70luvus7k8svk7ejh',
         keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || 'erd1qqqqqqqqqqqqqpgq0zlpshzkjr5egtaueyn29a2t9kv8mywp7k8sxexula',
         rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgqzkhxp72uzdq49dmzsng3g0tp98629k8z7k8szas8nt',
         ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgq85c5nze8vnrkcd3sr7cscclj7tmv6nxn7k8sa9cq2a',
+        vault: import.meta.env.VITE_VAULT_ADDRESS || '',
     },
     testnet: {
-        scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqg49x0pq93549gt0nvds7fjaxslxc9lpt7k8sc6d263',
+        scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || 'erd1qqqqqqqqqqqqqpgqcny96vj8sesktdrqkx4e5qeujh8j7ap47k8senhrj5',
         keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || 'erd1qqqqqqqqqqqqqpgq53ffcxnes943y6s27nhynxt6y9a787f07k8se4t2ka',
         rewards: import.meta.env.VITE_REWARDS_ADDRESS || 'erd1qqqqqqqqqqqqqpgq6t7um2uxapc9tk0mv4z5k68yd20a33vp7k8slmnpta',
-        ping: import.meta.env.VITE_PING_ADDRESS || '',
+        ping: import.meta.env.VITE_PING_ADDRESS || 'erd1qqqqqqqqqqqqqpgq2zpa5y9rp9djzsfr93ls2tmpns099cvu7k8s579232',
+        vault: import.meta.env.VITE_VAULT_ADDRESS || 'erd1qqqqqqqqqqqqqpgqd2ehnkrswj9vwe9rr0xrqykhj6hlufze7k8sxtt0an',
     },
     mainnet: {
         scheduler: import.meta.env.VITE_SCHEDULER_ADDRESS || '',
         keeperRegistry: import.meta.env.VITE_KEEPER_REGISTRY_ADDRESS || '',
         rewards: import.meta.env.VITE_REWARDS_ADDRESS || '',
         ping: import.meta.env.VITE_PING_ADDRESS || '',
+        vault: import.meta.env.VITE_VAULT_ADDRESS || '',
     },
 };
 
@@ -78,7 +82,7 @@ export const EXPLORER_ACCOUNT = (addr: string) =>
     `${NETWORK.explorerUrl}/accounts/${addr}`;
 
 // Min deposit (0.001 EGLD — matches on-chain Scheduler config)
-export const MIN_DEPOSIT = '1000000000000000';
+export const MIN_DEPOSIT = '100000000000000000'; // 0.1 EGLD — matches on-chain scheduler config
 
 // Gas limits
 export const GAS_SCHEDULE_TASK = 30_000_000;

@@ -35,7 +35,7 @@
             "comment": "Deploy Scheduler with min_deposit=0.1 EGLD, fee=5%",
             "tx": {
                 "from": "address:owner",
-                "contractCode": "mxsc:output/scheduler.mxsc.json",
+                "contractCode": "mxsc:../output/scheduler.mxsc.json",
                 "arguments": [
                     "address:keeper_registry",
                     "address:rewards",

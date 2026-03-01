@@ -37,7 +37,7 @@
             "comment": "Deploy KeeperRegistry with 1 EGLD min stake, 500 BPS slash, 12h cooldown",
             "tx": {
                 "from": "address:owner",
-                "contractCode": "mxsc:../keeper-registry/output/keeper-registry.mxsc.json",
+                "contractCode": "mxsc:../../keeper-registry/output/keeper-registry.mxsc.json",
                 "arguments": [
                     "1,000,000,000,000,000,000",
                     "500",

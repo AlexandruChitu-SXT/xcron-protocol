@@ -232,7 +232,7 @@ export function KeeperPanel() {
                     <div className="stats-grid">
                         <div className="stat-card" style={{ background: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)', boxShadow: '0 0 25px rgba(249,115,22,0.2)' }}>
                             <div className="stat-label" style={{ color: 'rgb(249,115,22)' }}>Active Keepers</div>
-                            <div className="stat-value">{loading ? '—' : globalStats.totalKeepers || 3}</div>
+                            <div className="stat-value">{loading ? '—' : globalStats.totalKeepers}</div>
                             <div className="stat-sub">In the network</div>
                         </div>
                         <div className="stat-card" style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)', boxShadow: '0 0 25px rgba(168,85,247,0.2)' }}>
@@ -241,14 +241,14 @@ export function KeeperPanel() {
                             <div className="stat-sub">EGLD required</div>
                         </div>
                         <div className="stat-card" style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', boxShadow: '0 0 25px rgba(34,197,94,0.2)' }}>
-                            <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Total Staked</div>
-                            <div className="stat-value">5.20</div>
-                            <div className="stat-sub">EGLD in bonds</div>
+                            <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Protocol Fee</div>
+                            <div className="stat-value">{loading ? '—' : `${(3000 / 100).toFixed(0)}%`}</div>
+                            <div className="stat-sub">Keeper earns 70%</div>
                         </div>
                         <div className="stat-card" style={{ background: 'rgba(6,182,212,0.08)', borderColor: 'rgba(6,182,212,0.2)', boxShadow: '0 0 25px rgba(6,182,212,0.2)' }}>
-                            <div className="stat-label" style={{ color: 'rgb(6,182,212)' }}>Est. APY</div>
-                            <div className="stat-value" style={{ color: 'var(--success)' }}>~12%</div>
-                            <div className="stat-sub">From execution fees</div>
+                            <div className="stat-label" style={{ color: 'rgb(6,182,212)' }}>Keeper Share</div>
+                            <div className="stat-value" style={{ color: 'var(--success)' }}>70%</div>
+                            <div className="stat-sub">Per execution reward</div>
                         </div>
                     </div>
 
@@ -621,7 +621,7 @@ function KeeperLeaderboard() {
                         <span style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: 'var(--accent-light)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {k.addr.slice(0, 10)}...{k.addr.slice(-6)}
                         </span>
-                        <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', textAlign: 'right', fontWeight: 600 }}>{k.execs} exec{k.execs !== 1 ? 's' : ''}</span>
+                        <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', textAlign: 'right', fontWeight: 600 }}>{k.execs} tx</span>
                     </div>
                 ))
             )}

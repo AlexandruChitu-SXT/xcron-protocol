@@ -13,3 +13,6 @@ common = { path = "../common" }
 
 [dev-dependencies.multiversx-sc-scenario]
 version = "0.63.0"
+
+[dev-dependencies.keeper-registry]
+path = "../keeper-registry"

@@ -57,9 +57,7 @@ export class Executor {
         "Not authorized",
         "Reentrancy blocked",
         "Task expired (TTL exceeded)",
-        "Task not yet ripe",
-        "Task assigned to another keeper",
-        "Insufficient gas for full execution",
+        // NOTE: "Task not yet ripe" is TRANSIENT (clock drift) — do NOT add here
         // S-1: Security rules
         "S-1: Cannot target scheduler itself",
         "S-1: Cannot target KeeperRegistry",

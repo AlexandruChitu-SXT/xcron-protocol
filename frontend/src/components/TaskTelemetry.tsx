@@ -12,39 +12,42 @@ export function TaskTelemetry({ txHash, txStatus, txLoading }: TaskTelemetryProp
     const [keeperStatus, setKeeperStatus] = useState<'waiting' | 'listening' | 'executed'>('waiting');
     const { query } = useContractQuery();
 
-    // Logic to poll the SC for execution status once the Tx is successful
+    // Poll the SC to check if the task was actually executed on-chain
     useEffect(() => {
         let interval: NodeJS.Timeout;
+        let cancelled = false;
+
         if (txStatus === 'success') {
             setKeeperStatus('listening');
 
-            // Poll the blockchain every 6 seconds to see if the overall task count went up
-            // (a simple heuristic for Devnet demo purposes; a production app would scan events for the specific Tx)
+            // Poll every 6 seconds to check if task count increased (real on-chain data)
+            let initialCount: number | null = null;
+
             interval = setInterval(async () => {
+                if (cancelled) return;
                 try {
                     const stats = await query(CONTRACTS.scheduler, 'getProtocolStats');
-                    if (stats.length >= 1) {
-                        const tasksExecuted = bufferToNumber(stats[0]); // assuming first stat is tasks executed if available
-                        // We simulate that any change in executed tasks means our task was handled.
-                        // Normally we'd query a specific task ID mapped to our tx.
-                        if (tasksExecuted > 0) { // For UI Demo purpose, quickly move to executed if we fetch stats
-                            setTimeout(() => setKeeperStatus('executed'), 2000); // 2s delay for visual effect
+                    if (stats.length >= 2) {
+                        const tasksExecuted = bufferToNumber(stats[1]);
+                        if (initialCount === null) {
+                            initialCount = tasksExecuted;
+                        } else if (tasksExecuted > initialCount) {
+                            // Task count actually increased on-chain
+                            setKeeperStatus('executed');
                         }
                     }
-                } catch (err) {
-                    // Ignore poll errors
+                } catch {
+                    // Ignore poll errors — keep waiting
                 }
             }, 6000);
-
-            // Simulation fallback in case polling fails / no keeper active
-            setTimeout(() => {
-                setKeeperStatus(prev => prev === 'listening' ? 'executed' : prev);
-            }, 12000);
         } else {
             setKeeperStatus('waiting');
         }
 
-        return () => clearInterval(interval);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
     }, [txStatus, query]);
 
     const steps = [

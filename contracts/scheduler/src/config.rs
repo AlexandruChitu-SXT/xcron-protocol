@@ -87,4 +87,44 @@ pub trait ConfigModule: crate::storage::StorageModule {
     fn set_max_reward_per_exec(&self, value: BigUint) {
         self.max_reward_per_exec().set(&value);
     }
+
+    /// M-3 Fix: Flush accumulated protocol fees to the Rewards contract.
+    ///
+    /// Protocol fees are accumulated in `accrued_protocol_fees` during execution
+    /// callbacks (because `transfer_execute` inside a callback cannot invoke
+    /// SC endpoints). This endpoint sends them properly outside the callback.
+    ///
+    /// Callable by owner or any whitelisted keeper (incentivizes keepers to
+    /// flush regularly since the rewards contract tracks their bonus).
+    #[endpoint(flushProtocolFees)]
+    fn flush_protocol_fees(&self) {
+        let caller = self.blockchain().get_caller();
+        require!(
+            self.whitelisted_keepers().contains(&caller)
+                || caller == self.blockchain().get_owner_address(),
+            "Not authorized"
+        );
+
+        let accrued = self.accrued_protocol_fees().get();
+        require!(accrued > BigUint::zero(), "No fees to flush");
+
+        // Clear BEFORE transfer (CEI pattern)
+        self.accrued_protocol_fees().clear();
+
+        let rewards_addr = self.rewards_addr().get();
+        self.tx()
+            .to(&rewards_addr)
+            .raw_call("receiveExecutionFee")
+            .argument(&caller) // keeper who flushed
+            .argument(&0u64)   // task_id = 0 (bulk flush)
+            .egld(&accrued)
+            .gas(10_000_000u64)
+            .transfer_execute();
+    }
+
+    /// View: check how many protocol fees have accumulated since last flush.
+    #[view(getAccruedProtocolFees)]
+    fn get_accrued_protocol_fees(&self) -> BigUint {
+        self.accrued_protocol_fees().get()
+    }
 }

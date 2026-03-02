@@ -138,6 +138,14 @@ pub trait StorageModule {
     #[storage_mapper("intraShardExecs")]
     fn intra_shard_execs(&self) -> SingleValueMapper<u64>;
 
+    // ── M-3 Fix: Accrued protocol fees ──────────────────────
+    /// Protocol fees accumulated during execution callbacks.
+    /// Since `transfer_execute` inside `#[promises_callback]` sends EGLD
+    /// but does NOT invoke the target endpoint, fees are stored here
+    /// and flushed to the Rewards contract via `flushProtocolFees`.
+    #[storage_mapper("accruedProtocolFees")]
+    fn accrued_protocol_fees(&self) -> SingleValueMapper<BigUint>;
+
     // ── Clone-Keys (Burner Wallets) ─────────────────────────
     /// Clone-Key address → its properties (main wallet link, limits, expiry).
     #[storage_mapper("cloneKeyProps")]

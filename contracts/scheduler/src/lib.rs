@@ -90,5 +90,6 @@ pub trait SchedulerContract:
             .set_if_empty(BigUint::from(common::constants::DEFAULT_MAX_REWARD_PER_EXEC));
         self.reveal_window()
             .set_if_empty(common::constants::DEFAULT_REVEAL_WINDOW_SECONDS);
+        self.accrued_protocol_fees().set_if_empty(BigUint::zero());
     }
 }

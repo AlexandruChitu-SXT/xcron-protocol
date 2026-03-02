@@ -165,29 +165,23 @@ pub trait HelpersModule: crate::storage::StorageModule {
 
     // ── Cross-contract call helpers ─────────────────────────
 
-    /// Send protocol fee to the Rewards contract after a successful execution.
+    /// M-3 Fix: Accumulate protocol fee instead of transfer_execute.
     ///
-    /// Centralizes the cross-contract call to `receiveExecutionFee` so that
-    /// changes to the Rewards ABI only need updating in one place.
+    /// Inside `#[promises_callback]`, `.transfer_execute()` sends EGLD
+    /// but does NOT invoke the target endpoint — the `receiveExecutionFee`
+    /// function never runs, so fees aren't tracked in the Rewards contract.
     ///
-    /// NOTE: The SDK `#[multiversx_sc::proxy]` macro is the ideal long-term
-    /// solution, but requires SDK 0.64+ for full test compatibility.
+    /// Solution: accumulate fees in `accrued_protocol_fees` storage mapper.
+    /// Owner/keeper can call `flushProtocolFees` to bulk-send them to the
+    /// Rewards contract outside of a callback context.
     fn forward_protocol_fee(
         &self,
-        keeper: &ManagedAddress,
-        task_id: u64,
+        _keeper: &ManagedAddress,
+        _task_id: u64,
         protocol_fee: &BigUint,
     ) {
         if protocol_fee > &BigUint::zero() {
-            let rewards_addr = self.rewards_addr().get();
-            self.tx()
-                .to(&rewards_addr)
-                .raw_call("receiveExecutionFee")
-                .argument(keeper)
-                .argument(&task_id)
-                .egld(protocol_fee)
-                .gas(5_000_000u64)
-                .transfer_execute();
+            self.accrued_protocol_fees().update(|total| *total += protocol_fee);
         }
     }
 

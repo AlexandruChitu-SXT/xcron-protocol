@@ -94,7 +94,7 @@ pub trait VaultContract:
         self.tx()
             .to(&delegation_addr)
             .raw_call("delegate")
-            .egld(&payment)
+            .egld(&payment.clone())
             .gas(12_000_000u64)
             .callback(self.callbacks().deposit_callback(caller, payment))
             .gas_for_callback(5_000_000u64)

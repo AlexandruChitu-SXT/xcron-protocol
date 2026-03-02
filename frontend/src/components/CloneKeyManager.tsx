@@ -152,7 +152,7 @@ export function CloneKeyManager() {
                             2) Authorize it here with an EGLD spending limit and an expiration date.{' '}
                             3) The keeper uses that Clone-Key to execute your automated tasks. If the budget runs out or it expires, it stops automatically.
                         </p>
-                        <p style={{ marginBottom: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        <p style={{ marginBottom: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
                             <strong style={{ color: 'var(--text-secondary)' }}>Benefits:</strong>{' '}
                             Your main wallet is never at risk • You control exactly how much it can spend • Revoke instantly and get your funds back • Auto-expires if you forget about it.
                         </p>
@@ -211,7 +211,7 @@ export function CloneKeyManager() {
                 {/* Explanation */}
                 <div style={{
                     marginBottom: 24, lineHeight: 1.7,
-                    fontSize: '0.82rem', color: 'var(--text-secondary)',
+                    fontSize: '1rem', color: 'var(--text-secondary)',
                     maxWidth: 720,
                 }}>
                     <p style={{ marginBottom: 12 }}>
@@ -225,7 +225,7 @@ export function CloneKeyManager() {
                         2) Authorize it here with an EGLD spending limit and an expiration date.{' '}
                         3) The keeper uses that Clone-Key to execute your automated tasks. If the budget runs out or it expires, it stops automatically.
                     </p>
-                    <p style={{ marginBottom: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    <p style={{ marginBottom: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
                         <strong style={{ color: 'var(--text-secondary)' }}>Benefits:</strong>{' '}
                         Your main wallet is never at risk • You control exactly how much it can spend • Revoke instantly and get your funds back • Auto-expires if you forget about it.
                     </p>

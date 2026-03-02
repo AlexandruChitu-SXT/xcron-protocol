@@ -32,7 +32,7 @@ const SECURITY = {
     MAX_EGLD_AMOUNT: 1000,
     MIN_EGLD_AMOUNT: 0.001,
     // 🔒 Voice security
-    MAX_VOICE_DURATION_MS: 30_000,
+    MAX_VOICE_DURATION_MS: 15_000,
 } as const;
 
 // ── Rate Limiter ──
@@ -1241,7 +1241,13 @@ RULES:
 
         // Request microphone access
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                },
+            });
             mediaStreamRef.current = stream;
 
             // Choose best supported format

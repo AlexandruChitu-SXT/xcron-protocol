@@ -284,14 +284,6 @@ export function ScheduleTask() {
     // How many times a recurring task should repeat
     const [remainingExecs, setRemainingExecs] = useState(10);
 
-    // Hybrid Price Condition state
-    const [priceEnabled, setPriceEnabled] = useState(false);
-    const [priceToken, setPriceToken] = useState('EGLD');
-    const [priceCondition, setPriceCondition] = useState<'above' | 'below'>('above');
-    const [priceThreshold, setPriceThreshold] = useState('');
-
-    // AI-Optimized execution state
-    const [aiOptimized, setAiOptimized] = useState(false);
 
     useEffect(() => {
         const tmplDefaults = TEMPLATES[template].defaults;
@@ -302,10 +294,6 @@ export function ScheduleTask() {
         setDelaySeconds(0);
         setIntervalSeconds(parseInt(tmplDefaults.interval || '0') * SECONDS_PER_ROUND);
         setRemainingExecs(10);
-        setPriceEnabled(false);
-        setPriceToken('EGLD');
-        setPriceCondition('above');
-        setPriceThreshold('');
     }, [template]);
 
     const update = (field: string, value: string) => {
@@ -429,24 +417,6 @@ export function ScheduleTask() {
                 setTxHash(result);
                 if (result !== 'pending-web-wallet') {
                     addToast('Task scheduled! Check explorer for confirmation.', 'success');
-
-                    // Hybrid: send setTaskMetadata with price condition
-                    if (priceEnabled && priceThreshold) {
-                        try {
-                            addToast('Setting price condition on-chain...', 'info');
-                            // Use a small delay to let the first tx confirm
-                            setTimeout(async () => {
-                                try {
-                                    // Note: in production, parse the task ID from the schedule tx events
-                                    addToast(`Price condition: ${priceToken} ${priceCondition} $${priceThreshold} — set via dashboard`, 'success');
-                                } catch (metaErr: any) {
-                                    addToast('Could not set price condition automatically. Set it via MyTasks.', 'error');
-                                }
-                            }, 3000);
-                        } catch (metaErr: any) {
-                            addToast('Price condition created but metadata tx failed. Set manually.', 'error');
-                        }
-                    }
                 }
             }
         } catch (err: any) {
@@ -486,7 +456,7 @@ export function ScheduleTask() {
                 {/* 3-Column Layout: Templates | Form | Templates */}
                 <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 220px', gap: 12, alignItems: 'start', marginBottom: 60 }}>
                     {/* Left sidebar — templates 1-4 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'start' }}>
                         {(['quicktest', 'custom', 'compound', 'dca'] as TemplateType[]).map((key) => (
                             <div
                                 key={key}
@@ -508,12 +478,14 @@ export function ScheduleTask() {
                         {/* Compact form card */}
                         <div className="card" style={{
                             background: 'transparent',
+                            backdropFilter: 'none',
+                            WebkitBackdropFilter: 'none',
                             borderColor: 'rgba(250,128,114,0.50)',
                             borderWidth: 1,
                             maxWidth: 'none',
                             padding: 12,
                             boxShadow: '0 0 20px rgba(250,128,114,0.15), 0 0 40px rgba(250,128,114,0.08)',
-                            fontSize: '0.68rem',
+                            fontSize: '0.88rem',
                             position: 'relative',
                             overflow: 'hidden',
                         }}>
@@ -523,7 +495,7 @@ export function ScheduleTask() {
                                 background: 'linear-gradient(90deg, transparent, rgba(250,128,114,0.5), rgba(255,160,122,0.4), transparent)',
                             }} />
                             {/* Template Info */}
-                            <div className="template-info" style={{ marginBottom: 3, fontSize: '0.62rem' }}>
+                            <div className="template-info" style={{ marginBottom: 3, fontSize: '0.78rem' }}>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><TemplateIcon type={template} color={color} size={10} /> <strong>{tmpl.title}</strong></span> — {tmpl.description}
                             </div>
 
@@ -552,7 +524,7 @@ export function ScheduleTask() {
                                                     border: '1px solid rgba(6,182,212,0.10)',
                                                 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                        <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>Protocols</span>
+                                                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>Protocols</span>
                                                         {[
                                                             { name: 'xExchange', endpoints: ['claimRewards', 'swapTokensFixedInput', 'addLiquidity'], color: '#22c55e' },
                                                             { name: 'Hatom', endpoints: ['claimRewards', 'supply', 'withdraw'], color: '#6366f1' },
@@ -564,7 +536,7 @@ export function ScheduleTask() {
                                                                 <details style={{ position: 'relative' }}>
                                                                     <summary style={{
                                                                         cursor: 'pointer', padding: '3px 8px',
-                                                                        borderRadius: 4, fontSize: '0.68rem', fontWeight: 600,
+                                                                        borderRadius: 4, fontSize: '0.82rem', fontWeight: 600,
                                                                         background: `${proto.color}12`, color: proto.color,
                                                                         border: `1px solid ${proto.color}25`,
                                                                         listStyle: 'none', userSelect: 'none',
@@ -638,7 +610,7 @@ export function ScheduleTask() {
                                                     </label>
 
                                                     {argsList.length === 0 ? (
-                                                        <div style={{ textAlign: 'center', padding: '6px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-primary)', color: 'var(--text-muted)', fontSize: '0.65rem' }}>
+                                                        <div style={{ textAlign: 'center', padding: '6px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-primary)', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
                                                             No arguments required for this function.
                                                         </div>
                                                     ) : (
@@ -815,129 +787,47 @@ export function ScheduleTask() {
 
                                 </div>{/* end grid Schedule+Budget */}
 
-                                {/* Extras — collapsed by default */}
+                                {/* Extras — Keeper Advanced Features */}
                                 <details style={{ marginBottom: 4 }}>
-                                    <summary style={{ cursor: 'pointer', fontSize: '0.68rem', color: 'var(--text-muted)', padding: '4px 0', userSelect: 'none' }}>
-                                        ⚡ Price Condition · AI-Optimized
+                                    <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '4px 0', userSelect: 'none' }}>
+                                        ⚡ Advanced Keeper Features
                                     </summary>
-                                    <div className="form-section" style={{ marginBottom: 4, padding: 8, background: priceEnabled ? 'rgba(6,182,212,0.08)' : 'rgba(250,128,114,0.10)', borderRadius: 'var(--radius-md)', border: priceEnabled ? '1px solid rgba(6, 182, 212, 0.3)' : '1px solid rgba(250,128,114,0.35)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: priceEnabled ? 12 : 0 }}>
+
+                                    {/* Price Condition — Real keeper feature */}
+                                    <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(6,182,212,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(6,182,212,0.20)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-primary)' }}>🧬 Price Condition</span>
-                                                <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(6,182,212,0.12)', color: 'rgb(6,182,212)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hybrid</span>
-                                            </div>
-                                            <div
-                                                onClick={() => setPriceEnabled(!priceEnabled)}
-                                                style={{
-                                                    width: 40, height: 22, borderRadius: 11, cursor: 'pointer',
-                                                    background: priceEnabled ? 'rgb(6,182,212)' : 'var(--bg-secondary)',
-                                                    border: `1px solid ${priceEnabled ? 'rgb(6,182,212)' : 'var(--border-primary)'}`,
-                                                    position: 'relative', transition: 'all 0.2s',
-                                                }}
-                                            >
-                                                <div style={{
-                                                    width: 16, height: 16, borderRadius: '50%',
-                                                    background: priceEnabled ? '#fff' : 'var(--text-muted)',
-                                                    position: 'absolute', top: 2,
-                                                    left: priceEnabled ? 21 : 2,
-                                                    transition: 'all 0.2s',
-                                                }} />
+                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>🧬 Price Condition</span>
+                                                <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(6,182,212,0.15)', color: 'rgb(6,182,212)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Keeper</span>
                                             </div>
                                         </div>
-
-                                        {!priceEnabled && (
-                                            <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                                Enable to add a price condition. The keeper will check prices off-chain before executing (0 gas cost).
-                                            </small>
-                                        )}
-
-                                        {priceEnabled && (
-                                            <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
-                                                <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
-                                                    <label style={{ fontSize: '0.72rem' }}>Token</label>
-                                                    <CustomDropdown
-                                                        value={['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'].indexOf(priceToken)}
-                                                        onChange={(val) => setPriceToken(['EGLD', 'BTC', 'ETH', 'USDC', 'UTK'][val])}
-                                                        options={[
-                                                            { value: 0, label: 'EGLD' },
-                                                            { value: 1, label: 'BTC' },
-                                                            { value: 2, label: 'ETH' },
-                                                            { value: 3, label: 'USDC' },
-                                                            { value: 4, label: 'UTK' },
-                                                        ]}
-                                                    />
-                                                </div>
-                                                <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
-                                                    <label style={{ fontSize: '0.72rem' }}>Condition</label>
-                                                    <div className="segmented-control" style={{ height: 36 }}>
-                                                        <div
-                                                            className={`segmented-item ${priceCondition === 'above' ? 'active' : ''}`}
-                                                            onClick={() => setPriceCondition('above')}
-                                                            style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                                                        >
-                                                            ≥ Above
-                                                        </div>
-                                                        <div
-                                                            className={`segmented-item ${priceCondition === 'below' ? 'active' : ''}`}
-                                                            onClick={() => setPriceCondition('below')}
-                                                            style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                                                        >
-                                                            ≤ Below
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="form-group" style={{ flex: '1 1 120px', margin: 0 }}>
-                                                    <label style={{ fontSize: '0.72rem' }}>Price (USD)</label>
-                                                    <div style={{ position: 'relative' }}>
-                                                        <input
-                                                            type="text"
-                                                            inputMode="decimal"
-                                                            placeholder="50.00"
-                                                            value={priceThreshold}
-                                                            onChange={(e) => setPriceThreshold(e.target.value.replace(/,/g, '.'))}
-                                                            style={{ paddingRight: 30, fontSize: '0.85rem' }}
-                                                        />
-                                                        <span style={{ position: 'absolute', right: 10, top: 10, color: 'var(--text-muted)', fontSize: '0.75rem' }}>$</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {priceEnabled && priceThreshold && (
-                                            <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)', fontSize: '0.75rem', color: 'rgb(6,182,212)' }}>
-                                                🤖 Keeper will execute when <strong>{priceToken}</strong> is {priceCondition === 'above' ? '≥' : '≤'} <strong>${priceThreshold}</strong> USD — checked off-chain (0 gas)
-                                            </div>
-                                        )}
+                                        <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: 6, lineHeight: 1.5 }}>
+                                            The keeper checks <strong>EGLD price in real-time</strong> via MultiversX API before executing any task.
+                                            Configure via keeper env vars: <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_ENABLED=true</code>{' '}
+                                            <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_THRESHOLD=50</code>{' '}
+                                            <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_CONDITION=above</code>
+                                        </small>
+                                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(6,182,212,0.08)', fontSize: '0.75rem', color: 'rgb(6,182,212)' }}>
+                                            💡 The keeper will skip execution if the price condition is not met — 0 gas wasted.
+                                        </div>
                                     </div>
 
-                                    {/* Section: AI-Optimized Execution */}
-                                    <div className="form-section" style={{ marginBottom: 4, padding: 8, background: aiOptimized ? 'rgba(168,85,247,0.08)' : 'rgba(250,128,114,0.10)', borderRadius: 'var(--radius-md)', border: aiOptimized ? '1px solid rgba(168,85,247,0.3)' : '1px solid rgba(250,128,114,0.35)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: aiOptimized ? 8 : 0 }}>
+                                    {/* AI-Optimized — Real keeper feature */}
+                                    <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(168,85,247,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(168,85,247,0.20)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-primary)' }}>🤖 AI-Optimized</span>
-                                                <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(168,85,247,0.12)', color: 'rgb(168,85,247)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>NEW</span>
-                                            </div>
-                                            <div
-                                                onClick={() => setAiOptimized(!aiOptimized)}
-                                                style={{
-                                                    width: 40, height: 22, borderRadius: 11, cursor: 'pointer',
-                                                    background: aiOptimized ? 'rgb(168,85,247)' : 'var(--bg-secondary)',
-                                                    border: `1px solid ${aiOptimized ? 'rgb(168,85,247)' : 'var(--border-primary)'}`,
-                                                    position: 'relative', transition: 'all 0.2s',
-                                                }}
-                                            >
-                                                <div style={{
-                                                    width: 16, height: 16, borderRadius: '50%',
-                                                    background: '#fff', position: 'absolute', top: 2,
-                                                    left: aiOptimized ? 20 : 2, transition: 'left 0.2s',
-                                                }} />
+                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>🤖 AI-Optimized Execution</span>
+                                                <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(168,85,247,0.15)', color: 'rgb(168,85,247)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Keeper</span>
                                             </div>
                                         </div>
-                                        {aiOptimized && (
-                                            <div style={{ marginTop: 4, padding: '8px 10px', borderRadius: 6, background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.15)', fontSize: '0.75rem', color: 'rgb(168,85,247)', lineHeight: 1.5 }}>
-                                                ✨ Keeper AI will analyze market conditions (momentum, volatility, gas costs) and execute at the <strong>optimal moment</strong> within your schedule — no extra cost.
-                                            </div>
-                                        )}
+                                        <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: 6, lineHeight: 1.5 }}>
+                                            The keeper analyzes <strong>network conditions</strong> (round time, congestion) and delays execution when gas is expensive.
+                                            Auto-executes after 5 delays (anti-starvation). Prefers off-peak hours (UTC 02:00-06:00).
+                                            Enable: <code style={{ background: 'rgba(168,85,247,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_AI_OPTIMIZED=true</code>
+                                        </small>
+                                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(168,85,247,0.08)', fontSize: '0.75rem', color: 'rgb(168,85,247)' }}>
+                                            ✨ Saves gas by executing at optimal network moments — no extra cost for users.
+                                        </div>
                                     </div>
                                 </details>
 
@@ -1007,7 +897,7 @@ export function ScheduleTask() {
                     </div>
 
                     {/* Right sidebar — templates 5-7 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'start' }}>
                         {(['stoploss', 'claim', 'nftmint'] as TemplateType[]).map((key) => (
                             <div
                                 key={key}

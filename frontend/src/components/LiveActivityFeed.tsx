@@ -137,13 +137,13 @@ export function LiveActivityFeed() {
     // ── Styles ──
     const S = {
         root: {
-            background: 'linear-gradient(135deg, rgba(7,54,66,0.95), rgba(0,43,54,0.98))',
+            background: 'transparent',
             border: '1px solid rgba(0,255,180,0.2)',
             borderRadius: 12,
             overflow: 'hidden',
             fontFamily: "'Inter', 'SF Mono', monospace",
             boxShadow: '0 8px 32px rgba(0,255,120,0.08), 0 0 60px rgba(0,0,0,0.3)',
-            backdropFilter: 'blur(12px)',
+            backdropFilter: 'none',
             flex: 1,
             display: 'flex',
             flexDirection: 'column' as const,

@@ -410,93 +410,173 @@ export function MyTasks() {
                         )}
                     </div>
                 ) : (
-                    <div className="task-list">
-                        {filteredTasks.map((task) => (
-                            <div key={task.id} className="task-card" style={{ position: 'relative' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                    <span className="task-id"># {task.id}</span>
-                                    {task.isOwner && (
-                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                                            Owner
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="task-info">
-                                    <div className="task-target">
-                                        <span style={{ fontFamily: 'monospace', color: 'var(--accent-light)' }}>
-                                            {task.targetEndpoint}()
-                                        </span>
-                                    </div>
-                                    <div className="task-detail" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                                        <span title={task.targetContract} style={{ cursor: 'help' }}>
-                                            Target: {shortenAddress(task.targetContract)}
-                                        </span>
-                                        {!task.isOwner && (
-                                            <span title={task.owner} style={{ cursor: 'help' }}>
-                                                Owner: {shortenAddress(task.owner)}
-                                            </span>
-                                        )}
-                                        {task.triggerTime > 0 && (
-                                            <span style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                                {new Date(task.triggerTime * 1000).toLocaleString(undefined, {
-                                                    month: 'short', day: 'numeric',
-                                                    hour: '2-digit', minute: '2-digit'
-                                                })}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <span className={`badge ${STATUS_CLASS[task.status] || ''}`}>
-                                        {task.status}
-                                    </span>
-                                    {task.isOwner && (task.status === 'Pending' || task.status === 'Committed') && (
-                                        <button
-                                            className="btn btn-danger btn-sm"
-                                            onClick={() => handleCancel(task.id)}
-                                            disabled={cancelling === task.id}
-                                        >
-                                            {cancelling === task.id ? <span className="loading-spinner" /> : 'Cancel'}
-                                        </button>
-                                    )}
-                                </div>
+                    /* ── Scheduled Tasks Widget ── */
+                    <div className="card" style={{
+                        padding: 0, overflow: 'hidden', marginBottom: 20,
+                        border: '1px solid rgba(59,130,246,0.2)',
+                        boxShadow: '0 0 20px rgba(59,130,246,0.08)',
+                    }}>
+                        {/* Widget Header */}
+                        <div
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '12px 20px',
+                                background: 'rgba(59,130,246,0.06)',
+                                borderBottom: '1px solid rgba(59,130,246,0.15)',
+                                cursor: 'default',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" strokeWidth="2" strokeLinecap="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" />
+                                </svg>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                    Scheduled Tasks
+                                </span>
+                                <span style={{
+                                    padding: '2px 8px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 700,
+                                    background: 'rgba(59,130,246,0.15)', color: 'rgb(59,130,246)',
+                                }}>
+                                    {filteredTasks.length}
+                                </span>
                             </div>
-                        ))}
+                        </div>
+
+                        {/* Scrollable task list — 5 items visible (~70px each = 350px max) */}
+                        <div style={{
+                            maxHeight: 350, overflowY: 'auto',
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: 'rgba(59,130,246,0.3) transparent',
+                        }}>
+                            {filteredTasks.map((task, i) => (
+                                <div
+                                    key={task.id}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 14,
+                                        padding: '10px 20px',
+                                        borderBottom: i < filteredTasks.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                                        background: task.status === 'Pending' ? 'rgba(251,191,36,0.02)' :
+                                            task.status === 'Completed' ? 'rgba(34,197,94,0.02)' :
+                                                task.status === 'Failed' ? 'rgba(239,68,68,0.02)' : 'transparent',
+                                        transition: 'background 0.15s',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    {/* Task ID */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 44 }}>
+                                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'rgb(59,130,246)' }}>#{task.id}</span>
+                                        {task.isOwner && (
+                                            <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                Owner
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Task Info */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--accent-light)', fontFamily: 'monospace' }}>
+                                            {task.targetEndpoint}()
+                                        </div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 10, marginTop: 2 }}>
+                                            <span title={task.targetContract}>{shortenAddress(task.targetContract)}</span>
+                                            {task.triggerTime > 0 && (
+                                                <span style={{ color: 'var(--text-secondary)' }}>
+                                                    {new Date(task.triggerTime * 1000).toLocaleString(undefined, {
+                                                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Status + Cancel */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                                        <span className={`badge ${STATUS_CLASS[task.status] || ''}`} style={{ fontSize: '0.7rem', padding: '3px 8px' }}>
+                                            {task.status}
+                                        </span>
+                                        {task.isOwner && (task.status === 'Pending' || task.status === 'Committed') && (
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                onClick={() => handleCancel(task.id)}
+                                                disabled={cancelling === task.id}
+                                                style={{ padding: '3px 8px', fontSize: '0.65rem' }}
+                                            >
+                                                {cancelling === task.id ? <span className="loading-spinner" /> : '✕'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                {/* Execution History */}
+                {/* ── Execution History Widget ── */}
                 {execHistory.length > 0 && (
-                    <div style={{ marginTop: 40 }}>
-                        <TypewriterTitle text="Execution History" className="section-title" />
-                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div className="card" style={{
+                        padding: 0, overflow: 'hidden',
+                        border: '1px solid rgba(34,197,94,0.2)',
+                        boxShadow: '0 0 20px rgba(34,197,94,0.08)',
+                    }}>
+                        {/* Widget Header */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 20px',
+                            background: 'rgba(34,197,94,0.06)',
+                            borderBottom: '1px solid rgba(34,197,94,0.15)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2" strokeLinecap="round">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                    Execution History
+                                </span>
+                                <span style={{
+                                    padding: '2px 8px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 700,
+                                    background: 'rgba(34,197,94,0.15)', color: 'rgb(34,197,94)',
+                                }}>
+                                    {execHistory.length}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Scrollable history — 5 items visible */}
+                        <div style={{
+                            maxHeight: 320, overflowY: 'auto',
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: 'rgba(34,197,94,0.3) transparent',
+                        }}>
                             {execHistory.map((log, i) => (
                                 <div
                                     key={log.txHash}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: 14,
-                                        padding: '14px 20px',
+                                        padding: '10px 20px',
                                         borderBottom: i < execHistory.length - 1 ? '1px solid var(--border-primary)' : 'none',
-                                        background: log.status === 'success' ? 'rgba(34,197,94,0.03)' : 'rgba(239,68,68,0.03)',
+                                        background: log.status === 'success' ? 'rgba(34,197,94,0.02)' : 'rgba(239,68,68,0.02)',
+                                        transition: 'background 0.15s',
                                     }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                 >
                                     <div style={{
-                                        width: 32, height: 32, borderRadius: 8, display: 'flex',
+                                        width: 28, height: 28, borderRadius: 7, display: 'flex',
                                         alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                                         background: log.status === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
                                     }}>
                                         {log.status === 'success' ? (
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
                                         ) : (
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(239,68,68)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(239,68,68)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                                         )}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                                             Task {log.taskId}
                                         </div>
-                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: 10, marginTop: 2 }}>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 10, marginTop: 2 }}>
                                             <span>Keeper: {shortenAddress(log.sender)}</span>
                                             <span>{timeAgo(log.timestamp)}</span>
                                         </div>
@@ -505,7 +585,7 @@ export function MyTasks() {
                                         href={`${NETWORK.explorerUrl}/transactions/${log.txHash}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        style={{ color: 'var(--accent-light)', fontSize: '0.8rem', textDecoration: 'none', flexShrink: 0 }}
+                                        style={{ color: 'var(--accent-light)', fontSize: '0.75rem', textDecoration: 'none', flexShrink: 0 }}
                                     >
                                         View Tx →
                                     </a>

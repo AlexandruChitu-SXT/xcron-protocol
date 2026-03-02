@@ -245,11 +245,39 @@ export function ExploreTasks() {
                     </div>
                 </div>
 
-                {/* Execution History — shown above task list */}
+                {/* ── Recent Executions Widget ── */}
                 {displayHistory.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                        <TypewriterTitle text="Recent Executions" className="section-title" style={{ marginBottom: 12 }} />
-                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div className="card" style={{
+                        padding: 0, overflow: 'hidden', marginBottom: 16,
+                        border: '1px solid rgba(34,197,94,0.2)',
+                        boxShadow: '0 0 20px rgba(34,197,94,0.08)',
+                    }}>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 20px',
+                            background: 'rgba(34,197,94,0.06)',
+                            borderBottom: '1px solid rgba(34,197,94,0.15)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2" strokeLinecap="round">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                    Recent Executions
+                                </span>
+                                <span style={{
+                                    padding: '2px 8px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 700,
+                                    background: 'rgba(34,197,94,0.15)', color: 'rgb(34,197,94)',
+                                }}>
+                                    {displayHistory.length}
+                                </span>
+                            </div>
+                        </div>
+                        <div style={{
+                            maxHeight: 320, overflowY: 'auto',
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: 'rgba(34,197,94,0.3) transparent',
+                        }}>
                             {displayHistory.map((log, i) => (
                                 <div
                                     key={log.txHash}
@@ -257,8 +285,10 @@ export function ExploreTasks() {
                                         display: 'flex', alignItems: 'center', gap: 12,
                                         padding: '10px 16px',
                                         borderBottom: i < displayHistory.length - 1 ? '1px solid var(--border-primary)' : 'none',
-                                        background: log.status === 'success' ? 'rgba(34,197,94,0.03)' : 'rgba(239,68,68,0.03)',
+                                        transition: 'background 0.15s',
                                     }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                 >
                                     <div style={{
                                         width: 28, height: 28, borderRadius: 6, display: 'flex',
@@ -314,7 +344,7 @@ export function ExploreTasks() {
                     </button>
                 </div>
 
-                {/* Task List */}
+                {/* ── All Tasks Widget ── */}
                 {loading ? (
                     <div className="empty-state">
                         <span className="loading-spinner" style={{ width: 32, height: 32 }} />
@@ -335,55 +365,87 @@ export function ExploreTasks() {
                         <p>No tasks found{statusFilter !== 'all' ? ` with status "${statusFilter}"` : ''}</p>
                     </div>
                 ) : (
-                    <div className="task-list">
-                        {filteredDisplay.map(task => (
-                            <div key={task.id} className="task-card">
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                    <span className="task-id"># {task.id}</span>
-                                </div>
-                                <div className="task-info">
-                                    <div className="task-target">
-                                        <span style={{ fontFamily: 'monospace', color: 'var(--accent-light)' }}>
-                                            {task.targetEndpoint}()
-                                        </span>
-                                    </div>
-                                    <div className="task-detail" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
-                                        <span title={task.targetContract} style={{ cursor: 'help' }}>
-                                            Target: {shortenAddress(task.targetContract)}
-                                        </span>
-                                        <span title={task.owner} style={{ cursor: 'help' }}>
-                                            Owner: {shortenAddress(task.owner)}
-                                        </span>
-                                        {task.deposit !== '0' && (
-                                            <span style={{ color: 'var(--accent-light)' }}>
-                                                {formatEgld(task.deposit, 4)} EGLD
-                                            </span>
-                                        )}
-                                        {task.triggerTime > 0 && (
-                                            <span style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                                                {new Date(task.triggerTime * 1000).toLocaleString(undefined, {
-                                                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                })}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <span className={`badge ${STATUS_CLASS[task.status] || ''}`}>
-                                        {task.status}
-                                    </span>
-                                    <a
-                                        href={`${NETWORK.explorerUrl}/accounts/${task.targetContract}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{ color: 'var(--accent-light)', fontSize: '0.75rem', textDecoration: 'none' }}
-                                    >
-                                        Explorer →
-                                    </a>
-                                </div>
+                    <div className="card" style={{
+                        padding: 0, overflow: 'hidden',
+                        border: '1px solid rgba(59,130,246,0.2)',
+                        boxShadow: '0 0 20px rgba(59,130,246,0.08)',
+                    }}>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 20px',
+                            background: 'rgba(59,130,246,0.06)',
+                            borderBottom: '1px solid rgba(59,130,246,0.15)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" strokeWidth="2" strokeLinecap="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" />
+                                </svg>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                    All Tasks
+                                </span>
+                                <span style={{
+                                    padding: '2px 8px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 700,
+                                    background: 'rgba(59,130,246,0.15)', color: 'rgb(59,130,246)',
+                                }}>
+                                    {filteredDisplay.length}
+                                </span>
                             </div>
-                        ))}
+                        </div>
+                        <div style={{
+                            maxHeight: 400, overflowY: 'auto',
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: 'rgba(59,130,246,0.3) transparent',
+                        }}>
+                            {filteredDisplay.map((task, i) => (
+                                <div
+                                    key={task.id}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 14,
+                                        padding: '10px 20px',
+                                        borderBottom: i < filteredDisplay.length - 1 ? '1px solid var(--border-primary)' : 'none',
+                                        transition: 'background 0.15s',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 44 }}>
+                                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'rgb(59,130,246)' }}>#{task.id}</span>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--accent-light)', fontFamily: 'monospace' }}>
+                                            {task.targetEndpoint}()
+                                        </div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 10, marginTop: 2, flexWrap: 'wrap' }}>
+                                            <span title={task.targetContract}>{shortenAddress(task.targetContract)}</span>
+                                            <span title={task.owner}>Owner: {shortenAddress(task.owner)}</span>
+                                            {task.deposit !== '0' && (
+                                                <span style={{ color: 'var(--accent-light)' }}>{formatEgld(task.deposit, 4)} EGLD</span>
+                                            )}
+                                            {task.triggerTime > 0 && (
+                                                <span style={{ color: 'var(--text-secondary)' }}>
+                                                    {new Date(task.triggerTime * 1000).toLocaleString(undefined, {
+                                                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                                        <span className={`badge ${STATUS_CLASS[task.status] || ''}`} style={{ fontSize: '0.7rem', padding: '3px 8px' }}>
+                                            {task.status}
+                                        </span>
+                                        <a
+                                            href={`${NETWORK.explorerUrl}/accounts/${task.targetContract}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ color: 'var(--accent-light)', fontSize: '0.72rem', textDecoration: 'none' }}
+                                        >
+                                            →
+                                        </a>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 

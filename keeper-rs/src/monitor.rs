@@ -210,8 +210,8 @@ impl TaskMonitor {
 
         // 4. Execute ONLY the first ripe task per cycle (avoids nonce conflicts)
         if let Some(&task_id) = ripe_ids.first() {
-            // ── Price Condition check ──
-            if !self.price_checker.should_execute(&self.price_condition).await {
+            // ── Price Condition check (per-task → fallback to global) ──
+            if !self.price_checker.should_execute_task(task_id, &self.price_condition).await {
                 debug!("Task #{} skipped: price condition not met", task_id);
                 return;
             }

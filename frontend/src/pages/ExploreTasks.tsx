@@ -61,9 +61,26 @@ export function ExploreTasks() {
 
     async function loadTasks(_silent = false) {
         try {
-            const nonceRes = await query(CONTRACTS.scheduler, 'getTaskNonce');
+            // Use direct contract queries for reliable stats (same approach as Stats page)
+            const [nonceRes, metricsRes] = await Promise.all([
+                query(CONTRACTS.scheduler, 'getTaskNonce'),
+                query(CONTRACTS.scheduler, 'getSecurityMetrics'),
+            ]);
             const totalTasks = nonceRes.length > 0 ? bufferToNumber(nonceRes[0]) : 0;
+            const totalExecuted = metricsRes.length > 0 ? bufferToNumber(metricsRes[0]) : 0;
+            const totalFailed = metricsRes.length > 1 ? bufferToNumber(metricsRes[1]) : 0;
+            const pendingCount = metricsRes.length > 2 ? bufferToNumber(metricsRes[2]) : 0;
 
+            // Set stats from direct queries (always accurate)
+            setStats({
+                total: totalTasks,
+                lifetime: totalTasks,
+                active: pendingCount,
+                completed: totalExecuted,
+                failed: totalFailed,
+            });
+
+            // Best-effort: try to parse individual tasks for the list display
             const taskList: TaskInfo[] = [];
             for (let i = 1; i <= totalTasks; i++) {
                 try {
@@ -80,12 +97,6 @@ export function ExploreTasks() {
 
             taskList.sort((a, b) => b.id - a.id);
             setTasks(taskList);
-
-            // Calculate stats
-            const active = taskList.filter(t => t.status === 'Pending' || t.status === 'Committed').length;
-            const completed = taskList.filter(t => t.status === 'Completed').length;
-            const failed = taskList.filter(t => t.status === 'Failed').length;
-            setStats({ total: taskList.length, lifetime: totalTasks, active, completed, failed });
         } catch (err) {
             devError('Failed to load tasks:', err);
         }

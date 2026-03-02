@@ -20,6 +20,7 @@ interface ProtocolStats {
     protocolFeeBps: number;
     totalSuccessful: number;
     totalFailed: number;
+    pendingCount: number;
 }
 
 export function Dashboard() {
@@ -32,6 +33,7 @@ export function Dashboard() {
         protocolFeeBps: 0,
         totalSuccessful: 0,
         totalFailed: 0,
+        pendingCount: 0,
     });
     const [txStats, setTxStats] = useState({ lifetime: 0, daily: 0 });
     const [protocolBalance, setProtocolBalance] = useState('0');
@@ -56,6 +58,7 @@ export function Dashboard() {
             // getSecurityMetrics returns MultiValue3<u64, u64, usize> = (totalExecuted, totalFailed, pendingCount)
             const totalSuccessful = metricsRes.length > 0 ? bufferToNumber(metricsRes[0]) : 0;
             const totalFailed = metricsRes.length > 1 ? bufferToNumber(metricsRes[1]) : 0;
+            const pendingCount = metricsRes.length > 2 ? bufferToNumber(metricsRes[2]) : 0;
 
             setStats({
                 totalTasks: nonceRes.length > 0 ? bufferToNumber(nonceRes[0]) : 0,
@@ -64,6 +67,7 @@ export function Dashboard() {
                 protocolFeeBps: feeRes.length > 0 ? bufferToNumber(feeRes[0]) : 0,
                 totalSuccessful,
                 totalFailed,
+                pendingCount,
             });
 
             // Use on-chain metrics for tx stats (API /transactions/count times out on testnet)
@@ -124,8 +128,8 @@ export function Dashboard() {
                         <LeftSidePanel data={{
                             successRate,
                             totalExecs,
-                            pendingTasks: Math.max(0, stats.totalTasks - stats.totalSuccessful - stats.totalFailed),
-                            completedTasks: stats.totalSuccessful + stats.totalFailed,
+                            pendingTasks: stats.pendingCount,
+                            completedTasks: stats.totalSuccessful,
                             totalTasks: stats.totalTasks,
                             protocolBalance,
                             balanceLoading: loading,

@@ -4,11 +4,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Testnet](https://img.shields.io/badge/MultiversX-Testnet-00e5ff)](https://testnet-explorer.multiversx.com)
 
-**Decentralized Task Automation on MultiversX**
+**Agentic Automation Protocol on MultiversX**
 
-XCron is a trustless cron-job scheduler that lets anyone automate on-chain actions — token swaps, DeFi harvests, governance votes, NFT mints — by posting tasks to a smart contract. A decentralized keeper network executes those tasks on time, earning rewards for reliable service.
+XCron is a trustless coordination layer for autonomous agents on MultiversX. Users and AI agents schedule on-chain actions — DeFi harvests, token swaps, governance votes, price-triggered trades — and a decentralized keeper network executes them on time, earning rewards for reliable service. Built for Supernova's sub-second finality.
 
-> **Status:** Testnet Live · 27 Tasks Scheduled · 4 Executions · 100% Success Rate
+> **Status:** Testnet Live · Supernova-Ready · 100% On-Chain Data
 >
 > 🌐 **Live Demo:** [xcron.io](https://xcron.io) · [mvxcron.com](https://mvxcron.com)
 
@@ -16,11 +16,12 @@ XCron is a trustless cron-job scheduler that lets anyone automate on-chain actio
 
 ## What It Does
 
-You tell XCron _what_ to execute and _when_. The protocol handles the rest.
+You tell XCron _what_ to execute and _when_. Autonomous keepers handle the rest.
 
 - **"Claim my staking rewards every day"** → XCron does it automatically
 - **"Swap EGLD to USDC if price drops below $3.50"** → On-chain oracle price triggers
 - **"Auto-compound my DeFi position weekly"** → Set and forget
+- **AI agents schedule tasks via SDK** → Agentic commerce on MultiversX
 
 No servers needed. No cron jobs. Fully on-chain, trustless, and decentralized.
 

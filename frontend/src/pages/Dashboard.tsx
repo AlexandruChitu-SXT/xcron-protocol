@@ -97,8 +97,8 @@ export function Dashboard() {
             {/* Hero Title — above logo, centered */}
             <div className="app-container">
                 <div className="hero-section" style={{ paddingBottom: 0 }}>
-                    <TypewriterTitle as="h1" text="Decentralized Task Automation" speed={75} />
-                    <TypewriterTitle as="p" className="hero-sub" text="The automation layer for MultiversX. Schedule smart contract executions and let decentralized keepers handle the rest." speed={25} style={{ marginBottom: 8 }} />
+                    <TypewriterTitle as="h1" text="Agentic Automation Protocol" speed={75} />
+                    <TypewriterTitle as="p" className="hero-sub" text="The coordination layer for autonomous agents on MultiversX. Schedule on-chain actions, let decentralized keepers execute them trustlessly." speed={25} style={{ marginBottom: 8 }} />
                     <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 0, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-glass)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-primary)' }}>
                             <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }} />

@@ -95,3 +95,20 @@
 - Alexandru debe contestarle demostrando que XCron *ya* está diseñado para aprovechar esto. (Ej. "Con bloques de <300ms, los Keepers de XCron pueden validar y ejecutar tareas encadenadas casi en tiempo real (ej. flashloans o arbitrajes que dependen de 1 bloque). No es solo auto-compounding, es alta frecuencia on-chain manejada por IA").
 
 ---
+
+## Mihai Eremia 🔥🛠 (@mihaieremia) — XOXNO
+
+**Quién es:** Fundador de XOXNO.com — el marketplace NFT más grande de MultiversX. Multiverse* y MultiversX Foundation. 3,400+ posts, 20K views.
+
+**Tweet 2 mar 2026:**
+> "Most probably this will be the next step for @XoxnoNetwork too on @MultiversX. There is no point keeping the entire infrastructure for the NFT Marketplace, Launchpad, and NFT Staking just for $5 per day in revenue. I think everything will be more streamlined and cost-efficient if we keep only DeFi (Lending/Liquid Staking). I'll think about it until the end of March since this month is fully focused on Supernova anyway."
+
+**Análisis:**
+- XOXNO simplifica: quita NFT marketplace/launchpad/staking, se queda solo con DeFi (Lending/Liquid Staking)
+- Decisión racional: $5/día no justifica la infraestructura
+- **Oportunidad para XCron:** DeFi ops (lending claims, staking harvests, auto-compound) son exactamente lo que XCron automatiza
+- Mihai está enfocado en Supernova este mes — timing perfecto para XCron
+
+**Respuesta sugerida:** Ver opciones en la conversación principal.
+
+**Estado:** Pendiente de respuesta de Alexandru.

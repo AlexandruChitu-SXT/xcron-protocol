@@ -20,7 +20,7 @@ export function KeeperPanel() {
     const { wallet, setShowConnectModal, signAndSendTransaction, addToast } = useWallet();
     const { query } = useContractQuery();
     const [stats, setStats] = useState<KeeperStats | null>(null);
-    const [globalStats, setGlobalStats] = useState({ totalKeepers: 0, minStake: '0' });
+    const [globalStats, setGlobalStats] = useState({ totalKeepers: 0, minStake: '0', protocolFeeBps: 3000 });
     const [loading, setLoading] = useState(true);
     const [stakeAmount, setStakeAmount] = useState('1');
 
@@ -31,14 +31,16 @@ export function KeeperPanel() {
     async function loadData() {
         setLoading(true);
         try {
-            const [keeperCountRes, minStakeRes] = await Promise.all([
+            const [keeperCountRes, minStakeRes, feeRes] = await Promise.all([
                 query(CONTRACTS.keeperRegistry, 'getActiveKeeperCount'),
                 query(CONTRACTS.keeperRegistry, 'getMinStake'),
+                query(CONTRACTS.scheduler, 'getProtocolFeeBps'),
             ]);
 
             setGlobalStats({
                 totalKeepers: keeperCountRes.length > 0 ? bufferToNumber(keeperCountRes[0]) : 0,
                 minStake: minStakeRes.length > 0 ? bufferToBigInt(minStakeRes[0]) : '1000000000000000000',
+                protocolFeeBps: feeRes.length > 0 ? bufferToNumber(feeRes[0]) : 3000,
             });
 
             if (wallet.connected) {
@@ -242,12 +244,12 @@ export function KeeperPanel() {
                         </div>
                         <div className="stat-card" style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', boxShadow: '0 0 25px rgba(34,197,94,0.2)' }}>
                             <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Protocol Fee</div>
-                            <div className="stat-value">{loading ? '—' : `${(3000 / 100).toFixed(0)}%`}</div>
-                            <div className="stat-sub">Keeper earns 70%</div>
+                            <div className="stat-value">{loading ? '—' : `${(globalStats.protocolFeeBps / 100).toFixed(0)}%`}</div>
+                            <div className="stat-sub">Keeper earns {100 - globalStats.protocolFeeBps / 100}%</div>
                         </div>
                         <div className="stat-card" style={{ background: 'rgba(6,182,212,0.08)', borderColor: 'rgba(6,182,212,0.2)', boxShadow: '0 0 25px rgba(6,182,212,0.2)' }}>
                             <div className="stat-label" style={{ color: 'rgb(6,182,212)' }}>Keeper Share</div>
-                            <div className="stat-value" style={{ color: 'var(--success)' }}>70%</div>
+                            <div className="stat-value" style={{ color: 'var(--success)' }}>{100 - globalStats.protocolFeeBps / 100}%</div>
                             <div className="stat-sub">Per execution reward</div>
                         </div>
                     </div>

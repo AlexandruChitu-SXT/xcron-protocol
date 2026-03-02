@@ -279,23 +279,32 @@ impl TaskMonitor {
             .await
             .map_err(|e| format!("JSON parse error: {}", e))?;
 
-        // Parse response: {"data": {"data": {"returnData": ["1f"], ...}}}
-        let return_data = data["data"]["data"]["returnData"]
-            .as_array()
-            .ok_or("No returnData")?;
+        // Check for VM-level errors first
+        let inner = &data["data"]["data"];
+        let return_code = inner["returnCode"].as_str().unwrap_or("");
+        if return_code != "ok" && !return_code.is_empty() {
+            let msg = inner["returnMessage"].as_str().unwrap_or("unknown");
+            return Err(format!("VM query failed: {} — {}", return_code, msg));
+        }
+
+        // Parse response: {"data": {"data": {"returnData": ["base64..."], ...}}}
+        let return_data = match inner["returnData"].as_array() {
+            Some(arr) => arr,
+            None => return Ok(0), // null returnData = no tasks yet
+        };
 
         if return_data.is_empty() {
             return Ok(0);
         }
 
-        let hex_val = return_data[0]
+        let b64_val = return_data[0]
             .as_str()
             .ok_or("returnData[0] not string")?;
 
-        // Decode base64 to hex
+        // Decode base64 to bytes
         let bytes = base64::Engine::decode(
             &base64::engine::general_purpose::STANDARD,
-            hex_val,
+            b64_val,
         ).map_err(|e| format!("base64 decode: {}", e))?;
 
         let nonce = bytes.iter().fold(0u64, |acc, &b| (acc << 8) | b as u64);
@@ -331,9 +340,19 @@ impl TaskMonitor {
             .await
             .map_err(|e| format!("JSON parse error: {}", e))?;
 
-        let return_data = data["data"]["data"]["returnData"]
-            .as_array()
-            .ok_or("No returnData")?;
+        // Check for VM-level errors (expired tasks, storage errors, etc.)
+        let inner = &data["data"]["data"];
+        let return_code = inner["returnCode"].as_str().unwrap_or("");
+        if return_code != "ok" && !return_code.is_empty() {
+            debug!("Task #{}: VM returned '{}' — treating as empty",
+                task_id, return_code);
+            return Ok(None);
+        }
+
+        let return_data = match inner["returnData"].as_array() {
+            Some(arr) => arr,
+            None => return Ok(None),
+        };
 
         if return_data.is_empty() {
             return Ok(None);
@@ -357,52 +376,127 @@ impl TaskMonitor {
         Ok(Some(task))
     }
 
-    /// Parse task bytes from the ABI-encoded struct.
-    /// This is a simplified parser that extracts trigger_time and status.
+    /// Parse task bytes from the ABI NestedEncode format.
+    ///
+    /// Task struct layout (MultiversX nested encoding):
+    /// - id: u64 (8 bytes)
+    /// - owner: 32 bytes (ManagedAddress)
+    /// - target_contract: 32 bytes (ManagedAddress)
+    /// - target_endpoint: 4 bytes len + data (ManagedBuffer)
+    /// - target_args: 4 bytes count + each arg: 4 bytes len + data (ManagedVec<ManagedBuffer>)
+    /// - trigger: 1 byte discriminant + fields (Trigger enum)
+    ///   - 0 (TimeOnce):      target_time u64 (8 bytes)
+    ///   - 1 (TimeRecurring): start_time u64 + interval u64 + remaining u64
+    ///   - 2 (ConditionOnChain): complex, skip
+    /// - max_gas: u64 (8 bytes)
+    /// - deposit: 4 bytes len + data (BigUint)
+    /// - max_retries: u8 (1 byte)
+    /// - retry_count: u8 (1 byte)
+    /// - ttl_seconds: u64 (8 bytes)
+    /// - created_at: u64 (8 bytes)
+    /// - status: 1 byte discriminant (TaskStatus enum: 0=Pending, 3=Completed, etc.)
     fn parse_task_bytes(&self, task_id: u64, bytes: &[u8]) -> Result<MonitoredTask, String> {
-        if bytes.len() < 50 {
+        let len = bytes.len();
+        if len < 50 {
             return Err("Task bytes too short".into());
         }
 
-        // The task struct layout (simplified):
-        // - owner: 32 bytes (address)
-        // - target_contract: 32 bytes (address)
-        // - endpoint_len: 4 bytes + endpoint bytes
-        // - args: variable
-        // - trigger (enum): variable — contains target_time (8 bytes)
-        // - max_gas: 8 bytes
-        // - deposit: variable (BigUint)
-        // etc.
-        //
-        // For now, we search for the timestamp pattern in the bytes.
-        // A proper implementation would use the full ABI decoder.
+        let mut pos: usize = 0;
 
-        // Quick approach: scan for a reasonable timestamp (2025-2027 range)
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        // Helper to read safely
+        let read_u64 = |p: &mut usize| -> Result<u64, String> {
+            if *p + 8 > len { return Err("truncated u64".into()); }
+            let val = u64::from_be_bytes(bytes[*p..*p+8].try_into().unwrap());
+            *p += 8;
+            Ok(val)
+        };
+        let read_u32 = |p: &mut usize| -> Result<u32, String> {
+            if *p + 4 > len { return Err("truncated u32".into()); }
+            let val = u32::from_be_bytes(bytes[*p..*p+4].try_into().unwrap());
+            *p += 4;
+            Ok(val)
+        };
+        let read_u8 = |p: &mut usize| -> Result<u8, String> {
+            if *p >= len { return Err("truncated u8".into()); }
+            let val = bytes[*p];
+            *p += 1;
+            Ok(val)
+        };
 
-        let min_ts = now - 86400 * 365; // 1 year ago
-        let max_ts = now + 86400 * 365; // 1 year from now
+        // 1. id: u64
+        let _id = read_u64(&mut pos)?;
 
-        let mut trigger_time: u64 = 0;
+        // 2. owner: 32 bytes
+        if pos + 32 > len { return Err("truncated owner".into()); }
+        pos += 32;
 
-        // Search for 8-byte sequences that look like timestamps
-        for i in 0..bytes.len().saturating_sub(7) {
-            let candidate = u64::from_be_bytes([
-                bytes[i], bytes[i+1], bytes[i+2], bytes[i+3],
-                bytes[i+4], bytes[i+5], bytes[i+6], bytes[i+7],
-            ]);
-            if candidate >= min_ts && candidate <= max_ts {
-                trigger_time = candidate;
-                break;
+        // 3. target_contract: 32 bytes
+        if pos + 32 > len { return Err("truncated target".into()); }
+        pos += 32;
+
+        // 4. target_endpoint: 4 bytes len + data
+        let ep_len = read_u32(&mut pos)? as usize;
+        if pos + ep_len > len { return Err("truncated endpoint".into()); }
+        pos += ep_len;
+
+        // 5. target_args: 4 bytes count + each: 4 bytes len + data
+        let args_count = read_u32(&mut pos)? as usize;
+        for _ in 0..args_count {
+            let arg_len = read_u32(&mut pos)? as usize;
+            if pos + arg_len > len { return Err("truncated arg".into()); }
+            pos += arg_len;
+        }
+
+        // 6. trigger: 1 byte discriminant + fields
+        let trigger_disc = read_u8(&mut pos)?;
+        let trigger_time: u64;
+        match trigger_disc {
+            0 => {
+                // TimeOnce { target_time: u64 }
+                trigger_time = read_u64(&mut pos)?;
+            }
+            1 => {
+                // TimeRecurring { start_time: u64, interval: u64, remaining_execs: u64 }
+                trigger_time = read_u64(&mut pos)?; // start_time
+                let _interval = read_u64(&mut pos)?;
+                let _remaining = read_u64(&mut pos)?;
+            }
+            _ => {
+                // ConditionOnChain or unknown — we can't parse precisely, use 0
+                trigger_time = 0;
+                // Skip to status via scanning — we know status is near the end
+                // For now, try best-effort
+                debug!("Task #{}: unknown trigger type {}, skipping", task_id, trigger_disc);
+                return Ok(MonitoredTask { id: task_id, trigger_time: 0, status: 255 });
             }
         }
 
-        // Status is typically near the end of the struct
-        // For now, assume Pending (0) unless we can find it
-        let status = 0u8;
+        // 7. max_gas: u64
+        let _max_gas = read_u64(&mut pos)?;
+
+        // 8. deposit: BigUint = 4 bytes len + data
+        let dep_len = read_u32(&mut pos)? as usize;
+        if pos + dep_len > len { return Err("truncated deposit".into()); }
+        pos += dep_len;
+
+        // 9. max_retries: u8
+        let _max_retries = read_u8(&mut pos)?;
+
+        // 10. retry_count: u8
+        let _retry_count = read_u8(&mut pos)?;
+
+        // 11. ttl_seconds: u64
+        let _ttl = read_u64(&mut pos)?;
+
+        // 12. created_at: u64
+        let _created_at = read_u64(&mut pos)?;
+
+        // 13. status: 1 byte discriminant
+        //     0=Pending, 1=Committed, 2=Executing, 3=Completed, 4=Failed, 5=Cancelled, 6=Expired
+        let status = read_u8(&mut pos)?;
+
+        debug!("Task #{}: trigger_time={}, status={} (pos={}/{})",
+            task_id, trigger_time, status, pos, len);
 
         Ok(MonitoredTask {
             id: task_id,

@@ -194,7 +194,7 @@ const protocolStateProvider: ElizaProvider = {
 // ─── Plugin Export ───────────────────────────────────────────────────
 
 export const xcronPlugin: ElizaPlugin = {
-    name: "xcron-protocol",
+    name: "xcron-sdk",
     description: "XCron Protocol — Decentralized task automation on MultiversX. Schedule, cancel, and monitor automated smart contract calls via chat.",
     actions: [
         scheduleTaskAction,

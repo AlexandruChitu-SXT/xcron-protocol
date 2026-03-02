@@ -1,6 +1,6 @@
 # SDK Reference
 
-Full API reference for `@xcron-protocol/sdk`.
+Full API reference for `xcron-sdk`.
 
 ## `XCronClient`
 

@@ -5,13 +5,13 @@ Integrate XCron Protocol into your dApp in under 5 minutes.
 ## 1. Install the SDK
 
 ```bash
-npm install @xcron-protocol/sdk @multiversx/sdk-core
+npm install xcron-sdk @multiversx/sdk-core
 ```
 
 ## 2. Initialize the Client
 
 ```typescript
-import { XCronClient } from "@xcron-protocol/sdk";
+import { XCronClient } from "xcron-sdk";
 
 const xcron = new XCronClient("testnet"); // or "mainnet"
 ```

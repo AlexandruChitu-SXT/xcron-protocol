@@ -1,12 +1,12 @@
 /**
- * xcron-protocol
+ * xcron-sdk
  *
  * SDK for integrating with XCron Protocol — Decentralized Task Automation on MultiversX.
  * Works with AI agents (ElizaOS, ChatGPT, Gemini, Claude).
  *
  * @example
  * ```typescript
- * import { XCronClient, autoCompoundXExchange } from "xcron-protocol";
+ * import { XCronClient, autoCompoundXExchange } from "xcron-sdk";
  *
  * const xcron = new XCronClient("testnet");
  *
@@ -20,7 +20,7 @@
  *
  * @example ElizaOS AI Agent
  * ```typescript
- * import { xcronPlugin } from "xcron-protocol/eliza-plugin";
+ * import { xcronPlugin } from "xcron-sdk/eliza-plugin";
  * // Add to your ElizaOS agent character config
  * ```
  */

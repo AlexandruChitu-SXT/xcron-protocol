@@ -10,6 +10,7 @@ import { XPortalClaimer } from "./xportal_claim";
 import { AIEvaluator } from "./ai_evaluator";
 import { CommitRevealManager } from "./commit_reveal";
 import { KeeperDashboard } from "./dashboard";
+import { RelayerService } from "./relayer";
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -95,6 +96,17 @@ async function main(): Promise<void> {
         tracked: monitor.getTrackedCount(),
     }));
     dashboard.start(3300);
+
+    // 4b. Initialize Relayed V3 gasless service
+    const relayer = new RelayerService(
+        signer,
+        keeperAddress,
+        networkClient,
+        logger,
+        config.contracts.scheduler
+    );
+    dashboard.setRelayer(relayer);
+    logger.info("Main", "🔄 Relayed V3: ENABLED (POST /relay on dashboard port)");
 
     // 5. Initialize xPortal XP Auto-Claimer (if enabled)
     let xportalClaimer: XPortalClaimer | null = null;

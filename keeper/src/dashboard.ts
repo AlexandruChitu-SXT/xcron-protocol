@@ -1,5 +1,6 @@
 import * as http from "http";
 import { HealthTracker, HealthMetrics } from "./logger";
+import { RelayerService } from "./relayer";
 
 /**
  * KeeperDashboard — Lightweight HTTP server for keeper monitoring.
@@ -15,6 +16,7 @@ export class KeeperDashboard {
     private server: http.Server | null = null;
     private healthTracker: HealthTracker;
     private getTaskCounts: () => { pending: number; tracked: number };
+    private relayer?: RelayerService;
 
     constructor(
         healthTracker: HealthTracker,
@@ -24,15 +26,33 @@ export class KeeperDashboard {
         this.getTaskCounts = getTaskCounts;
     }
 
+    setRelayer(relayer: RelayerService): void {
+        this.relayer = relayer;
+    }
+
     start(port: number = 3300): void {
         this.server = http.createServer((req, res) => {
             const url = req.url || "/";
+            const method = req.method || "GET";
+
+            // CORS headers for relay endpoint
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+            if (method === "OPTIONS") {
+                res.writeHead(204);
+                return res.end();
+            }
 
             if (url === "/health") {
                 return this.handleHealth(res);
             }
             if (url === "/metrics") {
                 return this.handleMetrics(res);
+            }
+            if (url === "/relay" && method === "POST") {
+                return this.handleRelay(req, res);
             }
             return this.handleDashboard(res);
         });
@@ -77,6 +97,39 @@ export class KeeperDashboard {
     private handleMetrics(res: http.ServerResponse): void {
         res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
         res.end(JSON.stringify(this.getMetricsData(), null, 2));
+    }
+
+    /**
+     * POST /relay — Relayed V3 gasless transactions.
+     * Accepts a user-signed transaction JSON, adds relayer signature, broadcasts.
+     */
+    private handleRelay(req: http.IncomingMessage, res: http.ServerResponse): void {
+        if (!this.relayer) {
+            res.writeHead(503, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: false, error: "Relayer service not configured" }));
+            return;
+        }
+
+        let body = "";
+        req.on("data", (chunk) => { body += chunk; });
+        req.on("end", async () => {
+            try {
+                const request = JSON.parse(body);
+                if (!request.transaction) {
+                    res.writeHead(400, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify({ success: false, error: "Missing 'transaction' field" }));
+                    return;
+                }
+
+                const result = await this.relayer!.relay(request);
+                const statusCode = result.success ? 200 : 400;
+                res.writeHead(statusCode, { "Content-Type": "application/json" });
+                res.end(JSON.stringify(result));
+            } catch (err: any) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ success: false, error: `Invalid request: ${err.message}` }));
+            }
+        });
     }
 
     private handleDashboard(res: http.ServerResponse): void {

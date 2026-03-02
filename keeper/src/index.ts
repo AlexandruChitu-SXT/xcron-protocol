@@ -225,6 +225,13 @@ async function main(): Promise<void> {
                         logger.error("Main", `xPortal claim check error: ${err.message}`);
                     }
                 }
+
+                // M-3: Auto-flush protocol fees to Rewards contract
+                try {
+                    await executor.flushProtocolFees();
+                } catch (err: any) {
+                    logger.error("Main", `Fee flush error (non-critical): ${err.message}`);
+                }
             }
         } catch (err: any) {
             logger.error("Main", `Error in cycle ${health.cycleCount}: ${err.message}`);

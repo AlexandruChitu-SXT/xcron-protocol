@@ -396,6 +396,81 @@ export class Executor {
         }
     }
 
+    /**
+     * M-3 Fix: Flush accrued protocol fees to the Rewards contract.
+     *
+     * Protocol fees accumulate in the scheduler during execution callbacks
+     * (because transfer_execute inside a callback can't invoke SC endpoints).
+     * This method sends them to the Rewards contract by calling flushProtocolFees.
+     *
+     * Called periodically from the main keeper loop (every HEALTH_INTERVAL cycles).
+     */
+    async flushProtocolFees(): Promise<{ flushed: boolean; error?: string }> {
+        try {
+            // First, check if there are any accrued fees (gas-free query)
+            const result = await this.networkClient.queryContract(
+                this.contracts.scheduler,
+                "getAccruedProtocolFees",
+                [],
+            );
+
+            // Parse the result — if empty or zero, skip
+            if (!result || result.length === 0 || !result[0] || result[0].length === 0) {
+                return { flushed: false }; // No fees to flush
+            }
+
+            // Check if the value is > 0
+            const feesHex = Buffer.from(result[0]).toString("hex");
+            const feesValue = BigInt("0x" + (feesHex || "0"));
+            if (feesValue === 0n) {
+                return { flushed: false }; // Zero fees
+            }
+
+            const feesEgld = Number(feesValue) / 1e18;
+            this.log(`💰 Accrued protocol fees: ${feesEgld.toFixed(6)} EGLD — flushing to Rewards contract...`);
+
+            // Build and send flushProtocolFees transaction
+            const currentNonce = await this.networkClient.getAccountNonce(
+                this.keeperAddress.bech32()
+            );
+
+            const tx = new Transaction({
+                sender: this.keeperAddress.bech32(),
+                receiver: this.contracts.scheduler,
+                data: new TextEncoder().encode("flushProtocolFees"),
+                gasLimit: BigInt(15_000_000),
+                chainID: this.networkClient.getChainId(),
+                value: BigInt(0),
+            });
+
+            tx.nonce = BigInt(currentNonce);
+
+            const txComputer = new TransactionComputer();
+            const serialized = txComputer.computeBytesForSigning(tx);
+            const signature = await this.signer.sign(serialized);
+            tx.signature = signature;
+
+            const provider = this.networkClient.getProvider();
+            const txHash = await provider.sendTransaction(tx);
+
+            this.log(`💰 flushProtocolFees broadcasted: ${txHash}`);
+
+            // Wait for confirmation
+            const confirmation = await this.waitForCompletion(txHash, 30_000);
+            if (confirmation.success) {
+                this.log(`💰 Protocol fees flushed successfully! (${feesEgld.toFixed(6)} EGLD → Rewards contract)`);
+                return { flushed: true };
+            } else {
+                this.log(`⚠️ flushProtocolFees failed: ${confirmation.error}`);
+                return { flushed: false, error: confirmation.error };
+            }
+        } catch (err: any) {
+            // Non-critical — don't crash the keeper loop
+            this.log(`⚠️ flushProtocolFees error (non-critical): ${err.message}`);
+            return { flushed: false, error: err.message };
+        }
+    }
+
     private log(msg: string): void {
         this.logger.info("Executor", msg);
     }

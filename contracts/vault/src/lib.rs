@@ -38,6 +38,7 @@ pub static ERR_INSUFFICIENT_BALANCE: &[u8] = b"Insufficient balance";
 pub static ERR_NOT_AUTHORIZED: &[u8] = b"Caller not authorized";
 pub static ERR_NO_SWAP_CONFIG: &[u8] = b"Swap not configured - set DEX pair contract first";
 pub static ERR_NO_MINT_CONFIG: &[u8] = b"Mint not configured - set NFT contract first";
+pub static ERR_SLIPPAGE_NOT_SET: &[u8] = b"Slippage protection not configured - set max_slippage_bps first";
 
 #[multiversx_sc::contract]
 pub trait VaultContract:
@@ -58,6 +59,7 @@ pub trait VaultContract:
         self.total_deposited().set(BigUint::zero());
         self.total_compounded().set(BigUint::zero());
         self.compound_count().set(0u64);
+        self.max_slippage_bps().set(300u64); // Default 3% slippage protection
         self.paused().set(false);
     }
 
@@ -75,7 +77,7 @@ pub trait VaultContract:
         self.require_not_paused();
 
         let caller = self.blockchain().get_caller();
-        let payment = self.call_value().egld_value().clone_value();
+        let payment = self.call_value().egld().clone_value();
         require!(payment > 0u64, ERR_ZERO_DEPOSIT);
 
         // Effects: update balances before external call
@@ -94,7 +96,7 @@ pub trait VaultContract:
             .raw_call("delegate")
             .egld(&payment)
             .gas(12_000_000u64)
-            .callback(self.callbacks().deposit_callback(caller))
+            .callback(self.callbacks().deposit_callback(caller, payment))
             .gas_for_callback(5_000_000u64)
             .register_promise();
     }
@@ -103,19 +105,22 @@ pub trait VaultContract:
     fn deposit_callback(
         &self,
         caller: ManagedAddress,
+        deposit_amount: BigUint,
         #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
     ) {
         if let ManagedAsyncCallResult::Err(_) = result {
-            // Delegation failed — refund user
-            let balance = self.user_balance(&caller).get();
-            if balance > 0u64 {
-                self.send().direct_egld(&caller, &balance);
+            // C-2 FIX: Refund ONLY the failed deposit amount, not the entire balance
+            let current_balance = self.user_balance(&caller).get();
+            if current_balance >= deposit_amount {
+                self.user_balance(&caller).set(&(&current_balance - &deposit_amount));
+            } else {
                 self.user_balance(&caller).set(&BigUint::zero());
-                let total = self.total_deposited().get();
-                if total >= balance {
-                    self.total_deposited().set(&(&total - &balance));
-                }
             }
+            let total = self.total_deposited().get();
+            if total >= deposit_amount {
+                self.total_deposited().set(&(&total - &deposit_amount));
+            }
+            self.send().direct_egld(&caller, &deposit_amount);
         }
     }
 
@@ -232,15 +237,22 @@ pub trait VaultContract:
         self.require_scheduler_caller();
 
         require!(!self.dex_pair_contract().is_empty(), ERR_NO_SWAP_CONFIG);
+        require!(!self.max_slippage_bps().is_empty(), ERR_SLIPPAGE_NOT_SET);
 
         let dex_addr = self.dex_pair_contract().get();
         let swap_amount = self.swap_amount_per_execution().get();
+
+        // C-1 FIX: Calculate min_amount_out using slippage protection
+        // For now, use slippage_bps as percentage of input (simple protection).
+        // A proper oracle-based calculation would be ideal for production.
+        let slippage_bps = self.max_slippage_bps().get();
+        let min_out = &swap_amount * (10_000u64 - slippage_bps) / 10_000u64;
 
         self.tx()
             .to(&dex_addr)
             .raw_call("swapTokensFixedInput")
             .egld(&swap_amount)
-            .argument(&ManagedBuffer::from(b"1"))  // min_amount_out = 1 (accept any output)
+            .argument(&min_out)
             .gas(20_000_000u64)
             .callback(self.callbacks().swap_callback())
             .gas_for_callback(5_000_000u64)
@@ -265,17 +277,30 @@ pub trait VaultContract:
         self.require_scheduler_caller();
 
         require!(!self.dex_pair_contract().is_empty(), ERR_NO_SWAP_CONFIG);
+        require!(!self.max_slippage_bps().is_empty(), ERR_SLIPPAGE_NOT_SET);
 
         let dex_addr = self.dex_pair_contract().get();
-        // Emergency: swap all available balance
-        let balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        // L-5 FIX: Use swap_amount config instead of entire contract balance.
+        // This prevents one user's emergency swap from draining all users' funds.
+        let swap_amount = self.swap_amount_per_execution().get();
+        let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        // Use the lesser of configured amount and actual balance
+        let amount = if swap_amount > BigUint::zero() && swap_amount < sc_balance {
+            swap_amount
+        } else {
+            sc_balance
+        };
 
-        if balance > 0u64 {
+        if amount > 0u64 {
+            // C-1 FIX: Slippage protection on emergency swap too
+            let slippage_bps = self.max_slippage_bps().get();
+            let min_out = &amount * (10_000u64 - slippage_bps) / 10_000u64;
+
             self.tx()
                 .to(&dex_addr)
                 .raw_call("swapTokensFixedInput")
-                .egld(&balance)
-                .argument(&ManagedBuffer::from(b"1"))
+                .egld(&amount)
+                .argument(&min_out)
                 .gas(20_000_000u64)
                 .callback(self.callbacks().emergency_swap_callback())
                 .gas_for_callback(5_000_000u64)
@@ -387,6 +412,14 @@ pub trait VaultContract:
         self.mint_endpoint_name().set(&endpoint);
     }
 
+    /// Set max slippage for swap operations (in basis points, e.g. 300 = 3%).
+    #[only_owner]
+    #[endpoint(setMaxSlippageBps)]
+    fn set_max_slippage_bps(&self, bps: u64) {
+        require!(bps <= 5000, "Max slippage cannot exceed 50%");
+        self.max_slippage_bps().set(bps);
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     //  VIEWS
     // ═══════════════════════════════════════════════════════════════════
@@ -441,6 +474,10 @@ pub trait VaultContract:
 
     #[storage_mapper("swap_amount")]
     fn swap_amount_per_execution(&self) -> SingleValueMapper<BigUint>;
+
+    // -- Slippage protection --
+    #[storage_mapper("max_slippage_bps")]
+    fn max_slippage_bps(&self) -> SingleValueMapper<u64>;
 
     // -- NFT Mint config --
     #[storage_mapper("nft_contract")]

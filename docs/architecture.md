@@ -113,3 +113,13 @@ The keeper bot's AI evaluator checks real-time prices from CoinGecko before exec
 | Rewards | `erd1qqqqqqqqqqqqqpgq7ql3hm76nyun0mmfq0kw2gacspjm63q97k8s6w5xzs` |
 | Ping (test) | `erd1qqqqqqqqqqqqqpgqw7rlhmu4jfxc8jy2p8hkkfghy6x0kvzc7k8sg0dwqk` |
 
+### MX-8004 Trustless Agents (Testnet)
+
+| Contract | Address |
+|:--|:--|
+| Identity Registry | `erd1qqqqqqqqqqqqqpgqstany2wfelfgd2wfn5nst5ulqdfy6fvs7k8sejh8ph` |
+| Validation Registry | `erd1qqqqqqqqqqqqqpgqdeyw8mmzkza4tlndeztty0f6hgng5z4s7k8suagqha` |
+| Reputation Registry | `erd1qqqqqqqqqqqqqpgq6czchparnywm9q40cdxksm85jc37vk4a7k8sefu0ar` |
+| Agent NFT Token | `XCRAGENT` (XCronAgent — soulbound identity) |
+
+

@@ -5,6 +5,7 @@ use tracing::info;
 
 /// Keeper configuration loaded from file + PEM wallet.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct KeeperConfig {
     pub keeper_address: String,
     pub scheduler_address: String,

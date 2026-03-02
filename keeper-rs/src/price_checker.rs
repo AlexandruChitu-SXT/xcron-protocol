@@ -111,6 +111,7 @@ impl PriceChecker {
     }
 
     /// Reload per-task conditions (call periodically to pick up changes).
+    #[allow(dead_code)]
     pub fn reload_conditions(&mut self) {
         self.per_task = Self::load_per_task_conditions();
     }
@@ -200,6 +201,7 @@ impl PriceChecker {
     }
 
     /// Get the last fetched price.
+    #[allow(dead_code)]
     pub fn last_price(&self) -> Option<f64> {
         self.last_price
     }

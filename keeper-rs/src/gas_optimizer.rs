@@ -5,7 +5,7 @@
 //! - Recent block gas usage
 //! - Time-of-day patterns (lower gas at off-peak hours)
 
-use tracing::{info, warn, debug};
+use tracing::{info, debug};
 use serde::Deserialize;
 
 /// AI optimization configuration
@@ -49,6 +49,7 @@ struct GatewayStatusData {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct NetworkStatus {
     #[serde(rename = "erd_round_time")]
     round_time: Option<u64>,
@@ -62,6 +63,7 @@ struct NetworkStatus {
 
 /// Network condition assessment
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct NetworkCondition {
     pub round_time_ms: u64,
     pub is_congested: bool,

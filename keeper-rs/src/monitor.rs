@@ -235,6 +235,8 @@ impl TaskMonitor {
                         warn!("❌ Task #{} failed: {}",
                             task_id,
                             result.error.as_deref().unwrap_or("unknown"));
+                        // M-4: Reset nonce counter on failure to re-sync with chain
+                        self.executor.reset_nonce();
                         // Mark as failed so we don't retry
                         self.failed_tasks.insert(task_id);
                         self.known_tasks.remove(&task_id);
@@ -242,6 +244,8 @@ impl TaskMonitor {
                 }
                 Err(e) => {
                     error!("Task #{} execution error: {}", task_id, e);
+                    // M-4: Reset nonce counter on error to re-sync with chain
+                    self.executor.reset_nonce();
                     self.failed_tasks.insert(task_id);
                     self.known_tasks.remove(&task_id);
                 }
@@ -462,8 +466,7 @@ impl TaskMonitor {
                 let _remaining = read_u64(&mut pos)?;
             }
             _ => {
-                // ConditionOnChain or unknown — we can't parse precisely, use 0
-                trigger_time = 0;
+                // ConditionOnChain or unknown — we can't parse precisely
                 // Skip to status via scanning — we know status is near the end
                 // For now, try best-effort
                 debug!("Task #{}: unknown trigger type {}, skipping", task_id, trigger_disc);

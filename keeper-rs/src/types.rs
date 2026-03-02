@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 /// Task status as stored in the scheduler contract.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum TaskStatus {
     Pending = 0,
     Committed = 1,
@@ -13,6 +14,7 @@ pub enum TaskStatus {
     Expired = 5,
 }
 
+#[allow(dead_code)]
 impl TaskStatus {
     pub fn from_u8(v: u8) -> Self {
         match v {
@@ -29,6 +31,7 @@ impl TaskStatus {
 
 /// A task fetched from the Scheduler contract.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ScheduledTask {
     pub id: u64,
     pub owner: String,
@@ -43,6 +46,7 @@ pub struct ScheduledTask {
 /// Result of executing a task.
 #[derive(Debug)]
 pub struct ExecutionResult {
+    #[allow(dead_code)]
     pub task_id: u64,
     pub success: bool,
     pub tx_hash: Option<String>,
@@ -51,6 +55,7 @@ pub struct ExecutionResult {
 
 /// Block info from WebSocket.
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct BlockInfo {
     pub hash: Option<String>,
     pub nonce: Option<u64>,
@@ -61,6 +66,7 @@ pub struct BlockInfo {
 /// API transaction response.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct ApiTransaction {
     pub tx_hash: Option<String>,
     pub status: Option<String>,
@@ -74,18 +80,21 @@ pub struct ApiTransaction {
 /// VM query response.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct VmQueryResponse {
     pub data: Option<VmQueryData>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct VmQueryData {
     pub data: Option<VmQueryResult>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct VmQueryResult {
     pub return_data: Option<Vec<String>>,
     pub return_code: Option<String>,

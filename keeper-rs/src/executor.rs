@@ -14,9 +14,12 @@ pub struct TaskExecutor {
     scheduler_address: String,
     keeper_address: String,
     private_key: Vec<u8>,
+    #[allow(dead_code)]
     public_key: Vec<u8>,
     http_client: reqwest::Client,
     chain_id: String,
+    /// M-4: Local nonce counter to avoid race conditions on rapid execution
+    last_used_nonce: Option<u64>,
 }
 
 impl TaskExecutor {
@@ -46,13 +49,17 @@ impl TaskExecutor {
             public_key,
             http_client: reqwest::Client::new(),
             chain_id,
+            last_used_nonce: None,
         }
     }
 
     /// Execute a task by sending an executeTask transaction.
-    pub async fn execute_task(&self, task_id: u64) -> Result<ExecutionResult, String> {
-        // 1. Get current nonce for the keeper address
-        let nonce = self.get_account_nonce().await?;
+    pub async fn execute_task(&mut self, task_id: u64) -> Result<ExecutionResult, String> {
+        // M-5: Check balance before attempting execution
+        self.check_balance().await?;
+
+        // M-4: Use local nonce counter to avoid race conditions
+        let nonce = self.get_next_nonce().await?;
         debug!("Keeper nonce: {}", nonce);
 
         // 2. Build the transaction data field
@@ -118,7 +125,23 @@ impl TaskExecutor {
         })
     }
 
-    /// Get the current nonce of the keeper account.
+    /// M-4: Get next nonce using local counter to prevent race conditions.
+    /// Fetches from chain on first call, then increments locally.
+    async fn get_next_nonce(&mut self) -> Result<u64, String> {
+        let nonce = match self.last_used_nonce {
+            Some(last) => last + 1,
+            None => self.get_account_nonce().await?,
+        };
+        self.last_used_nonce = Some(nonce);
+        Ok(nonce)
+    }
+
+    /// Reset nonce counter (call after a confirmed TX failure to re-sync).
+    pub fn reset_nonce(&mut self) {
+        self.last_used_nonce = None;
+    }
+
+    /// Get the current nonce of the keeper account from the network.
     async fn get_account_nonce(&self) -> Result<u64, String> {
         let url = format!(
             "{}/address/{}/nonce",
@@ -141,6 +164,42 @@ impl TaskExecutor {
             .ok_or_else(|| "Cannot parse nonce".to_string())
     }
 
+    /// M-5: Verify keeper has sufficient EGLD balance before attempting execution.
+    /// Minimum required: 0.01 EGLD (10^16 atomic units) to cover gas fees.
+    async fn check_balance(&self) -> Result<(), String> {
+        let url = format!(
+            "{}/address/{}/balance",
+            self.gateway_url, self.keeper_address
+        );
+
+        let resp = self.http_client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("Balance check HTTP error: {}", e))?;
+
+        let data: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Balance check JSON error: {}", e))?;
+
+        let balance_str = data["data"]["balance"]
+            .as_str()
+            .unwrap_or("0");
+
+        let balance: u128 = balance_str.parse().unwrap_or(0);
+        // Minimum 0.01 EGLD = 10^16 atomic units
+        const MIN_BALANCE: u128 = 10_000_000_000_000_000;
+
+        if balance < MIN_BALANCE {
+            return Err(format!(
+                "Insufficient keeper balance: {} (minimum 0.01 EGLD required)",
+                balance_str
+            ));
+        }
+
+        Ok(())
+    }
     /// Sign a message with Ed25519.
     fn sign(&self, message: &[u8]) -> Result<Vec<u8>, String> {
         use ed25519_dalek::{SigningKey, Signer};

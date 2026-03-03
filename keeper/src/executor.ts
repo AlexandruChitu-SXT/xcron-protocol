@@ -11,6 +11,7 @@ import { Logger } from "./logger";
 import { GasOptimizer } from "./gas_optimizer";
 import { AIEvaluator, AIDecision, MarketContext, TaskContext } from "./ai_evaluator";
 import { CommitRevealManager } from "./commit_reveal";
+import { XwapReporter } from "./xwap_reporter";
 
 export interface ExecutionResult {
     taskId: number;
@@ -106,6 +107,13 @@ export class Executor {
         this.commitReveal = cr;
     }
 
+    // ── XWAP Oracle ──
+    private xwapReporter?: XwapReporter;
+
+    setXwapReporter(reporter: XwapReporter): void {
+        this.xwapReporter = reporter;
+    }
+
     /**
      * Execute a ripe task by calling the Scheduler's executeTask endpoint.
      */
@@ -126,6 +134,21 @@ export class Executor {
                     };
                 }
                 this.log(`Task #${task.id}: CR complete, proceeding to execute`);
+            }
+
+            // XWAP Core Oracle: Global Safety Check
+            if (this.xwapReporter) {
+                // We double check safety strictly before simulation
+                const isSafe = await this.xwapReporter.isSafeToExecute();
+                if (!isSafe) {
+                    this.log(`Task #${task.id} skipped: XWAP Oracle reports system is UNSAFE (Gate closed due to manipulation/volatility)`);
+                    return {
+                        taskId: task.id,
+                        success: false,
+                        error: "XWAP oracle gate closed",
+                        permanent: false,
+                    };
+                }
             }
 
             // S-DRY: Dry-run simulation — test execution via vm-query before spending gas

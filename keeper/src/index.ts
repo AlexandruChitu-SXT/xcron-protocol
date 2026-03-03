@@ -11,6 +11,8 @@ import { AIEvaluator } from "./ai_evaluator";
 import { CommitRevealManager } from "./commit_reveal";
 import { KeeperDashboard } from "./dashboard";
 import { RelayerService } from "./relayer";
+import { XwapReporter } from "./xwap_reporter";
+import { PriceService } from "./price_service";
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -87,6 +89,22 @@ async function main(): Promise<void> {
         keeperAddress,
         logger
     );
+
+    // 4a. Initialize XWAP Reporter
+    // Ensure we use the API for robust queries (the gateway gave us a 404 earlier)
+    const priceService = new PriceService(logger);
+    // Hardcoded for Phase 1 Testnet; this should move to config in production
+    const XWAP_CONTRACT = "erd1qqqqqqqqqqqqqpgqlnu2aqhzmy49sa9lf7vx3jsy3l622fgv7k8snmwahh";
+    const xwapReporter = new XwapReporter(
+        logger,
+        priceService,
+        XWAP_CONTRACT,
+        config.keeper.walletPem,
+        "https://testnet-api.multiversx.com"
+    );
+    logger.info("Main", `⚖️ XWAP Reporter: ENABLED (${XWAP_CONTRACT})`);
+
+    executor.setXwapReporter(xwapReporter);
 
     logger.info("Main", `Poll interval: ${config.keeper.pollIntervalMs}ms`);
 
@@ -176,7 +194,23 @@ async function main(): Promise<void> {
         health.cycleCount++;
 
         try {
-            // Scan for ripe tasks (with retry)
+            // -- 1. AI & Core Oracle Cycle --
+            // Call XWAP every cycle to keep the on-chain EWMA fresh
+            // Simulated reserve values for testnet since we don't have a real xExchange pool
+            const simulatedReserveA = 1000n * 10n ** 18n; // 1000 EGLD
+            const simulatedReserveB = 4000n * 10n ** 6n;  // $4000 USDC -> EGLD=$4.00
+
+            try {
+                logger.debug("Main", "Running XWAP Reporter cycle...");
+                const isSafe = await xwapReporter.runCycle(simulatedReserveA, 18, simulatedReserveB, 6);
+                if (!isSafe) {
+                    logger.warn("Main", "🚨 XWAP reports system is NOT safe! Gate is closed.");
+                }
+            } catch (err: any) {
+                logger.error("Main", `XWAP Reporter cycle failed: ${err.message}`);
+            }
+
+            // -- 2. Scan for ripe tasks (with retry) --
             const ripeTasks = await monitor.scanForRipeTasks();
 
             if (ripeTasks.length === 0) {

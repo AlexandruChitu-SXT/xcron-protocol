@@ -1,0 +1,11 @@
+[package]
+name = "xwap-meta"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies.xwap]
+path = ".."
+
+[dependencies.multiversx-sc-meta-lib]
+workspace = true

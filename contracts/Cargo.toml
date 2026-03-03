@@ -24,6 +24,8 @@ members = [
     "test-dex/meta",
     "test-nft",
     "test-nft/meta",
+    "xwap",
+    "xwap/meta",
 ]
 
 [workspace.dependencies]

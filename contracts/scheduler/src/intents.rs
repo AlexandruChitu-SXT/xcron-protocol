@@ -31,7 +31,7 @@ pub trait IntentsModule:
         let amount_in = amount_in_ref.clone_value();
         require!(amount_in > 0, "Amount in must be greater than 0");
         
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         require!(deadline > current_time, "Deadline must be in the future");
 
         let caller = self.blockchain().get_caller();
@@ -95,7 +95,7 @@ pub trait IntentsModule:
         let mut intent = self.intent_by_id(intent_id).get();
         require!(intent.status == IntentStatus::Pending, "Intent not pending");
         require!(
-            self.blockchain().get_block_timestamp() <= intent.deadline,
+            self.blockchain().get_block_timestamp_seconds().as_u64_seconds() <= intent.deadline,
             "Intent expired"
         );
 

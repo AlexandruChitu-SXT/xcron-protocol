@@ -246,19 +246,22 @@ export function ProtocolRadar() {
 
     return (
         <div className="card" style={{
-            padding: 16,
+            padding: 12,
             background: 'rgba(232,146,124,0.04)',
             borderColor: 'rgba(232,146,124,0.15)',
             position: 'relative',
             overflow: 'hidden',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
         }}>
             {/* Subtle glow */}
             <div style={{
                 position: 'absolute', top: '50%', left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: 140, height: 140, borderRadius: '50%',
+                width: 100, height: 100, borderRadius: '50%',
                 background: 'rgba(232,146,124,0.06)',
-                filter: 'blur(50px)', pointerEvents: 'none',
+                filter: 'blur(40px)', pointerEvents: 'none',
             }} />
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -283,7 +286,7 @@ export function ProtocolRadar() {
 
             <canvas
                 ref={canvasRef}
-                style={{ width: '100%', height: 200, display: 'block' }}
+                style={{ width: '100%', height: 150, display: 'block', flex: 1 }}
             />
 
             {/* Metric pills — 3-column grid */}

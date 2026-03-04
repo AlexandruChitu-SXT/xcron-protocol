@@ -5,8 +5,8 @@ import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '..
 import { CONTRACTS, NETWORK } from '../config';
 import { NavLink } from 'react-router-dom';
 import { LiveActivityFeed } from '../components/LiveActivityFeed';
-import { PriceTicker } from '../components/PriceTicker';
 import { ProtocolRadar } from '../components/ProtocolRadar';
+import { ProtocolVitals } from '../components/ProtocolVitals';
 import SlicedLogo3D from '../components/SlicedLogo3D';
 import { AnimatedCounter } from '../components/AnimatedCounter';
 import { LeftSidePanel, RightSidePanel } from '../components/ProtocolSidePanels';
@@ -191,10 +191,10 @@ export function Dashboard() {
                         <ProtocolRadar />
                     </div>
                     <div className="bottom-widget">
-                        <LiveActivityFeed />
+                        <ProtocolVitals />
                     </div>
                     <div className="bottom-widget">
-                        <PriceTicker />
+                        <LiveActivityFeed />
                     </div>
                 </div>
 

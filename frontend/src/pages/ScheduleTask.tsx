@@ -167,7 +167,7 @@ const TemplateIcon = ({ type, color, size = 20 }: { type: TemplateType; color: s
     }
 };
 
-const TEMPLATE_KEYS: TemplateType[] = ['quicktest', 'custom', 'compound', 'dca', 'stoploss', 'claim', 'nftmint'];
+const TEMPLATE_KEYS: TemplateType[] = ['quicktest', 'smartintent', 'custom', 'compound', 'dca', 'stoploss', 'claim', 'nftmint'];
 
 const TEMPLATE_COLORS: Record<TemplateType, string> = {
     quicktest: 'rgb(0,255,136)',

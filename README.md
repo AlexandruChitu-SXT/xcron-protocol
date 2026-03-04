@@ -27,6 +27,16 @@ No servers needed. No cron jobs. Fully on-chain, trustless, and decentralized.
 
 ---
 
+## 🌟 Vanguard V2: XCron Intents (Pillar A) - LIVE
+
+XCron has evolved beyond basic imperative tasks (cron jobs) into a **Declarative Intent Protocol**. Instead of defining *how* to execute a transaction, users simply declare their desired outcome (e.g., "Swap 100 USDC for WEGLD with a strict minimum return of 2.5 WEGLD").
+
+Our specialized **Rust-based Solver Network** (built on Tokio) competes to find the most optimal routing across xExchange, AshSwap, and OneDex. If solvers fail to secure the *Strict Minimum Return* (Slippage Protection), the transaction mathematically reverts securely.
+
+![XCron UI: Declarative Smart Intents](https://xcron.io/assets/intent-panel-demo.png)
+
+---
+
 ## Architecture
 
 ```

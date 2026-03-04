@@ -116,6 +116,21 @@ pub trait StorageModule {
     #[storage_mapper("keeperShard")]
     fn keeper_shard(&self, keeper: &ManagedAddress) -> SingleValueMapper<u32>;
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  INTENTS STORAGE (XCron V2 Vanguard)
+    // ═══════════════════════════════════════════════════════════════════
+
+    #[view(getIntentNonce)]
+    #[storage_mapper("intent_nonce")]
+    fn intent_nonce(&self) -> SingleValueMapper<u64>;
+
+    #[view(getIntent)]
+    #[storage_mapper("intent_by_id")]
+    fn intent_by_id(&self, intent_id: u64) -> SingleValueMapper<common::types::Intent<Self::Api>>;
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  TASKS STORAGE
+    // ═══════════════════════════════════════════════════════════════════
     // ── Security: Rate limiting per round ───────────────────
     /// Tasks scheduled by address in a given block round (anti-spam).
     /// Key: (caller_address, round_number). Cleared automatically by new rounds.

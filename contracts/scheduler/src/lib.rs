@@ -31,6 +31,7 @@ pub mod config;
 pub mod events;
 pub mod execution;
 pub mod helpers;
+pub mod intents;
 pub mod scheduling;
 pub mod storage;
 pub mod validation;
@@ -44,6 +45,7 @@ pub trait SchedulerContract:
     + config::ConfigModule
     + validation::ValidationModule
     + helpers::HelpersModule
+    + intents::IntentsModule
     + scheduling::SchedulingModule
     + execution::ExecutionModule
     + commit_reveal::CommitRevealModule

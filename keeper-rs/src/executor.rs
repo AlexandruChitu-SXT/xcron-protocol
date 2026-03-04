@@ -125,6 +125,73 @@ impl TaskExecutor {
         })
     }
 
+    /// Broadcasts the mathematically optimal route discovered by the Solver Engine 
+    /// back to the Scheduler's Vanguard Settlement Contract.
+    pub async fn execute_intent(
+        &mut self,
+        intent_id: u64,
+        route: &crate::solver::SolverRoute,
+    ) -> Result<String, String> {
+        self.check_balance().await?;
+
+        let nonce = self.get_next_nonce().await?;
+        debug!("Solver nonce: {}", nonce);
+
+        let intent_id_hex = format!("{:016x}", intent_id); // 8-byte padded hex
+
+        // MultiversX payloads are heavily structured:
+        // functionName@arg1@arg2@arg3
+        let mut data_field = format!("solveIntent@{}@{}@{}", 
+            intent_id_hex, 
+            hex::encode(bech32::decode(&route.target_contract).unwrap().1), // Decode bech32 to raw pubkey hex
+            route.target_endpoint
+        );
+
+        for arg in &route.target_args {
+            data_field.push('@');
+            data_field.push_str(arg);
+        }
+
+        // Extremely high gas limit for cross-DEX swapping and promises evaluation
+        let gas_limit: u64 = 600_000_000;
+
+        let data_b64 = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            data_field.as_bytes(),
+        );
+
+        let sign_payload = format!(
+            r#"{{"nonce":{},"value":"0","receiver":"{}","sender":"{}","gasPrice":1000000000,"gasLimit":{},"data":"{}","chainID":"{}","version":2}}"#,
+            nonce,
+            self.scheduler_address,
+            self.keeper_address,
+            gas_limit,
+            data_b64,
+            self.chain_id,
+        );
+
+        let signature = self.sign(sign_payload.as_bytes())?;
+        let sig_hex = hex::encode(&signature);
+
+        let broadcast_json = serde_json::json!({
+            "nonce": nonce,
+            "value": "0",
+            "receiver": self.scheduler_address,
+            "sender": self.keeper_address,
+            "gasPrice": 1_000_000_000u64,
+            "gasLimit": gas_limit,
+            "data": data_b64,
+            "chainID": self.chain_id,
+            "version": 2,
+            "signature": sig_hex,
+        });
+
+        let tx_hash = self.broadcast_transaction(&broadcast_json).await?;
+        info!("🚀 Solver Intent Broadcast: {}", tx_hash);
+
+        Ok(tx_hash)
+    }
+
     /// M-4: Get next nonce using local counter to prevent race conditions.
     /// Fetches from chain on first call, then increments locally.
     async fn get_next_nonce(&mut self) -> Result<u64, String> {

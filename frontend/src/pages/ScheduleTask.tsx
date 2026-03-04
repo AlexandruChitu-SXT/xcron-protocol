@@ -7,7 +7,7 @@ import { CONTRACTS, GAS_SCHEDULE_TASK } from '../config';
 import { TaskTelemetry } from '../components/TaskTelemetry';
 import { TypewriterTitle } from '../components/TypewriterTitle';
 
-type TemplateType = 'quicktest' | 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom';
+type TemplateType = 'quicktest' | 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom' | 'smartintent';
 
 interface TemplateDefaults {
     targetContract: string;
@@ -134,6 +134,22 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
             ttlRounds: '3600',
         },
     },
+    smartintent: {
+        title: 'Smart Swap Intent',
+        description: 'Declarative routing. Specify what you want to swap and the minimum acceptable return. Solvers do the complex routing for you securely.',
+        category: 'Vanguard V2',
+        defaults: {
+            targetContract: '',
+            targetEndpoint: 'solveIntent',
+            triggerType: 'once' as const,
+            targetRound: '',
+            interval: '',
+            deposit: '0.005',
+            maxGas: '60000000',
+            maxRetries: '3',
+            ttlRounds: '3600',
+        },
+    },
 };
 
 // Modern SVG icons for each template
@@ -147,6 +163,7 @@ const TemplateIcon = ({ type, color, size = 20 }: { type: TemplateType; color: s
         case 'claim': return (<svg {...props}><circle cx="12" cy="12" r="10" /><path d="M16 8l-4 4-4-4" /><line x1="12" y1="12" x2="12" y2="16" /></svg>);
         case 'nftmint': return (<svg {...props}><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18" /><circle cx="8" cy="15" r="2" /><path d="M14 13l3 4h-6l3-4z" /></svg>);
         case 'custom': return (<svg {...props}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>);
+        case 'smartintent': return (<svg {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /><line x1="5" y1="12" x2="19" y2="12" /></svg>);
     }
 };
 
@@ -160,6 +177,7 @@ const TEMPLATE_COLORS: Record<TemplateType, string> = {
     stoploss: 'rgb(239,68,68)',
     claim: 'rgb(251,191,36)',
     nftmint: 'rgb(168,85,247)',
+    smartintent: 'rgb(255,42,128)',
 };
 
 const TEMPLATE_LABELS: Record<TemplateType, { contract: string; endpoint: string }> = {
@@ -170,6 +188,7 @@ const TEMPLATE_LABELS: Record<TemplateType, { contract: string; endpoint: string
     stoploss: { contract: 'DEX Contract', endpoint: 'Swap Function' },
     claim: { contract: 'Staking / Farm Contract', endpoint: 'Claim Function' },
     nftmint: { contract: 'NFT Collection Contract', endpoint: 'Mint Function' },
+    smartintent: { contract: 'Intent Target (Auto)', endpoint: 'Intent Action (Auto)' },
 };
 
 // Custom styled dropdown (replaces native <select>)
@@ -272,6 +291,12 @@ export function ScheduleTask() {
 
     const [form, setForm] = useState({ ...TEMPLATES[template].defaults });
     const [argsList, setArgsList] = useState<{ type: 'string' | 'number' | 'address', value: string }[]>([]);
+
+    // Vanguard V2: Smart Intent Dash Hooks
+    const [intentTokenIn, setIntentTokenIn] = useState('WEGLD-bd4d79');
+    const [intentAmountIn, setIntentAmountIn] = useState('');
+    const [intentTokenOut, setIntentTokenOut] = useState('USDC-c76f1f');
+    const [intentMinReturn, setIntentMinReturn] = useState('');
 
     const { txHash, setTxHash, status: txStatus, loading: txLoading } = useTxTracker();
     const [error, setError] = useState('');
@@ -505,17 +530,19 @@ export function ScheduleTask() {
                                 {/* Target — inline for custom */}
                                 <div className="form-section" style={{ marginBottom: 4 }}>
                                     <div style={{ display: template === 'custom' ? 'grid' : 'block', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                        <div className="form-group">
-                                            <label>{labels.contract}</label>
-                                            <input
-                                                type="text"
-                                                placeholder="erd1qqq..."
-                                                value={form.targetContract}
-                                                onChange={(e) => update('targetContract', e.target.value)}
-                                                required
-                                                style={{ fontFamily: 'monospace' }}
-                                            />
-                                        </div>
+                                        {template !== 'smartintent' && (
+                                            <div className="form-group">
+                                                <label>{labels.contract}</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="erd1qqq..."
+                                                    value={form.targetContract}
+                                                    onChange={(e) => update('targetContract', e.target.value)}
+                                                    required
+                                                    style={{ fontFamily: 'monospace' }}
+                                                />
+                                            </div>
+                                        )}
 
                                         {template === 'custom' && (
                                             <>
@@ -645,6 +672,86 @@ export function ScheduleTask() {
                                                     )}
                                                 </div>
                                             </>
+                                        )}
+
+                                        {/* Vanguard V2: Smart Intent UI */}
+                                        {template === 'smartintent' && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                                <div style={{ padding: '16px', background: 'rgba(255,42,128,0.05)', border: '1px solid rgba(255,42,128,0.2)', borderRadius: 'var(--radius-md)' }}>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 16, alignItems: 'center' }}>
+                                                        {/* Token In */}
+                                                        <div>
+                                                            <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Inject Liquidity (Pay)</label>
+                                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={intentAmountIn}
+                                                                    onChange={(e) => setIntentAmountIn(e.target.value)}
+                                                                    style={{ flex: 1, fontSize: '1.1rem', fontWeight: 600, padding: '8px 12px' }}
+                                                                />
+                                                                <select
+                                                                    value={intentTokenIn}
+                                                                    onChange={(e) => setIntentTokenIn(e.target.value)}
+                                                                    style={{ padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-sm)', color: 'white', fontWeight: 600 }}
+                                                                >
+                                                                    <option value="USDC-c76f1f">USDC</option>
+                                                                    <option value="WEGLD-bd4d79">WEGLD</option>
+                                                                    <option value="ASH-a642d1">ASH</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Swap Icon */}
+                                                        <div style={{ color: 'var(--accent-light)', marginTop: 20 }}>
+                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                                        </div>
+
+                                                        {/* Token Out */}
+                                                        <div>
+                                                            <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Desired Outcome (Receive)</label>
+                                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                                <select
+                                                                    value={intentTokenOut}
+                                                                    onChange={(e) => setIntentTokenOut(e.target.value)}
+                                                                    style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-sm)', color: 'white', fontWeight: 600 }}
+                                                                >
+                                                                    <option value="WEGLD-bd4d79">WEGLD</option>
+                                                                    <option value="USDC-c76f1f">USDC</option>
+                                                                    <option value="ASH-a642d1">ASH</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Slippage & Min Return */}
+                                                    <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                                            <div style={{ flex: 1, paddingRight: 24 }}>
+                                                                <label style={{ fontSize: '0.85rem', color: 'var(--accent-light)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                                                                    Strict Minimum Return (Slippage Protection)
+                                                                </label>
+                                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 10px 0', lineHeight: 1.4 }}>
+                                                                    If the Solvers cannot route your trade across DEXes to secure at least this amount, the Intent expires securely without costing you any gas.
+                                                                </p>
+                                                            </div>
+                                                            <div style={{ width: 140 }}>
+                                                                <div style={{ position: 'relative' }}>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={intentMinReturn}
+                                                                        onChange={(e) => setIntentMinReturn(e.target.value)}
+                                                                        style={{ width: '100%', padding: '8px 12px', fontSize: '1rem', fontWeight: 700, color: '#10b981', borderColor: 'rgba(16,185,129,0.3)' }}
+                                                                    />
+                                                                    <span style={{ position: 'absolute', right: 12, top: 10, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                                        {intentTokenOut.split('-')[0]}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>{/* end inline grid */}
                                 </div>

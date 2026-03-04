@@ -3,6 +3,52 @@ use multiversx_sc::derive_imports::*;
 multiversx_sc::imports!();
 
 // ═══════════════════════════════════════════════════════════════════
+//  INTENT TYPES (XCron V2)
+// ═══════════════════════════════════════════════════════════════════
+
+/// A declarative Intent created by a user, defining a financial outcome rather
+/// than an imperative instruction. Solvers race to execute it efficiently.
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct Intent<M: ManagedTypeApi> {
+    /// Unique, monotonically increasing intent identifier.
+    pub id: u64,
+    /// Address that created this intent and provided the `token_in` funds.
+    pub owner: ManagedAddress<M>,
+    /// The ESDT token identifier the user has pre-deposited.
+    pub token_in: TokenIdentifier<M>,
+    /// The exact amount of `token_in` locked in the contract for this intent.
+    pub amount_in: BigUint<M>,
+    /// The ESDT token identifier the user desires to receive.
+    pub token_out: TokenIdentifier<M>,
+    /// The absolute minimum amount of `token_out` the user will accept.
+    /// Acts as slip-protect and profit-guarantee.
+    pub min_return: BigUint<M>,
+    /// Block timestamp (seconds) after which this intent becomes invalid.
+    pub deadline: u64,
+    /// The EGLD fee dedicated to the Solver who successfully settles this intent.
+    pub solver_fee: BigUint<M>,
+    /// Current status of the intent in its lifecycle.
+    pub status: IntentStatus,
+    /// The solver address that successfully completed the intent (if any).
+    pub settled_by: Option<ManagedAddress<M>>,
+}
+
+/// Current status of an Intent.
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Debug)]
+pub enum IntentStatus {
+    /// Available for Solvers to route and execute.
+    Pending,
+    /// Successfully routed and settled on-chain.
+    Settled,
+    /// Revoked manually by the creator (funds refunded).
+    Cancelled,
+    /// Deadline passed without successful execution.
+    Expired,
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  TASK TYPES
 // ═══════════════════════════════════════════════════════════════════
 

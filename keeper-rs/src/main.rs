@@ -9,6 +9,7 @@ mod executor;
 mod types;
 mod price_checker;
 mod gas_optimizer;
+mod solver;
 
 use config::KeeperConfig;
 use monitor::TaskMonitor;

@@ -81,8 +81,8 @@ export const EXPLORER_TX = (hash: string) =>
 export const EXPLORER_ACCOUNT = (addr: string) =>
     `${NETWORK.explorerUrl}/accounts/${addr}`;
 
-// Min deposit (0.001 EGLD — matches on-chain Scheduler config)
-export const MIN_DEPOSIT = '100000000000000000'; // 0.1 EGLD — matches on-chain scheduler config
+// Min deposit: 0.1 EGLD (1e17 wei) — matches on-chain Scheduler min_deposit config
+export const MIN_DEPOSIT = '100000000000000000';
 
 // Gas limits
 export const GAS_SCHEDULE_TASK = 30_000_000;

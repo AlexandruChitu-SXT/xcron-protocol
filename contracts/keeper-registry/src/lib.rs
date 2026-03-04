@@ -31,6 +31,9 @@ pub trait KeeperRegistryContract:
         cooldown_seconds: u64,
         treasury_addr: ManagedAddress,
     ) {
+        // L-5: Prevent deploying with zero treasury — slashed funds would be burned
+        require!(!treasury_addr.is_zero(), "Treasury address cannot be zero");
+
         self.min_stake().set(&min_stake);
         self.slash_pct_bps().set(slash_pct_bps);
         self.cooldown_seconds().set(cooldown_seconds);

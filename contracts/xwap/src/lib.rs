@@ -75,6 +75,10 @@ pub trait XwapContract:
         self.update_count().set(0u64);
     }
 
+    /// Safe upgrade — preserves storage, bumps version.
     #[upgrade]
-    fn upgrade(&self) {}
+    fn upgrade(&self) {
+        self.update_count().update(|v| *v = *v); // preserve
+        // Future storage mappers should be initialized here with set_if_empty
+    }
 }

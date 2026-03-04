@@ -122,10 +122,12 @@ pub trait IntentsModule:
         }
 
         // Execute via Promises callback to guarantee slippage protection
-        // The SDK requires this explicit unsafe block for async promise registration
+        // NOTE: register_promise() requires `unsafe` in SDK 0.65 by design.
+        // This is safe because we follow CEI pattern and validate all inputs above.
         unsafe {
             contract_call
                 .callback(self.callbacks().intent_settlement_callback(intent_id, initial_balance, caller))
+                .gas_for_callback(25_000_000u64)
                 .register_promise();
         }
     }
@@ -138,7 +140,7 @@ pub trait IntentsModule:
         solver: ManagedAddress,
         #[call_result] result: ManagedAsyncCallResult<IgnoreValue>,
     ) {
-        let intent = self.intent_by_id(intent_id).get();
+        let mut intent = self.intent_by_id(intent_id).get();
 
         match result {
             ManagedAsyncCallResult::Ok(_) => {
@@ -149,29 +151,44 @@ pub trait IntentsModule:
                 );
 
                 let received = if final_balance > initial_balance {
-                    final_balance - initial_balance
+                    &final_balance - &initial_balance
                 } else {
                     BigUint::zero()
                 };
 
                 // VANGUARD SETTLEMENT Engine: Mathematical Slippage Guarantee
                 if received >= intent.min_return {
-                    // 1. Send the newly acquired tokens to the user
+                    // ✅ Success: Send acquired tokens to user, pay solver
                     self.send().direct_esdt(&intent.owner, &intent.token_out, 0, &received);
-                    
-                    // 2. Pay the Solver (simplified for V1, assuming EGLD in contract)
+
                     if intent.solver_fee > 0 {
                         self.send().direct_egld(&solver, &intent.solver_fee);
                     }
                 } else {
-                    // Slippage tolerance failed: Panicking reverts the ENTIRE transaction,
-                    // resetting the Intent back to Pending and refunding the input tokens.
-                    require!(false, "Slippage tolerance not met");
+                    // ❌ Slippage tolerance not met.
+                    // CRITICAL FIX (M-2): require!(false) in a callback does NOT
+                    // revert pre-callback state. We must manually revert the intent
+                    // status and return tokens via back_transfers.
+                    intent.status = IntentStatus::Pending;
+                    intent.settled_by = None;
+                    self.intent_by_id(intent_id).set(&intent);
+
+                    // Return any received output tokens to the contract (they stay)
+                    // The input tokens should return via back_transfers from the
+                    // failed async call, but if any output was partially received,
+                    // send it back to the owner as well.
+                    if received > 0 {
+                        self.send().direct_esdt(&intent.owner, &intent.token_out, 0, &received);
+                    }
                 }
             },
             ManagedAsyncCallResult::Err(_) => {
-                // DEX execution failed: Revert the whole transaction.
-                require!(false, "Intent execution failed");
+                // ❌ DEX execution failed.
+                // CRITICAL FIX (M-2): Manually revert intent to Pending.
+                // Back-transfers will return the input tokens to the contract.
+                intent.status = IntentStatus::Pending;
+                intent.settled_by = None;
+                self.intent_by_id(intent_id).set(&intent);
             }
         }
     }

@@ -120,3 +120,41 @@
 > "Hey, sorry to message out of the blue. I've seen a few of your posts and comments and was curious if you'd be open to a quick chat about small ways to contribute around @MerlinLayer2 alongside what you're already working on?"
 **Análisis:** Está "pescando" talento (scouting). Ha visto que Alexandru está construyendo activamente y le propone colaborar con MerlinLayer2 "sin dejar de hacer lo que ya hace".
 **Estado:** Pendiente de respuesta.
+
+### Interacción 4 de Marzo 2026:
+- Teresa aclara que no es una oferta formal ("I'm simply involved around the Merlin ecosystem..."). Solo conecta con gente del ecosistema y de proyectos donde hay sinergias.
+- Pregunta: "Out of curiosity, what are you mainly focused on building right now?"
+- **Respuesta planificada por Alejandro:** "Hi Teresa, thanks for clarifying. No worries at all! I appreciate the open networking approach.
+Right now, I'm the founder of XCron Protocol, a decentralized execution layer we are building on MultiversX. We allow users to automate smart contract interactions (DCA, Auto-Compound, intents, etc) without giving up custody of their funds.
+We are currently heads down building our 'Vanguard V2' update, introducing a highly optimized UI and pushing the limits of our Keeper network.
+While our core is in MultiversX for now, the vision of cross-chain automation (and obviously Bitcoin L2s environments like Merlin) is always on our roadmap as the definitive endgame.
+I'm always happy to stay connected and see how the whole ecosystem evolves. Are there specific DeFi primitives you guys are most excited about in Merlin right now?"
+
+### Interacción 4 de Marzo 2026 (Draft 2 Corto):
+- **Respuesta:** "Hi Teresa, thanks for clarifying. No worries at all!
+I'm the founder of XCron Protocol, a decentralized execution layer for DeFi automation originally on MultiversX. 
+We are currently heads down building our 'Vanguard' update. Since cross-chain automation (specifically Bitcoin L2s) is our endgame roadmap, I'm always happy to stay connected and see how the Merlin ecosystem evolves."
+
+### Interacción 4 de Marzo 2026 (Draft 3 Honesto y Claro):
+- **Respuesta para Teresa (Mentalidad Real de Alejandro):**
+"Hi Teresa! I appreciate the transparency.
+To answer your question directly: I am currently 100% focused on building XCron Protocol. It is basically a decentralized automation layer built on MultiversX. 
+To put it simply, we allow anyone to schedule smart contract executions (like recurring swaps, DCA, compounders) without us ever holding their funds. We are building the infrastructure so that other developers and users can put their DeFi strategies on autopilot.
+
+Right now, I am deep into developing our 'Vanguard' update to make the protocol much more powerful and easier to use. Honestly, the potential of decentralized automation is so massive that we are still discovering all the use cases ourselves 😂.
+
+Since we are focused purely on the MultiversX ecosystem right now (no EVM/ERC20 at the moment), I'm curious how ecosystems like Merlin handle this kind of trustless 'cron job' automation for their users. Always happy to share notes and learn from other chains!"
+
+### Interacción 4 de Marzo 2026 (Draft Final Directo para enviar rápido):
+- **Respuesta Enviada a Teresa:**
+"Hi Teresa, thanks! No worries.
+To answer your question directly: I am 100% focused on building XCron Protocol. It is a decentralized automation layer built entirely on MultiversX. 
+
+Basically, we allow anyone to schedule smart contract executions (like recurring swaps, DCA, compounders, etc.) without us ever holding their funds. We give developers and users the infrastructure to put their DeFi strategies on autopilot trustlessly. Right now, I'm deep into developing our 'Vanguard' update."
+
+### Draft Final Definitivo:
+"Hi Teresa, thanks! No worries. Sorry for the delay, I’m deep into building at the moment and also taking care of my son.
+
+To answer your question directly: I am 100% focused on building XCron Protocol. It is a decentralized automation layer built entirely on MultiversX. 
+
+Basically, we allow anyone to schedule smart contract executions (like recurring swaps, DCA, compounders, etc.) without us ever holding their funds. We give developers and users the infrastructure to put their DeFi strategies on autopilot trustlessly. Right now, I'm fully immersed in developing our 'Vanguard' update."

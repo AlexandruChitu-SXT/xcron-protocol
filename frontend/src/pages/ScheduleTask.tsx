@@ -280,101 +280,104 @@ function formatDuration(seconds: number): string {
     return `${d} ${d === 1 ? 'day' : 'days'}`;
 }
 
+
+// The different stages of the Omnibox flow
+type FlowStep = 'template' | 'contract' | 'endpoint' | 'deposit' | 'confirm';
+
 export function ScheduleTask() {
     const { wallet, setShowConnectModal, signAndSendTransaction, addToast } = useWallet();
-    const [searchParams] = useSearchParams();
-
-    const initialTemplate = (searchParams.get('template') as TemplateType) || 'custom';
-    const [template, setTemplate] = useState<TemplateType>(
-        TEMPLATE_KEYS.includes(initialTemplate) ? initialTemplate : 'custom'
-    );
-
-    const [form, setForm] = useState({ ...TEMPLATES[template].defaults });
-    const [argsList, setArgsList] = useState<{ type: 'string' | 'number' | 'address', value: string }[]>([]);
-
-    // Vanguard V2: Smart Intent Dash Hooks
-    const [intentTokenIn, setIntentTokenIn] = useState('WEGLD-bd4d79');
-    const [intentAmountIn, setIntentAmountIn] = useState('');
-    const [intentTokenOut, setIntentTokenOut] = useState('USDC-c76f1f');
-    const [intentMinReturn, setIntentMinReturn] = useState('');
-
     const { txHash, setTxHash, status: txStatus, loading: txLoading } = useTxTracker();
+
+    // Core state
+    const [step, setStep] = useState<FlowStep>('template');
+    const [template, setTemplate] = useState<TemplateType>('custom');
+    const [inputValue, setInputValue] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    // Human-friendly time state (in seconds)
-    const [delaySeconds, setDelaySeconds] = useState(0);
-    const [intervalSeconds, setIntervalSeconds] = useState(
-        parseInt(TEMPLATES[initialTemplate].defaults.interval || '0') * SECONDS_PER_ROUND
-    );
-    const [remainingExecs, setRemainingExecs] = useState(10);
-    const [requireXwapSafe, setRequireXwapSafe] = useState(false);
 
+    // Form data accumulated through the flow
+    const [form, setForm] = useState<Partial<TemplateDefaults>>({});
 
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-focus input on step change
     useEffect(() => {
-        const tmplDefaults = TEMPLATES[template].defaults;
-        setForm({ ...tmplDefaults });
-        setArgsList([]);
-        setTxHash('');
-        setError('');
-        setDelaySeconds(0);
-        setIntervalSeconds(parseInt(tmplDefaults.interval || '0') * SECONDS_PER_ROUND);
-        setRemainingExecs(10);
-        setRequireXwapSafe(false);
-    }, [template]);
-
-    const update = (field: string, value: string) => {
-        setForm((prev: TemplateDefaults) => ({ ...prev, [field]: value }));
-        setError('');
-        setTxHash(null);
-    };
-
-    // Normalize commas to dots for decimal inputs
-    const updateDecimal = (field: string, value: string) => {
-        update(field, value.replace(/,/g, '.'));
-    };
-
-    const addArgument = () => {
-        setArgsList([...argsList, { type: 'string', value: '' }]);
-    };
-
-    const updateArgument = (index: number, field: 'type' | 'value', val: string) => {
-        const newArgs = [...argsList];
-        newArgs[index] = { ...newArgs[index], [field]: val };
-        setArgsList(newArgs);
-    };
-
-    const removeArgument = (index: number) => {
-        setArgsList(argsList.filter((_, i) => i !== index));
-    };
-
-    const encodeArguments = (): string => {
-        if (argsList.length === 0) return '00000000'; // Empty vec length
-
-        let encoded = numToHex8(argsList.length); // u32 length of args vector (not true u32 but 1 byte hack for small args)
-        // Wait, for safety we should encode u32 properly.
-        encoded = argsList.length.toString(16).padStart(8, '0');
-
-        for (const arg of argsList) {
-            let argHex = '';
-            if (arg.type === 'string') {
-                argHex = stringToHex(arg.value);
-            } else if (arg.type === 'number') {
-                argHex = parseInt(arg.value).toString(16);
-                if (argHex.length % 2 !== 0) argHex = '0' + argHex;
-            } else if (arg.type === 'address') {
-                argHex = addressToHex(arg.value);
-            }
-
-            // Append length of this specific argument as u32
-            const argLenBase = (argHex.length / 2).toString(16).padStart(8, '0');
-            encoded += argLenBase + argHex;
+        if (inputRef && inputRef.current) {
+            inputRef.current.focus();
         }
+        setInputValue('');
+        setError('');
+    }, [step]);
 
-        return encoded;
+    const handleNext = () => {
+        if (!inputValue.trim() && step !== 'template') return;
+
+        setError('');
+
+        switch (step) {
+            case 'template':
+                setStep('contract');
+                break;
+            case 'contract':
+                if (inputValue.length < 62 || !inputValue.startsWith('erd1')) {
+                    setError('Invalid MultiversX contract address.');
+                    return;
+                }
+                setForm(prev => ({ ...prev, targetContract: inputValue }));
+                setStep('endpoint');
+                break;
+            case 'endpoint':
+                setForm(prev => ({ ...prev, targetEndpoint: inputValue }));
+                setStep('deposit');
+                break;
+            case 'deposit':
+                const depositVal = parseFloat(inputValue.replace(/,/g, '.'));
+                if (isNaN(depositVal) || depositVal <= 0) {
+                    setError('Enter a valid EGLD amount (e.g. 0.05)');
+                    return;
+                }
+                setForm(prev => ({
+                    ...prev,
+                    deposit: inputValue.replace(/,/g, '.'),
+                    // Default scheduling options to speed up Omnibox demo:
+                    triggerType: 'once',
+                    maxGas: '10000000',
+                    maxRetries: '3',
+                    ttlRounds: '1000'
+                }));
+                setStep('confirm');
+                break;
+            case 'confirm':
+                handleSubmit();
+                break;
+        }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleNext();
+        } else if (e.key === 'Escape') {
+            // Go back
+            if (step === 'contract') setStep('template');
+            if (step === 'endpoint') setStep('contract');
+            if (step === 'deposit') setStep('endpoint');
+            if (step === 'confirm') setStep('deposit');
+        }
+    };
+
+    const handleTemplatePillClick = (key: TemplateType) => {
+        setTemplate(key);
+        setForm(TEMPLATES[key].defaults);
+        // Pre-filled templates go straight to deposit
+        if (key !== 'custom') {
+            setStep('deposit');
+        } else {
+            setStep('contract');
+        }
+    };
+
+    const handleSubmit = async () => {
         if (!wallet.connected) {
             setShowConnectModal(true);
             return;
@@ -383,53 +386,20 @@ export function ScheduleTask() {
         setLoading(true);
         setError('');
 
-        // Custom validation (replaces native browser tooltips)
-        if (!form.targetContract.trim()) {
-            setError('Target contract address is required');
-            setLoading(false);
-            return;
-        }
-        if (!form.targetEndpoint.trim()) {
-            setError('Endpoint name is required');
-            setLoading(false);
-            return;
-        }
-        if (!form.deposit || parseFloat(form.deposit.replace(/,/g, '.')) <= 0) {
-            setError('EGLD deposit must be greater than 0');
-            setLoading(false);
-            return;
-        }
-
         try {
-            const targetAddrHex = addressToHex(form.targetContract);
-            const endpointHex = stringToHex(form.targetEndpoint);
+            const targetAddrHex = addressToHex(form.targetContract || '');
+            const endpointHex = stringToHex(form.targetEndpoint || '');
+            const encodedArgsList = '00000000'; // No args in minimalist flow for now
 
-            // Encode custom arguments securely
-            const encodedArgsList = encodeArguments();
-
-            // Supernova: Time-based scheduling using Unix Timestamp (seconds)
             const currentTimestamp = Math.floor(Date.now() / 1000);
-            let targetTime = currentTimestamp + delaySeconds;
-            // Safety: never send NaN or negative values
-            if (!Number.isFinite(targetTime) || targetTime < 0) targetTime = 0;
+            const triggerHex = '00' + hex64(currentTimestamp);
 
-            let triggerHex: string;
-            if (form.triggerType === 'once') {
-                triggerHex = '00' + hex64(targetTime);
-            } else {
-                triggerHex = '01' + hex64(targetTime)
-                    + hex64(intervalSeconds)
-                    + hex64(remainingExecs);
-            }
-
-            const maxGasHex = hex64(parseInt(form.maxGas));
-            const depositWei = BigInt(Math.floor(parseFloat(form.deposit.replace(/,/g, '.')) * 1e18));
-            const maxRetriesHex = numToHex8(parseInt(form.maxRetries));
-            // Convert legacy ttlRounds from template to seconds
-            // NOTE: SECONDS_PER_ROUND = 6 currently, will be ~0.6 after Supernova
-            const ttlSeconds = parseInt(form.ttlRounds || '1000') * SECONDS_PER_ROUND;
+            const maxGasHex = hex64(parseInt(form.maxGas || '10000000'));
+            const depositWei = BigInt(Math.floor(parseFloat(form.deposit || '0') * 1e18));
+            const maxRetriesHex = numToHex8(parseInt(form.maxRetries || '3'));
+            const ttlSeconds = parseInt(form.ttlRounds || '1000') * 6;
             const ttlHex = hex64(ttlSeconds);
-            const requireXwapHex = requireXwapSafe ? '01' : '';
+            const requireXwapHex = '';
 
             const data = `scheduleTask@${targetAddrHex}@${endpointHex}@${encodedArgsList}@${triggerHex}@${maxGasHex}@${maxRetriesHex}@${ttlHex}@${requireXwapHex}`;
 
@@ -437,7 +407,7 @@ export function ScheduleTask() {
                 receiver: CONTRACTS.scheduler,
                 value: depositWei.toString(),
                 data,
-                gasLimit: GAS_SCHEDULE_TASK,
+                gasLimit: 50000000,
             });
 
             if (result) {
@@ -448,675 +418,238 @@ export function ScheduleTask() {
             }
         } catch (err: any) {
             setError(err.message || 'Failed to schedule task');
-            addToast(`Schedule failed: ${err.message}`, 'error');
+            setStep('template');
         } finally {
             setLoading(false);
         }
     };
 
-    const tmpl = TEMPLATES[template];
-    const labels = TEMPLATE_LABELS[template];
-    const color = TEMPLATE_COLORS[template];
+    const getPrompt = () => {
+        switch (step) {
+            case 'template': return 'What do you want to automate?';
+            case 'contract': return 'Enter the smart contract address';
+            case 'endpoint': return 'What function should the keeper call?';
+            case 'deposit': return 'How much EGLD to deposit for gas?';
+            case 'confirm': return 'Press Enter to deploy to Vanguard Network';
+            default: return '';
+        }
+    };
+
+    const getPlaceholder = () => {
+        switch (step) {
+            case 'template': return 'Type "swap", "claim", or select below...';
+            case 'contract': return 'erd1...';
+            case 'endpoint': return 'e.g., claimRewards';
+            case 'deposit': return '0.05';
+            case 'confirm': return '';
+            default: return '';
+        }
+    };
 
     return (
-        <div className="page">
-            <div className="app-container" style={{ maxWidth: '100%', padding: '0 16px' }}>
-                <div className="page-header" style={{ marginBottom: 28 }}>
-                    <TypewriterTitle as="h1" text="Schedule a Task" speed={70} />
-                    <TypewriterTitle as="p" text="Choose a template or build your own — XCron can automate any smart contract call" speed={25} />
-                </div>
+        <div className="page" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '80vh',
+            background: 'radial-gradient(ellipse at center, rgba(14,165,233,0.03) 0%, transparent 70%)'
+        }}>
 
-                {/* How It Works — compact inline */}
-                <div style={{ display: 'flex', gap: 24, marginBottom: 28, padding: '10px 24px', borderRadius: 6, background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.12)', justifyContent: 'center' }}>
-                    {[
-                        { num: '1', label: 'Schedule', desc: 'Define what to call & when', color: 'rgb(251,191,36)' },
-                        { num: '2', label: 'Deposit', desc: 'EGLD covers keeper gas', color: 'var(--accent-light)' },
-                        { num: '3', label: 'Execute', desc: 'Keepers auto-call your target', color: 'rgb(34,197,94)' },
-                    ].map(s => (
-                        <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ width: 28, height: 28, borderRadius: '50%', background: `${s.color}22`, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem', fontWeight: 700, flexShrink: 0 }}>{s.num}</span>
-                            <span style={{ fontSize: '1.05rem', color: '#ffffff' }}><strong style={{ color: 'var(--text-primary)' }}>{s.label}</strong> — {s.desc}</span>
-                        </div>
-                    ))}
-                </div>
+            <div style={{ width: '100%', maxWidth: 700, position: 'relative', zIndex: 10 }}>
 
-
-                {/* Vanguard Cover Flow — Horizontal Template Selection */}
-                <div className="cover-flow-container" style={{
-                    display: 'flex',
-                    gap: 16,
-                    overflowX: 'auto',
-                    paddingBottom: 24,
-                    marginBottom: 32,
-                    paddingTop: 10,
-                    paddingLeft: 4,
-                    paddingRight: 4,
-                    scrollSnapType: 'x mandatory',
-                    WebkitOverflowScrolling: 'touch',
-                }}>
-                    <style>{`
-                        .cover-flow-container::-webkit-scrollbar { display: none; }
-                        .cover-flow-container { -ms-overflow-style: none; scrollbar-width: none; }
-                    `}</style>
-                    {(Object.keys(TEMPLATES) as TemplateType[]).map((key) => {
-                        const isActive = template === key;
-                        const cColor = TEMPLATE_COLORS[key];
-                        return (
-                            <div
-                                key={key}
-                                onClick={() => setTemplate(key)}
-                                style={{
-                                    flexShrink: 0,
-                                    width: isActive ? 260 : 180,
-                                    height: isActive ? 160 : 130,
-                                    scrollSnapAlign: 'center',
-                                    background: isActive ? `linear-gradient(145deg, ${cColor}15, var(--bg-secondary))` : 'var(--bg-secondary)',
-                                    border: `1px solid ${isActive ? cColor : 'var(--border-primary)'}`,
-                                    borderRadius: 16,
-                                    padding: isActive ? 20 : 16,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'flex-start',
-                                    justifyContent: 'space-between',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.4s cubic-bezier(0.25, 1, 0.5, 1)',
-                                    boxShadow: isActive ? `0 12px 40px ${cColor}25, inset 0 1px 0 ${cColor}30` : '0 4px 12px rgba(0,0,0,0.2)',
-                                    transform: isActive ? 'scale(1.02) translateY(-4px)' : 'scale(1) translateY(0)',
-                                    opacity: isActive ? 1 : 0.5,
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: isActive ? 12 : 10 }}>
-                                    <div style={{
-                                        width: isActive ? 42 : 32,
-                                        height: isActive ? 42 : 32,
-                                        borderRadius: 10,
-                                        background: `${cColor}20`,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        transition: 'all 0.4s',
-                                        boxShadow: isActive ? `0 0 15px ${cColor}40` : 'none',
-                                    }}>
-                                        <TemplateIcon type={key} color={cColor} size={isActive ? 22 : 16} />
-                                    </div>
-                                    <h4 style={{
-                                        margin: 0,
-                                        fontSize: isActive ? '1.1rem' : '0.9rem',
-                                        fontWeight: isActive ? 700 : 500,
-                                        color: isActive ? '#fff' : 'var(--text-secondary)',
-                                        transition: 'all 0.4s'
-                                    }}>{TEMPLATES[key].title}</h4>
-                                </div>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-end',
-                                    width: '100%',
-                                    marginTop: 'auto'
-                                }}>
-                                    <span style={{
-                                        fontSize: '0.68rem',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.8px',
-                                        fontWeight: 800,
-                                        color: cColor,
-                                        background: `${cColor}20`,
-                                        padding: '4px 8px',
-                                        borderRadius: 6,
-                                        border: `1px solid ${cColor}30`
-                                    }}>
-                                        {TEMPLATES[key].category}
-                                    </span>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Center — Form */}
-                <div style={{ width: '100%', maxWidth: 780, margin: '0 auto', marginBottom: 60 }}>
-
-
-                    {/* Compact form card */}
-                    <div className="card" style={{
-                        background: 'transparent',
-                        backdropFilter: 'none',
-                        WebkitBackdropFilter: 'none',
-                        borderColor: 'rgba(250,128,114,0.50)',
-                        borderWidth: 1,
-                        maxWidth: 'none',
-                        padding: 12,
-                        boxShadow: '0 0 20px rgba(250,128,114,0.15), 0 0 40px rgba(250,128,114,0.08)',
-                        fontSize: '0.88rem',
-                        position: 'relative',
-                        overflow: 'hidden',
+                {/* Cinematic Title */}
+                <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                    <h1 style={{
+                        fontSize: '1.8rem',
+                        fontWeight: 300,
+                        color: '#fff',
+                        letterSpacing: '-0.5px',
+                        animation: 'fadeInUp 0.8s ease forwards'
                     }}>
-                        {/* Top shimmer accent line */}
-                        <div style={{
-                            position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-                            background: 'linear-gradient(90deg, transparent, rgba(250,128,114,0.5), rgba(255,160,122,0.4), transparent)',
-                        }} />
-                        {/* Template Info */}
-                        <div className="template-info" style={{ marginBottom: 3, fontSize: '0.78rem' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><TemplateIcon type={template} color={color} size={10} /> <strong>{tmpl.title}</strong></span> — {tmpl.description}
-                        </div>
+                        {getPrompt()}
+                    </h1>
+                </div>
 
-                        <form onSubmit={handleSubmit} noValidate>
-                            {/* Target — inline for custom */}
-                            <div className="form-section" style={{ marginBottom: 4 }}>
-                                <div style={{ display: template === 'custom' ? 'grid' : 'block', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                    {template !== 'smartintent' && (
-                                        <div className="form-group">
-                                            <label>{labels.contract}</label>
-                                            <input
-                                                type="text"
-                                                placeholder="erd1qqq..."
-                                                value={form.targetContract}
-                                                onChange={(e) => update('targetContract', e.target.value)}
-                                                required
-                                                style={{ fontFamily: 'monospace' }}
-                                            />
-                                        </div>
-                                    )}
+                {/* The Omnibox */}
+                <div style={{
+                    position: 'relative',
+                    width: '100%',
+                    transform: step === 'confirm' ? 'scale(1.02)' : 'scale(1)',
+                    transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}>
 
-                                    {template === 'custom' && (
-                                        <>
-                                            {/* Popular Protocols — compact inline helper */}
-                                            <div style={{
-                                                marginTop: 2, marginBottom: 4, padding: '4px 8px',
-                                                background: 'rgba(6,182,212,0.04)', borderRadius: 6,
-                                                border: '1px solid rgba(6,182,212,0.10)',
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>Protocols</span>
-                                                    {[
-                                                        { name: 'xExchange', endpoints: ['claimRewards', 'swapTokensFixedInput', 'addLiquidity'], color: '#22c55e' },
-                                                        { name: 'Hatom', endpoints: ['claimRewards', 'supply', 'withdraw'], color: '#6366f1' },
-                                                        { name: 'AshSwap', endpoints: ['exchange', 'addLiquidity'], color: '#f43f5e' },
-                                                        { name: 'OneDex', endpoints: ['swap', 'addLiquidity', 'removeLiquidity'], color: '#f59e0b' },
-                                                        { name: 'JewelSwap', endpoints: ['claimRewards', 'stake'], color: '#06b6d4' },
-                                                    ].map((proto) => (
-                                                        <div key={proto.name} style={{ position: 'relative' }}>
-                                                            <details style={{ position: 'relative' }}>
-                                                                <summary style={{
-                                                                    cursor: 'pointer', padding: '3px 8px',
-                                                                    borderRadius: 4, fontSize: '0.82rem', fontWeight: 600,
-                                                                    background: `${proto.color}12`, color: proto.color,
-                                                                    border: `1px solid ${proto.color}25`,
-                                                                    listStyle: 'none', userSelect: 'none',
-                                                                    transition: 'all 0.15s',
-                                                                }}>
-                                                                    {proto.name}
-                                                                </summary>
-                                                                <div style={{
-                                                                    position: 'absolute', top: 'calc(100% + 3px)', left: 0,
-                                                                    zIndex: 30, minWidth: 170,
-                                                                    background: 'var(--bg-secondary)', borderRadius: 6,
-                                                                    border: '1px solid var(--border-primary)',
-                                                                    boxShadow: '0 6px 18px rgba(0,0,0,0.5)',
-                                                                    overflow: 'hidden',
-                                                                }}>
-                                                                    {proto.endpoints.map((ep) => (
-                                                                        <div
-                                                                            key={ep}
-                                                                            onClick={() => {
-                                                                                update('targetEndpoint', ep);
-                                                                                const details = document.querySelectorAll('.form-section details[open]');
-                                                                                details.forEach(d => (d as HTMLDetailsElement).open = false);
-                                                                                addToast(`Endpoint: ${ep} — now paste the ${proto.name} address above`, 'info');
-                                                                            }}
-                                                                            style={{
-                                                                                padding: '6px 10px', cursor: 'pointer',
-                                                                                fontSize: '0.72rem', fontFamily: 'monospace',
-                                                                                color: 'var(--text-secondary)',
-                                                                                transition: 'background 0.15s',
-                                                                            }}
-                                                                            onMouseEnter={(e) => {
-                                                                                e.currentTarget.style.background = `${proto.color}15`;
-                                                                                e.currentTarget.style.color = proto.color;
-                                                                            }}
-                                                                            onMouseLeave={(e) => {
-                                                                                e.currentTarget.style.background = 'transparent';
-                                                                                e.currentTarget.style.color = 'var(--text-secondary)';
-                                                                            }}
-                                                                        >
-                                                                            {ep}()
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </details>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
+                    {/* Magical Glow Behind */}
+                    <div style={{
+                        position: 'absolute',
+                        top: -10, left: -10, right: -10, bottom: -10,
+                        background: 'linear-gradient(90deg, rgba(6,182,212,0.5), rgba(168,85,247,0.5), rgba(6,182,212,0.5))',
+                        filter: 'blur(20px)',
+                        opacity: step === 'confirm' ? 0.8 : 0.4,
+                        zIndex: -1,
+                        borderRadius: 40,
+                        transition: 'opacity 0.5s ease',
+                        animation: 'glowPulse 4s infinite alternate'
+                    }} />
 
-                                            <div className="form-group">
-                                                <label>{labels.endpoint}</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. claimRewards"
-                                                    value={form.targetEndpoint}
-                                                    onChange={(e) => update('targetEndpoint', e.target.value)}
-                                                    required
-                                                    style={{ fontFamily: 'monospace' }}
-                                                />
-                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                                    The smart contract function name to call (e.g. claimRewards, swap, mint)
-                                                </small>
-                                            </div>
+                    {/* The Input Container */}
+                    <div style={{
+                        background: 'rgba(5, 10, 20, 0.95)', // Made slightly darker to pop the text
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255,255,255,0.2)', // Slightly brighter border
+                        borderRadius: 30,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        padding: '16px 24px', // Increased padding for a larger click area
+                        boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.15)',
+                    }}>
+                        <span style={{ color: 'var(--accent-light)', marginRight: 16, fontSize: '1.2rem', fontWeight: 600 }}>❯</span>
 
-                                            <div className="form-group" style={{ marginTop: 6 }}>
-                                                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span>Function Arguments</span>
-                                                    <button type="button" onClick={addArgument} className="btn-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                        + Add Argument
-                                                    </button>
-                                                </label>
-
-                                                {argsList.length === 0 ? (
-                                                    <div style={{ textAlign: 'center', padding: '6px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-primary)', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                                                        No arguments required for this function.
-                                                    </div>
-                                                ) : (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                                        {argsList.map((arg, idx) => (
-                                                            <div key={idx} style={{ display: 'flex', gap: 8 }}>
-                                                                <select
-                                                                    value={arg.type}
-                                                                    onChange={(e) => updateArgument(idx, 'type', e.target.value)}
-                                                                    style={{ width: '100px', padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
-                                                                >
-                                                                    <option value="string">String</option>
-                                                                    <option value="number">Number</option>
-                                                                    <option value="address">Address</option>
-                                                                </select>
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder={arg.type === 'number' ? 'e.g. 1000' : arg.type === 'address' ? 'erd1...' : 'text'}
-                                                                    value={arg.value}
-                                                                    onChange={(e) => updateArgument(idx, 'value', e.target.value)}
-                                                                    required
-                                                                    style={{ flex: 1, fontFamily: 'monospace', padding: '8px', borderRadius: 'var(--radius-sm)' }}
-                                                                />
-                                                                <button type="button" onClick={() => removeArgument(idx)} style={{ background: 'rgba(239,68,68,0.1)', color: 'rgb(239,68,68)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)', width: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    ✕
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* Vanguard V2: Smart Intent UI */}
-                                    {template === 'smartintent' && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                            <div style={{ padding: '16px', background: 'rgba(255,42,128,0.05)', border: '1px solid rgba(255,42,128,0.2)', borderRadius: 'var(--radius-md)' }}>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 16, alignItems: 'center' }}>
-                                                    {/* Token In */}
-                                                    <div>
-                                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Inject Liquidity (Pay)</label>
-                                                        <div style={{ display: 'flex', gap: 8 }}>
-                                                            <input
-                                                                type="text"
-                                                                value={intentAmountIn}
-                                                                onChange={(e) => setIntentAmountIn(e.target.value)}
-                                                                style={{ flex: 1, fontSize: '1.1rem', fontWeight: 600, padding: '8px 12px' }}
-                                                            />
-                                                            <select
-                                                                value={intentTokenIn}
-                                                                onChange={(e) => setIntentTokenIn(e.target.value)}
-                                                                style={{ padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-sm)', color: 'white', fontWeight: 600 }}
-                                                            >
-                                                                <option value="USDC-c76f1f">USDC</option>
-                                                                <option value="WEGLD-bd4d79">WEGLD</option>
-                                                                <option value="ASH-a642d1">ASH</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Swap Icon */}
-                                                    <div style={{ color: 'var(--accent-light)', marginTop: 20 }}>
-                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                                                    </div>
-
-                                                    {/* Token Out */}
-                                                    <div>
-                                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Desired Outcome (Receive)</label>
-                                                        <div style={{ display: 'flex', gap: 8 }}>
-                                                            <select
-                                                                value={intentTokenOut}
-                                                                onChange={(e) => setIntentTokenOut(e.target.value)}
-                                                                style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-sm)', color: 'white', fontWeight: 600 }}
-                                                            >
-                                                                <option value="WEGLD-bd4d79">WEGLD</option>
-                                                                <option value="USDC-c76f1f">USDC</option>
-                                                                <option value="ASH-a642d1">ASH</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Slippage & Min Return */}
-                                                <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                                        <div style={{ flex: 1, paddingRight: 24 }}>
-                                                            <label style={{ fontSize: '0.85rem', color: 'var(--accent-light)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                                                                Strict Minimum Return (Slippage Protection)
-                                                            </label>
-                                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 10px 0', lineHeight: 1.4 }}>
-                                                                If the Solvers cannot route your trade across DEXes to secure at least this amount, the Intent expires securely without costing you any gas.
-                                                            </p>
-                                                        </div>
-                                                        <div style={{ width: 140 }}>
-                                                            <div style={{ position: 'relative' }}>
-                                                                <input
-                                                                    type="text"
-                                                                    value={intentMinReturn}
-                                                                    onChange={(e) => setIntentMinReturn(e.target.value)}
-                                                                    style={{ width: '100%', padding: '8px 12px', fontSize: '1rem', fontWeight: 700, color: '#10b981', borderColor: 'rgba(16,185,129,0.3)' }}
-                                                                />
-                                                                <span style={{ position: 'absolute', right: 12, top: 10, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                                    {intentTokenOut.split('-')[0]}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>{/* end inline grid */}
+                        {step === 'confirm' ? (
+                            <div style={{ flex: 1, color: '#ffffff', fontSize: '1.4rem', fontWeight: 300, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>deploying task...</span>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>ESC to cancel</span>
                             </div>
+                        ) : (
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={getPlaceholder()}
+                                disabled={loading}
+                                style={{
+                                    flex: 1,
+                                    background: 'transparent',
+                                    border: 'none',
+                                    outline: 'none',
+                                    color: '#ffffff', // Ensures user typing is bright white
+                                    caretColor: '#ffffff', // Ensures the blinking cursor is white
+                                    fontSize: '1.4rem',
+                                    fontWeight: 300,
+                                    letterSpacing: '0.5px',
+                                    width: '100%',
+                                }}
+                            />
+                        )}
 
-                            {/* Schedule + Budget — side by side */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 8 }}>
-
-                                {/* Section: Schedule */}
-                                <div className="form-section" style={{ marginBottom: 0, padding: 8, background: 'rgba(250,128,114,0.10)', border: '1px solid rgba(250,128,114,0.35)', borderRadius: 'var(--radius-md)', boxShadow: '0 0 12px rgba(250,128,114,0.08)' }}>
-                                    <div className="section-title" style={{ fontSize: '0.75rem', marginBottom: 4 }}>Schedule</div>
-
-                                    <div className="form-group">
-                                        <label>Trigger Type</label>
-                                        <div className="segmented-control">
-                                            <div
-                                                className={`segmented-item ${form.triggerType === 'once' ? 'active' : ''}`}
-                                                onClick={() => update('triggerType', 'once')}
-                                            >
-                                                One-time
-                                            </div>
-                                            <div
-                                                className={`segmented-item ${form.triggerType === 'recurring' ? 'active' : ''}`}
-                                                onClick={() => update('triggerType', 'recurring')}
-                                            >
-                                                Recurring
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>{form.triggerType === 'once' ? 'Execute After' : 'Start After'}</label>
-                                        <CustomDropdown
-                                            value={delaySeconds}
-                                            onChange={(val) => setDelaySeconds(val)}
-                                            options={[
-                                                { value: 0, label: 'Immediately (as soon as possible)' },
-                                                { value: 600, label: '10 minutes' },
-                                                { value: 1800, label: '30 minutes' },
-                                                { value: 3600, label: '1 hour' },
-                                                { value: 21600, label: '6 hours' },
-                                                { value: 86400, label: '24 hours' },
-                                            ]}
-                                        />
-                                        <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                            {delaySeconds === 0 ? 'A keeper will execute the task as soon as possible' : `The task will become executable at the specific exact time after ~${formatDuration(delaySeconds)}`}
-                                        </small>
-                                    </div>
-
-                                    {form.triggerType === 'recurring' && (
-                                        <>
-                                            <div className="form-group" style={{ marginTop: 12 }}>
-                                                <label>Repeat Every</label>
-                                                <CustomDropdown
-                                                    value={intervalSeconds}
-                                                    onChange={(val) => setIntervalSeconds(val)}
-                                                    options={INTERVAL_PRESETS.map((p) => ({ value: p.seconds, label: p.label }))}
-                                                />
-                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                                    The task will re-execute exactly every {formatDuration(intervalSeconds)}
-                                                </small>
-                                            </div>
-                                            <div className="form-group" style={{ marginTop: 12 }}>
-                                                <label>Repeat Count</label>
-                                                <CustomDropdown
-                                                    value={remainingExecs}
-                                                    onChange={(val) => setRemainingExecs(val)}
-                                                    options={[
-                                                        { value: 3, label: '3 times' },
-                                                        { value: 5, label: '5 times' },
-                                                        { value: 10, label: '10 times' },
-                                                        { value: 25, label: '25 times' },
-                                                        { value: 50, label: '50 times' },
-                                                        { value: 100, label: '100 times' },
-                                                    ]}
-                                                />
-                                                <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                                                    How many times the task will execute before stopping. More repetitions need a larger deposit.
-                                                </small>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-
-                                {/* Section: Budget */}
-                                <div className="form-section" style={{ marginBottom: 0, padding: 8, background: 'rgba(250,128,114,0.10)', border: '1px solid rgba(250,128,114,0.35)', borderRadius: 'var(--radius-md)', boxShadow: '0 0 12px rgba(250,128,114,0.08)' }}>
-                                    <div className="section-title" style={{ fontSize: '0.75rem', marginBottom: 4 }}>Budget</div>
-
-                                    <div className="form-group">
-                                        <label>EGLD to Deposit</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                placeholder="0.005"
-                                                value={form.deposit}
-                                                onChange={(e) => updateDecimal('deposit', e.target.value)}
-                                                required
-                                                style={{ paddingRight: 60 }}
-                                            />
-                                            <span style={{ position: 'absolute', right: 12, top: 12, color: 'var(--text-muted)', fontSize: '0.85rem' }}>EGLD</span>
-                                        </div>
-                                        <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', lineHeight: 1.5 }}>
-                                            Budget for keeper gas costs.
-                                            {form.triggerType === 'recurring'
-                                                ? ' More deposit = more executions.'
-                                                : ' 0.005 EGLD is usually enough.'}
-                                            {' '}Unused deposit is refundable.
-                                        </small>
-                                    </div>
-
-                                    {template === 'custom' && (
-                                        <details style={{ marginTop: 8 }}>
-                                            <summary style={{
-                                                cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)',
-                                                padding: '6px 0', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 6
-                                            }}>
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
-                                                Advanced Settings
-                                            </summary>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-                                                <div className="form-group">
-                                                    <label style={{ fontSize: '0.78rem' }}>Gas Limit</label>
-                                                    <input
-                                                        type="number"
-                                                        value={form.maxGas}
-                                                        onChange={(e) => update('maxGas', e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="form-group">
-                                                    <label style={{ fontSize: '0.78rem' }}>Max Retries</label>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        max="10"
-                                                        value={form.maxRetries}
-                                                        onChange={(e) => update('maxRetries', e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </details>
-                                    )}
-                                </div>
-
-                            </div>{/* end grid Schedule+Budget */}
-
-                            {/* Extras — Keeper Advanced Features */}
-                            <details style={{ marginBottom: 4 }}>
-                                <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '4px 0', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
-                                    Advanced Keeper Features
-                                </summary>
-
-                                {/* Price Condition — Real keeper feature */}
-                                <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(6,182,212,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(6,182,212,0.20)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-8.36l5.67-5.67" /></svg>
-                                                Price Condition
-                                            </span>
-                                            <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(6,182,212,0.15)', color: 'rgb(6,182,212)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Keeper</span>
-                                        </div>
-                                    </div>
-                                    <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: 6, lineHeight: 1.5 }}>
-                                        The keeper checks <strong>EGLD price in real-time</strong> via MultiversX API before executing any task.
-                                        Configure via keeper env vars: <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_ENABLED=true</code>{' '}
-                                        <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_THRESHOLD=50</code>{' '}
-                                        <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_CONDITION=above</code>
-                                    </small>
-                                    <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(6,182,212,0.08)', fontSize: '0.75rem', color: 'rgb(6,182,212)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5" /><path d="M9 18h6" /><path d="M10 22h4" /></svg>
-                                        The keeper will skip execution if the price condition is not met — 0 gas wasted.
-                                    </div>
-                                </div>
-
-                                {/* AI-Optimized — Real keeper feature */}
-                                <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(168,85,247,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(168,85,247,0.20)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg>
-                                                AI-Optimized Execution
-                                            </span>
-                                            <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(168,85,247,0.15)', color: 'rgb(168,85,247)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Keeper</span>
-                                        </div>
-                                    </div>
-                                    <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: 6, lineHeight: 1.5 }}>
-                                        The keeper analyzes <strong>network conditions</strong> (round time, congestion) and delays execution when gas is expensive.
-                                        Auto-executes after 5 delays (anti-starvation). Prefers off-peak hours (UTC 02:00-06:00).
-                                        Enable: <code style={{ background: 'rgba(168,85,247,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_AI_OPTIMIZED=true</code>
-                                    </small>
-                                    <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(168,85,247,0.08)', fontSize: '0.75rem', color: 'rgb(168,85,247)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M7 5H3" /><path d="M21 17v4" /><path d="M23 19h-4" /></svg>
-                                        Saves gas by executing at optimal network moments — no extra cost for users.
-                                    </div>
-                                </div>
-
-                                {/* XWAP Volatility Gate — Real Contract Feature */}
-                                <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(251,191,36,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(251,191,36,0.20)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setRequireXwapSafe(!requireXwapSafe)}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                                                Volatility Protection
-                                            </span>
-                                            <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(251,191,36,0.15)', color: 'rgb(251,191,36)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>On-Chain</span>
-                                        </div>
-                                        <div style={{
-                                            width: 36, height: 20, borderRadius: 10, background: requireXwapSafe ? 'rgb(251,191,36)' : 'var(--bg-card)',
-                                            border: `1px solid ${requireXwapSafe ? 'rgb(251,191,36)' : 'var(--border-primary)'}`,
-                                            position: 'relative', transition: 'all 0.2s',
-                                        }}>
-                                            <div style={{
-                                                width: 14, height: 14, borderRadius: 7, background: '#fff',
-                                                position: 'absolute', top: 2, left: requireXwapSafe ? 18 : 2, transition: 'all 0.2s',
-                                            }} />
-                                        </div>
-                                    </div>
-                                    <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: 6, lineHeight: 1.5 }}>
-                                        The task will <strong>pause execution</strong> during severe market volatility. Evaluated natively on-chain via the <strong>XWAP Oracle</strong>.
-                                        Recommended for DeFi swaps and liquidations to prevent high slippage or sandwich attacks.
-                                    </small>
-                                </div>
-                            </details>
-
-                            {/* Task Chaining hint */}
-                            <div style={{
-                                padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                                background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
-                                marginBottom: 8, fontSize: '0.72rem', color: 'rgba(34,197,94,0.85)',
-                                display: 'flex', alignItems: 'center', gap: 8,
-                            }}>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-                                <span>
-                                    <strong>Task Chaining:</strong> After creating multiple tasks, link them in{' '}
-                                    <a href="/tasks" style={{ color: 'rgb(34,197,94)', textDecoration: 'underline' }}>My Tasks</a>
-                                    {' '}so they execute sequentially — Step B only runs if Step A succeeds.
-                                </span>
+                        {/* Enter Hint */}
+                        {step !== 'confirm' && inputValue && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0.6, animation: 'fadeIn 0.3s' }}>
+                                <span style={{ fontSize: '0.8rem', color: '#fff' }}>Press</span>
+                                <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: 4, color: '#fff', fontSize: '0.75rem', fontFamily: 'monospace' }}>↵</kbd>
                             </div>
-
-                            {error && (
-                                <div className="toast-error" style={{ position: 'relative', marginBottom: 16, padding: 12, borderRadius: 8 }}>
-                                    {error}
-                                </div>
-                            )}
-
-                            <button className="btn btn-primary" style={{ width: '100%', padding: 6, fontSize: '0.72rem' }} disabled={loading}>
-                                {loading ? <span className="loading-spinner" /> : wallet.connected ? `Schedule ${tmpl.title}` : 'Connect Wallet to Schedule'}
-                            </button>
-                        </form>
-
-                        {/* Template About — collapsible */}
-                        {template !== 'custom' && template !== 'quicktest' && (
-                            <details style={{ marginTop: 12 }}>
-                                <summary style={{ cursor: 'pointer', fontSize: '0.78rem', color: color, fontWeight: 600, padding: '6px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
-                                    About {tmpl.title}
-                                </summary>
-                                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, padding: '8px 0' }}>
-                                    {template === 'compound' && 'Auto-compounding reinvests your staking/farm rewards automatically. At 20% APR, daily compounding yields ~22% APY.'}
-                                    {template === 'dca' && 'Dollar Cost Averaging buys tokens at regular intervals regardless of price, removing the stress of timing the market.'}
-                                    {template === 'stoploss' && 'Stop-Loss monitors your position and triggers a sell when the price drops below your threshold — even while you sleep.'}
-                                    {template === 'claim' && 'Automatically claims your accumulated staking or farming rewards on a schedule. Set and forget.'}
-                                    {template === 'nftmint' && 'Schedule a mint transaction to fire at the exact block of an NFT launch. Never miss a drop.'}
-                                </div>
-                            </details>
                         )}
                     </div>
+                </div>
 
-                    {/* Telemetry — only after submission */}
-                    {txHash === 'pending-web-wallet' && (
-                        <div className="card" style={{ borderColor: 'rgba(34, 197, 94, 0.3)', marginTop: 16 }}>
-                            <div className="section-title" style={{ color: 'var(--success)' }}>Web Wallet Opened</div>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                Complete the transaction in the MultiversX Web Wallet tab.
-                            </p>
-                        </div>
-                    )}
+                {/* Error floating below */}
+                {error && (
+                    <div style={{ color: '#ef4444', textAlign: 'center', marginTop: 20, fontSize: '0.9rem', animation: 'fadeInUp 0.3s' }}>
+                        {error}
+                    </div>
+                )}
 
-                    {txHash && txHash !== 'pending-web-wallet' && (
-                        <div style={{ marginTop: 16 }}>
+                {/* Telemetry / Tx Tracker */}
+                {txHash && (
+                    <div style={{ marginTop: 40, animation: 'fadeIn 0.5s' }}>
+                        {txHash === 'pending-web-wallet' ? (
+                            <div style={{ textAlign: 'center', color: 'var(--success)' }}>Sign transaction in Web Wallet...</div>
+                        ) : (
                             <TaskTelemetry
                                 txHash={txHash}
                                 txStatus={(txStatus as 'idle' | 'pending' | 'success' | 'fail') || 'idle'}
                                 txLoading={txLoading}
                             />
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Contextual Helpers (Pills) only on Template step */}
+                {step === 'template' && !txHash && (
+                    <div style={{
+                        marginTop: 40,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 12,
+                        justifyContent: 'center',
+                        animation: 'fadeInUp 1s ease forwards',
+                        opacity: 0
+                    }}>
+                        {(Object.keys(TEMPLATES) as TemplateType[]).map(key => {
+                            if (key === 'custom') return null;
+                            const t = TEMPLATES[key];
+                            return (
+                                <button
+                                    key={key}
+                                    onClick={() => handleTemplatePillClick(key)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.03)',
+                                        border: '1px solid rgba(255,255,255,0.08)',
+                                        borderRadius: 20,
+                                        padding: '8px 16px',
+                                        color: 'var(--text-secondary)',
+                                        fontSize: '0.85rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                        e.currentTarget.style.color = '#fff';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                        e.currentTarget.style.color = 'var(--text-secondary)';
+                                    }}
+                                >
+                                    <span style={{ color: 'var(--accent-light)' }}>✧</span> {t.title}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Breadcrumbs / Progress */}
+                {step !== 'template' && !txHash && (
+                    <div style={{
+                        marginTop: 30,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: 8,
+                        opacity: 0.5
+                    }}>
+                        {['contract', 'endpoint', 'deposit'].map((s, i) => {
+                            const active = s === step;
+                            const passed = ['contract', 'endpoint', 'deposit'].indexOf(step) > i;
+                            return (
+                                <div key={s} style={{
+                                    width: active ? 24 : 8,
+                                    height: 4,
+                                    borderRadius: 2,
+                                    background: active || passed ? '#fff' : 'rgba(255,255,255,0.2)',
+                                    transition: 'all 0.3s'
+                                }} />
+                            );
+                        })}
+                    </div>
+                )}
             </div>
+
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes glowPulse {
+                    0% { filter: blur(20px) brightness(1); }
+                    100% { filter: blur(25px) brightness(1.3); }
+                }
+            `}</style>
         </div>
     );
 }

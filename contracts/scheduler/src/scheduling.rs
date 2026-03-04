@@ -68,7 +68,7 @@ pub trait SchedulingModule:
 
         // S-13: Endpoint name validation
         require!(
-            target_endpoint.len() >= 1
+            !target_endpoint.is_empty()
                 && target_endpoint.len() <= common::constants::MAX_ENDPOINT_NAME_BYTES,
             "S-13: Invalid endpoint name length (1-64 bytes)"
         );

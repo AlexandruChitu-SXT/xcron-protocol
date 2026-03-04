@@ -62,7 +62,7 @@ pub trait CloneKeysModule:
             "Must deposit EGLD as spend limit"
         );
         require!(
-            deposit <= BigUint::from(common::constants::MAX_CLONE_KEY_SPEND_LIMIT),
+            deposit <= common::constants::MAX_CLONE_KEY_SPEND_LIMIT,
             "Spend limit exceeds maximum (2 EGLD)"
         );
 
@@ -189,7 +189,7 @@ pub trait CloneKeysModule:
         // Check new total doesn't exceed max
         let new_limit = &props.spend_limit + &added;
         require!(
-            new_limit <= BigUint::from(common::constants::MAX_CLONE_KEY_SPEND_LIMIT),
+            new_limit <= common::constants::MAX_CLONE_KEY_SPEND_LIMIT,
             "New spend limit would exceed maximum (2 EGLD)"
         );
 

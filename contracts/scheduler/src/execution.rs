@@ -50,7 +50,7 @@ pub trait ExecutionModule:
                     .sync_call();
 
                 let mut is_safe = false;
-                if raw_results.len() > 0 {
+                if !raw_results.is_empty() {
                     let raw_val = raw_results.get(0);
                     if !raw_val.is_empty() {
                         is_safe = true;
@@ -224,11 +224,9 @@ pub trait ExecutionModule:
                         self.send().direct_egld(&task.owner, &remaining_deposit);
                         self.user_refunded_event(task_id, &task.owner, &remaining_deposit);
                     }
-                } else {
-                    if remaining_deposit > BigUint::zero() {
-                        self.send().direct_egld(&task.owner, &remaining_deposit);
-                        self.user_refunded_event(task_id, &task.owner, &remaining_deposit);
-                    }
+                } else if remaining_deposit > BigUint::zero() {
+                    self.send().direct_egld(&task.owner, &remaining_deposit);
+                    self.user_refunded_event(task_id, &task.owner, &remaining_deposit);
                 }
 
                 // Send protocol fee to Rewards contract

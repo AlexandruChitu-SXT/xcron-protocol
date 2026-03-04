@@ -170,11 +170,12 @@ export function MyTasks() {
 
     // Canvas Interaction Handlers
     const handleWheel = (e: React.WheelEvent) => {
+        // Zoom in/out instead of panning
         e.preventDefault();
-        const zoomSensitivity = 0.001;
+        const zoomSensitivity = 0.002;
         setTransform(prev => ({
             ...prev,
-            scale: Math.min(Math.max(0.3, prev.scale - e.deltaY * zoomSensitivity), 3)
+            scale: Math.min(Math.max(0.2, prev.scale - e.deltaY * zoomSensitivity), 4)
         }));
     };
 
@@ -196,18 +197,23 @@ export function MyTasks() {
 
     // Compute layout for Node Graph
     const nodes = tasks.map((t, index) => {
-        // Very basic procedural layout for now:
-        // Try to place children to the right of parents, else stack vertically
-        let x = 100;
-        let y = 100 + (index * 150);
+        // Grid layout instead of infinite vertical line
+        const columns = window.innerWidth > 1000 ? 3 : window.innerWidth > 700 ? 2 : 1;
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+
+        let x = 40 + col * 320;
+        let y = 40 + row * 180;
 
         // If this task is a dependency (has a postTaskId), or is a child
         const parent = tasks.find(pt => pt.postTaskId === t.id);
         if (parent) {
-            // It's a chained task, place it to the right of parent
+            // It's a chained task, place it slightly offset from parent
             const parentIndex = tasks.findIndex(pt => pt.id === parent.id);
-            x = 450;
-            y = 100 + (parentIndex * 150);
+            const pCol = parentIndex % columns;
+            const pRow = Math.floor(parentIndex / columns);
+            x = 40 + pCol * 320 + 60;
+            y = 40 + pRow * 180 + 100;
         }
 
         return { ...t, x, y };
@@ -223,13 +229,14 @@ export function MyTasks() {
     }
 
     return (
-        <div className="page" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '20px 40px', background: 'rgba(10,15,25,0.8)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-                <div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 300, color: '#fff', letterSpacing: '-0.5px' }}>Visual Canvas</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Task Chaining & Intents Network Map</p>
+        <div className="page" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
+            {/* Header Overlay */}
+            <div style={{ position: 'absolute', top: 80, left: 0, right: 0, padding: '20px 40px', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', background: 'linear-gradient(to bottom, rgba(3,7,18,0.9) 0%, transparent 100%)', pointerEvents: 'none' }}>
+                <div style={{ pointerEvents: 'auto' }}>
+                    <TypewriterTitle as="h1" text="Visual Canvas" speed={70} />
+                    <TypewriterTitle as="p" text="Task Chaining & Intents Network Map" speed={30} />
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 12, pointerEvents: 'auto' }}>
                     <button className="btn btn-secondary btn-sm" onClick={() => loadTasks()} disabled={loading}>
                         {loading ? 'Syncing...' : '↻ Sync Data'}
                     </button>
@@ -239,15 +246,16 @@ export function MyTasks() {
                 </div>
             </div>
 
-            {/* The Graph Canvas */}
+            {/* The Graph Canvas - Full transparent to show app starry background */}
             <div
                 ref={canvasRef}
                 style={{
                     flex: 1,
                     position: 'relative',
-                    background: '#030712', // Deep vanguard space
+                    background: 'transparent',
                     overflow: 'hidden',
                     cursor: isDragging ? 'grabbing' : 'grab',
+                    marginTop: 0,
                     backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
                     backgroundSize: '100% 100%, 40px 40px, 40px 40px',
                     backgroundPosition: `${transform.x}px ${transform.y}px`,
@@ -296,7 +304,7 @@ export function MyTasks() {
                             left: node.x,
                             top: node.y,
                             width: 280,
-                            padding: 16,
+                            padding: 20,
                             background: 'rgba(10, 15, 25, 0.85)',
                             backdropFilter: 'blur(10px)',
                             border: `1px solid ${node.status === 'Completed' ? 'rgba(34,197,94,0.4)' : node.status === 'Failed' ? 'rgba(239,68,68,0.4)' : 'rgba(6,182,212,0.3)'}`,
@@ -305,6 +313,7 @@ export function MyTasks() {
                             color: '#fff',
                             display: 'flex', flexDirection: 'column', gap: 12
                         }}>
+                            {/* Header */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                                     Task #{node.id}
@@ -318,6 +327,7 @@ export function MyTasks() {
                                 </span>
                             </div>
 
+                            {/* Content */}
                             <div>
                                 <div style={{ fontWeight: 500, fontSize: '1.1rem', color: '#fff' }}>{node.targetEndpoint}()</div>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>

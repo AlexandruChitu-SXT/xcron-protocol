@@ -59,7 +59,7 @@
         {
             "step": "scCall",
             "id": "target-self",
-            "comment": "C-2: Attempt to target the scheduler contract itself — should fail",
+            "comment": "C-2: Attempt to target the scheduler contract itself \u2014 should fail",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -72,6 +72,7 @@
                     "10,000,000",
                     "3",
                     "1000",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
@@ -87,7 +88,7 @@
         {
             "step": "scCall",
             "id": "target-registry",
-            "comment": "C-2: Attempt to target the keeper registry — should fail",
+            "comment": "C-2: Attempt to target the keeper registry \u2014 should fail",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -100,6 +101,7 @@
                     "10,000,000",
                     "3",
                     "1000",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
@@ -115,7 +117,7 @@
         {
             "step": "scCall",
             "id": "target-rewards",
-            "comment": "C-2: Attempt to target the rewards contract — should fail",
+            "comment": "C-2: Attempt to target the rewards contract \u2014 should fail",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -128,6 +130,7 @@
                     "10,000,000",
                     "3",
                     "1000",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",

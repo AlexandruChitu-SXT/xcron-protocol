@@ -60,7 +60,7 @@
         {
             "step": "scCall",
             "id": "block-upgradeContract",
-            "comment": "S-1b: upgradeContract is a dangerous endpoint — must be blocked",
+            "comment": "S-1b: upgradeContract is a dangerous endpoint \u2014 must be blocked",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -73,6 +73,7 @@
                     "10,000,000",
                     "3",
                     "1000",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
@@ -88,7 +89,7 @@
         {
             "step": "scCall",
             "id": "block-ESDTTransfer",
-            "comment": "S-1b: ESDTTransfer is a dangerous endpoint — must be blocked",
+            "comment": "S-1b: ESDTTransfer is a dangerous endpoint \u2014 must be blocked",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -101,6 +102,7 @@
                     "10,000,000",
                     "3",
                     "1000",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
@@ -116,7 +118,7 @@
         {
             "step": "scCall",
             "id": "block-setOwner",
-            "comment": "S-1b: setOwner is a dangerous endpoint — must be blocked",
+            "comment": "S-1b: setOwner is a dangerous endpoint \u2014 must be blocked",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -129,6 +131,7 @@
                     "10,000,000",
                     "3",
                     "1000",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",

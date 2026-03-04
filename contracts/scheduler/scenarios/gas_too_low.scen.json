@@ -63,7 +63,7 @@
         {
             "step": "scCall",
             "id": "gas-too-low",
-            "comment": "Schedule with max_gas=1000 (below MIN_GAS_LIMIT=5M) — should fail",
+            "comment": "Schedule with max_gas=1000 (below MIN_GAS_LIMIT=5M) \u2014 should fail",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -76,6 +76,7 @@
                     "1000",
                     "3",
                     "1000",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
@@ -91,7 +92,7 @@
         {
             "step": "scCall",
             "id": "ttl-too-short",
-            "comment": "Schedule with ttl_rounds=1 (below MIN_TTL_ROUNDS=10) — should fail",
+            "comment": "Schedule with ttl_rounds=1 (below MIN_TTL_ROUNDS=10) \u2014 should fail",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -104,6 +105,7 @@
                     "10,000,000",
                     "3",
                     "1",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",

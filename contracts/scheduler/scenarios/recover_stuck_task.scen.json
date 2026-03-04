@@ -1,6 +1,6 @@
 {
     "name": "recover-stuck-task",
-    "comment": "Owner recovers a task stuck in Executing state for over 24 hours — deposit refunded to user",
+    "comment": "Owner recovers a task stuck in Executing state for over 24 hours \u2014 deposit refunded to user",
     "steps": [
         {
             "step": "setState",
@@ -100,6 +100,7 @@
                     "10,000,000",
                     "3",
                     "604800",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
@@ -116,7 +117,7 @@
         {
             "step": "scCall",
             "id": "recover-too-early",
-            "comment": "Owner tries to recover before 24h — should fail",
+            "comment": "Owner tries to recover before 24h \u2014 should fail",
             "tx": {
                 "from": "address:owner",
                 "to": "sc:scheduler",

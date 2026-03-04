@@ -77,7 +77,7 @@
         {
             "step": "scCall",
             "id": "schedule-task-1",
-            "comment": "Schedule a task targeting target_contract — should add to shard index",
+            "comment": "Schedule a task targeting target_contract \u2014 should add to shard index",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
@@ -91,6 +91,7 @@
                     "10,000,000",
                     "0",
                     "3600",
+                    "",
                     ""
                 ],
                 "gasLimit": "20,000,000",

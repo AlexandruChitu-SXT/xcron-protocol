@@ -103,6 +103,7 @@
                     "3",
                     "1000",
                     "",
+                    "",
                     "200,000,000,000,000,000"
                 ],
                 "egldValue": "0",
@@ -119,7 +120,7 @@
         {
             "step": "scCall",
             "id": "main-wallet-cancels-task",
-            "comment": "Main wallet (user1) cancels the task — refund goes to user1",
+            "comment": "Main wallet (user1) cancels the task \u2014 refund goes to user1",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",

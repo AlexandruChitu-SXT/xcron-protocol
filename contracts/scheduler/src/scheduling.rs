@@ -30,6 +30,7 @@ pub trait SchedulingModule:
         max_retries: u8,
         ttl_seconds: u64,
         require_xwap_safe: bool,
+        confidential: bool,
         requested_deposit: OptionalValue<BigUint>,
     ) -> u64 {
         self.require_not_paused();
@@ -132,6 +133,7 @@ pub trait SchedulingModule:
             completed_at: 0,
             post_task_id: None,
             require_xwap_safe,
+            confidential,
         };
 
         self.tasks(task_id).set(&task);

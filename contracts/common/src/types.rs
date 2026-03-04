@@ -101,6 +101,9 @@ pub struct Task<M: ManagedTypeApi> {
     /// Whether this task requires the XWAP Oracle Gate to be OPEN before executing.
     /// Used to opt-in to high volatility protection.
     pub require_xwap_safe: bool,
+    /// Whether this task's metadata is encrypted and must be processed inside
+    /// a Trusted Execution Environment (TEE). Anti-MEV protection for whale strategies.
+    pub confidential: bool,
 }
 
 /// Current status of a task in its lifecycle.

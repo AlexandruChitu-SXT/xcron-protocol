@@ -26,6 +26,7 @@ members = [
     "test-nft/meta",
     "xwap",
     "xwap/meta",
+    "zk-verifier",
 ]
 
 [workspace.dependencies]

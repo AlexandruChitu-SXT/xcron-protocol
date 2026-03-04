@@ -123,6 +123,7 @@
                     "10,000,000",
                     "3",
                     "604800",
+                    "",
                     ""
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
@@ -138,7 +139,7 @@
         },
         {
             "step": "setState",
-            "comment": "Advance timestamp to 2000 — task is ripe",
+            "comment": "Advance timestamp to 2000 \u2014 task is ripe",
             "currentBlockInfo": {
                 "blockTimestamp": "2000"
             }
@@ -146,7 +147,7 @@
         {
             "step": "scCall",
             "id": "non-assigned-keeper-blocked",
-            "comment": "Keeper2 tries to execute during grace period — should be blocked if not assigned",
+            "comment": "Keeper2 tries to execute during grace period \u2014 should be blocked if not assigned",
             "tx": {
                 "from": "address:keeper2",
                 "to": "sc:scheduler",
@@ -164,7 +165,7 @@
         },
         {
             "step": "setState",
-            "comment": "Advance timestamp to 2031 — grace period over",
+            "comment": "Advance timestamp to 2031 \u2014 grace period over",
             "currentBlockInfo": {
                 "blockTimestamp": "2031"
             }

@@ -152,6 +152,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             completed_at: 0,
             post_task_id: None,
             require_xwap_safe: original_task.require_xwap_safe,
+            confidential: original_task.confidential,
         };
 
         self.tasks(new_id).set(&new_task);

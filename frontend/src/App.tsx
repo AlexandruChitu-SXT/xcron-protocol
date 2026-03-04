@@ -20,6 +20,7 @@ const ExploreTasks = lazy(() => import('./pages/ExploreTasks').then(m => ({ defa
 const ProtocolStats = lazy(() => import('./pages/ProtocolStats').then(m => ({ default: m.ProtocolStats })));
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 const CloneKeyManager = lazy(() => import('./components/CloneKeyManager').then(m => ({ default: m.CloneKeyManager })));
+const AdminPanel = lazy(() => import('./pages/AdminPanel').then(m => ({ default: m.AdminPanel })));
 
 // Loading spinner shown while a page chunk loads
 function PageLoader() {
@@ -75,6 +76,7 @@ function App() {
               <Route path="/explore" element={<ExploreTasks />} />
               <Route path="/stats" element={<ProtocolStats />} />
               <Route path="/clone-keys" element={<CloneKeyManager />} />
+              <Route path="/admin" element={<AdminPanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

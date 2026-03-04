@@ -51,6 +51,7 @@ export function Header() {
         { to: '/stats', label: 'Stats' },
         { to: '/keeper', label: 'Keeper Nodes' },
         { to: '/clone-keys', label: 'Clone-Keys' },
+        { to: '/admin', label: 'Admin' },
     ];
 
     return (

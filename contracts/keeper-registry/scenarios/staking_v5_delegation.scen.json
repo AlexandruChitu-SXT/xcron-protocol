@@ -1,24 +1,25 @@
 {
-    "name": "deploy-keeper-registry",
-    "comment": "Test deploying the KeeperRegistry and registering a keeper",
+    "name": "staking-v5-delegation",
+    "comment": "Test keeper staking and subsequent delegation to a MVX Staking Provider",
     "steps": [
         {
             "step": "setState",
             "accounts": {
                 "address:owner": {
                     "nonce": "0",
-                    "balance": "100,000,000,000,000,000,000",
-                    "storage": {}
+                    "balance": "100,000,000,000,000,000,000"
                 },
                 "address:keeper1": {
                     "nonce": "0",
-                    "balance": "10,000,000,000,000,000,000",
-                    "storage": {}
+                    "balance": "20,000,000,000,000,000,000"
                 },
                 "address:treasury": {
                     "nonce": "0",
-                    "balance": "0",
-                    "storage": {}
+                    "balance": "0"
+                },
+                "address:mock_provider": {
+                    "nonce": "0",
+                    "balance": "0"
                 }
             },
             "newAddresses": [
@@ -32,12 +33,11 @@
         {
             "step": "scDeploy",
             "id": "deploy",
-            "comment": "Deploy KeeperRegistry with min_stake=1 EGLD, slash=10%, cooldown=600",
             "tx": {
                 "from": "address:owner",
                 "contractCode": "file:../output/keeper-registry.mxsc.json",
                 "arguments": [
-                    "1,000,000,000,000,000,000",
+                    "5,000,000,000,000,000,000",
                     "1000",
                     "600",
                     "address:treasury"
@@ -51,25 +51,26 @@
             }
         },
         {
-            "step": "scQuery",
-            "id": "check-min-stake",
-            "comment": "Verify min stake is 1 EGLD",
+            "step": "scCall",
+            "id": "set-staking-provider",
             "tx": {
+                "from": "address:owner",
                 "to": "sc:keeper_registry",
-                "function": "getMinStake",
-                "arguments": []
+                "function": "setStakingProvider",
+                "arguments": [
+                    "address:mock_provider"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
             },
             "expect": {
-                "out": [
-                    "1,000,000,000,000,000,000"
-                ],
+                "out": [],
                 "status": "0"
             }
         },
         {
             "step": "scCall",
-            "id": "register-keeper1",
-            "comment": "Register keeper1 with 5 EGLD stake",
+            "id": "register-keeper",
             "tx": {
                 "from": "address:keeper1",
                 "to": "sc:keeper_registry",
@@ -85,37 +86,35 @@
             }
         },
         {
-            "step": "scQuery",
-            "id": "check-active-count",
-            "comment": "Verify 1 active keeper",
+            "step": "scCall",
+            "id": "delegate-stake",
             "tx": {
+                "from": "address:owner",
                 "to": "sc:keeper_registry",
-                "function": "getActiveKeeperCount",
-                "arguments": []
+                "function": "delegateStake",
+                "arguments": [
+                    "5,000,000,000,000,000,000"
+                ],
+                "gasLimit": "20,000,000",
+                "gasPrice": "0"
             },
             "expect": {
-                "out": [
-                    "1"
-                ],
+                "out": [],
                 "status": "0"
             }
         },
         {
-            "step": "scQuery",
-            "id": "check-keeper-active",
-            "comment": "Verify keeper1 is active",
-            "tx": {
-                "to": "sc:keeper_registry",
-                "function": "isActiveKeeper",
-                "arguments": [
-                    "address:keeper1"
-                ]
-            },
-            "expect": {
-                "out": [
-                    "1"
-                ],
-                "status": "0"
+            "step": "checkState",
+            "accounts": {
+                "address:owner": {
+                    "balance": "100,000,000,000,000,000,000"
+                },
+                "address:keeper1": {
+                    "balance": "15,000,000,000,000,000,000"
+                },
+                "address:mock_provider": {
+                    "balance": "5,000,000,000,000,000,000"
+                }
             }
         }
     ]

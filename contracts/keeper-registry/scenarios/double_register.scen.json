@@ -31,7 +31,7 @@
             "id": "deploy",
             "tx": {
                 "from": "address:owner",
-                "contractCode": "mxsc:output/keeper-registry.mxsc.json",
+                "contractCode": "file:../output/keeper-registry.mxsc.json",
                 "arguments": [
                     "1,000,000,000,000,000,000",
                     "1000",

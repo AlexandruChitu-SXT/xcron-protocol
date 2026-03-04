@@ -44,4 +44,13 @@ pub trait ConfigModule: crate::storage::StorageModule {
     fn remove_authorized_caller(&self, addr: ManagedAddress) {
         self.authorized_callers().swap_remove(&addr);
     }
+
+    // ── Staking V5 Config ─────────────────────────────────────
+
+    /// Set the Staking Provider (Validator) address where EGLD will be delegated.
+    #[only_owner]
+    #[endpoint(setStakingProvider)]
+    fn set_staking_provider(&self, addr: ManagedAddress) {
+        self.staking_provider_addr().set(&addr);
+    }
 }

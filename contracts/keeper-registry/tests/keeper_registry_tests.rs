@@ -3,7 +3,7 @@ use multiversx_sc_scenario::*;
 fn world() -> ScenarioWorld {
     let mut blockchain = ScenarioWorld::new();
     blockchain.register_contract(
-        "mxsc:output/keeper-registry.mxsc.json",
+        "file:output/keeper-registry.mxsc.json",
         keeper_registry::ContractBuilder,
     );
     blockchain
@@ -44,4 +44,13 @@ fn add_stake() {
 #[test]
 fn unstake_flow() {
     world().run("scenarios/unstake_flow.scen.json");
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STAKING V5 DELEGATION
+// ═══════════════════════════════════════════════════════════
+
+#[test]
+fn staking_v5_delegation() {
+    world().run("scenarios/staking_v5_delegation.scen.json");
 }

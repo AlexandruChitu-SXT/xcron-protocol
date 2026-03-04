@@ -33,4 +33,19 @@ pub trait StorageModule {
     /// Contract version for safe upgrades.
     #[storage_mapper("version")]
     fn version(&self) -> SingleValueMapper<u32>;
+
+    // ── Staking V5 Mappers ─────────────────────────────────────
+
+    /// The address of the Staking Provider (Validator) where EGLD is delegated.
+    #[storage_mapper("stakingProviderAddr")]
+    fn staking_provider_addr(&self) -> SingleValueMapper<ManagedAddress>;
+
+    /// Total yield generated from delegated stakes.
+    #[storage_mapper("totalYieldGenerated")]
+    fn total_yield_generated(&self) -> SingleValueMapper<BigUint>;
+
+    /// Slashing debt: EGLD that was slashed but is currently unbonding from a provider.
+    /// Will be seized by the protocol once unbonding is complete.
+    #[storage_mapper("slashedPendingUnbond")]
+    fn slashed_pending_unbond(&self, addr: &ManagedAddress) -> SingleValueMapper<BigUint>;
 }

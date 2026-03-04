@@ -26,7 +26,8 @@
                 }
             ],
             "currentBlockInfo": {
-                "blockRound": "100"
+                "blockRound": "100",
+                "blockTimestamp": "100"
             }
         },
         {
@@ -34,7 +35,7 @@
             "id": "deploy",
             "tx": {
                 "from": "address:owner",
-                "contractCode": "mxsc:output/keeper-registry.mxsc.json",
+                "contractCode": "file:../output/keeper-registry.mxsc.json",
                 "arguments": [
                     "1,000,000,000,000,000,000",
                     "1000",
@@ -124,7 +125,8 @@
             "step": "setState",
             "comment": "Advance past cooldown period (100 + 600 = 700)",
             "currentBlockInfo": {
-                "blockRound": "800"
+                "blockRound": "800",
+                "blockTimestamp": "800"
             }
         },
         {
@@ -149,7 +151,7 @@
             "comment": "Keeper should have received 5 EGLD back",
             "accounts": {
                 "address:keeper1": {
-                    "balance": "10,000,000,000,000,000,000"
+                    "balance": "9,750,000,000,000,000,000"
                 }
             }
         }

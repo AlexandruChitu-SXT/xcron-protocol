@@ -202,8 +202,8 @@ export function MyTasks() {
         const col = index % columns;
         const row = Math.floor(index / columns);
 
-        let x = 40 + col * 320;
-        let y = 40 + row * 180;
+        let x = (window.innerWidth / 2) - 150 + (col * 320); // Center horizontally (approx 150px half width of node)
+        let y = (window.innerHeight / 3) + (row * 180); // Start at top-third vertically
 
         // If this task is a dependency (has a postTaskId), or is a child
         const parent = tasks.find(pt => pt.postTaskId === t.id);
@@ -212,8 +212,8 @@ export function MyTasks() {
             const parentIndex = tasks.findIndex(pt => pt.id === parent.id);
             const pCol = parentIndex % columns;
             const pRow = Math.floor(parentIndex / columns);
-            x = 40 + pCol * 320 + 60;
-            y = 40 + pRow * 180 + 100;
+            x = (window.innerWidth / 2) - 150 + (pCol * 320) + 60;
+            y = (window.innerHeight / 3) + (pRow * 180) + 100;
         }
 
         return { ...t, x, y };
@@ -229,7 +229,7 @@ export function MyTasks() {
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingTop: '80px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', paddingTop: '80px', overflow: 'hidden' }}>
             {/* Header Overlay */}
             <div style={{ padding: '20px 40px', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', background: 'linear-gradient(to bottom, rgba(3,7,18,0.9) 0%, transparent 100%)', pointerEvents: 'none', flexShrink: 0 }}>
                 <div style={{ pointerEvents: 'auto' }}>
@@ -256,9 +256,6 @@ export function MyTasks() {
                     overflow: 'hidden',
                     cursor: isDragging ? 'grabbing' : 'grab',
                     minHeight: '500px', // Fallback for small screens
-                    backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
-                    backgroundSize: '100% 100%, 40px 40px, 40px 40px',
-                    backgroundPosition: `${transform.x}px ${transform.y}px`,
                 }}
                 onWheel={handleWheel}
                 onMouseDown={handleMouseDown}

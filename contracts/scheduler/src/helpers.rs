@@ -9,10 +9,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
     ///
     /// Keeper gets: min(deposit - protocol_fee, max_reward_per_exec).
     /// Excess is refunded to the task owner via remaining_deposit.
-    fn calculate_keeper_reward(
-        &self,
-        task: &common::types::Task<Self::Api>,
-    ) -> BigUint {
+    fn calculate_keeper_reward(&self, task: &common::types::Task<Self::Api>) -> BigUint {
         let protocol_fee = self.calculate_protocol_fee(task);
         let uncapped_reward = &task.deposit - &protocol_fee;
 
@@ -29,35 +26,29 @@ pub trait HelpersModule: crate::storage::StorageModule {
     /// For recurring tasks: fee is based on deposit/remaining_execs (per-execution share).
     /// For one-time tasks: fee is based on the full deposit.
     /// Formula: per_exec_deposit × protocol_fee_bps / BPS_DENOMINATOR
-    fn calculate_protocol_fee(
-        &self,
-        task: &common::types::Task<Self::Api>,
-    ) -> BigUint {
+    fn calculate_protocol_fee(&self, task: &common::types::Task<Self::Api>) -> BigUint {
         let fee_bps = self.protocol_fee_bps().get();
 
         // For recurring tasks, calculate fee on per-execution deposit
         let per_exec_deposit = match &task.trigger {
-            common::types::Trigger::TimeRecurring { remaining_execs, .. } => {
+            common::types::Trigger::TimeRecurring {
+                remaining_execs, ..
+            } => {
                 if *remaining_execs > 0 {
                     &task.deposit / *remaining_execs
                 } else {
                     task.deposit.clone()
                 }
-            },
+            }
             _ => task.deposit.clone(),
         };
 
         &per_exec_deposit * fee_bps / common::constants::BPS_DENOMINATOR
     }
 
-
     /// Index a task for keeper discovery based on its trigger type.
     /// Also indexes by target shard for shard-aware keeper routing.
-    fn index_task(
-        &self,
-        task_id: u64,
-        trigger: &common::types::Trigger<Self::Api>,
-    ) {
+    fn index_task(&self, task_id: u64, trigger: &common::types::Trigger<Self::Api>) {
         match trigger {
             common::types::Trigger::TimeOnce { target_time } => {
                 self.time_index(*target_time).insert(task_id);
@@ -72,16 +63,14 @@ pub trait HelpersModule: crate::storage::StorageModule {
 
         // Cross-shard optimization: Index task by target shard
         let task = self.tasks(task_id).get();
-        let target_shard = self.blockchain().get_shard_of_address(&task.target_contract);
+        let target_shard = self
+            .blockchain()
+            .get_shard_of_address(&task.target_contract);
         self.shard_task_index(target_shard).insert(task_id);
     }
 
     /// Remove a task from all discovery indices (time, condition, shard).
-    fn remove_from_indices(
-        &self,
-        task_id: u64,
-        task: &common::types::Task<Self::Api>,
-    ) {
+    fn remove_from_indices(&self, task_id: u64, task: &common::types::Task<Self::Api>) {
         match &task.trigger {
             common::types::Trigger::TimeOnce { target_time } => {
                 self.time_index(*target_time).swap_remove(&task_id);
@@ -95,26 +84,25 @@ pub trait HelpersModule: crate::storage::StorageModule {
         }
 
         // Cross-shard optimization: Remove from shard index
-        let target_shard = self.blockchain().get_shard_of_address(&task.target_contract);
+        let target_shard = self
+            .blockchain()
+            .get_shard_of_address(&task.target_contract);
         self.shard_task_index(target_shard).swap_remove(&task_id);
     }
 
-
-
-
     /// Re-index a task for retry pickup.
-    fn reindex_task(
-        &self,
-        task_id: u64,
-        task: &common::types::Task<Self::Api>,
-    ) {
+    fn reindex_task(&self, task_id: u64, task: &common::types::Task<Self::Api>) {
         match &task.trigger {
             common::types::Trigger::ConditionOnChain { .. } => {
                 self.condition_tasks().insert(task_id);
             }
             _ => {
                 // Time-based: re-index at current time + 10s (grace period for retry)
-                let next_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds() + 10;
+                let next_time = self
+                    .blockchain()
+                    .get_block_timestamp_seconds()
+                    .as_u64_seconds()
+                    + 10;
                 self.time_index(next_time).insert(task_id);
             }
         }
@@ -131,7 +119,11 @@ pub trait HelpersModule: crate::storage::StorageModule {
         remaining_execs: u64,
         remaining_deposit: BigUint,
     ) {
-        let next_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds() + interval;
+        let next_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds()
+            + interval;
         let new_id = self.task_nonce().get() + 1;
         self.task_nonce().set(new_id);
 
@@ -151,11 +143,15 @@ pub trait HelpersModule: crate::storage::StorageModule {
             max_retries: original_task.max_retries,
             retry_count: 0,
             ttl_seconds: original_task.ttl_seconds,
-            created_at: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
+            created_at: self
+                .blockchain()
+                .get_block_timestamp_seconds()
+                .as_u64_seconds(),
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
             completed_at: 0,
             post_task_id: None,
+            require_xwap_safe: original_task.require_xwap_safe,
         };
 
         self.tasks(new_id).set(&new_task);
@@ -181,7 +177,8 @@ pub trait HelpersModule: crate::storage::StorageModule {
         protocol_fee: &BigUint,
     ) {
         if protocol_fee > &BigUint::zero() {
-            self.accrued_protocol_fees().update(|total| *total += protocol_fee);
+            self.accrued_protocol_fees()
+                .update(|total| *total += protocol_fee);
         }
     }
 
@@ -190,11 +187,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
     /// Enables progressive slashing: keepers with consecutive failures get
     /// penalized (Strike 1: 5%, Strike 2: 15%, Strike 3: 20% + expulsion).
     /// Fire-and-forget — this runs inside the callback so no further callback is possible.
-    fn forward_keeper_result(
-        &self,
-        keeper: &ManagedAddress,
-        success: bool,
-    ) {
+    fn forward_keeper_result(&self, keeper: &ManagedAddress, success: bool) {
         let registry_addr = self.keeper_registry_addr().get();
         self.tx()
             .to(&registry_addr)

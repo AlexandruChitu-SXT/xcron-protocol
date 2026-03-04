@@ -21,7 +21,10 @@ pub trait CommitRevealModule:
         self.require_registered_keeper(&keeper);
 
         let task = self.tasks(task_id).get();
-        require!(task.status == common::types::TaskStatus::Pending, "Task not Pending");
+        require!(
+            task.status == common::types::TaskStatus::Pending,
+            "Task not Pending"
+        );
 
         let bond = self.call_value().egld().clone_value();
         let min_bond = self.commit_bond().get();
@@ -30,7 +33,10 @@ pub trait CommitRevealModule:
         let commit_info = common::types::CommitInfo {
             keeper: keeper.clone(),
             commit_hash,
-            commit_timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
+            commit_timestamp: self
+                .blockchain()
+                .get_block_timestamp_seconds()
+                .as_u64_seconds(),
             bond,
         };
 
@@ -50,13 +56,19 @@ pub trait CommitRevealModule:
         let keeper = self.blockchain().get_caller();
 
         let task = self.tasks(task_id).get();
-        require!(task.status == common::types::TaskStatus::Committed, "Task not Committed");
+        require!(
+            task.status == common::types::TaskStatus::Committed,
+            "Task not Committed"
+        );
 
         let commit_info = self.commits(task_id).get();
         require!(commit_info.keeper == keeper, "Not the committing keeper");
 
         // Check reveal window
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
         let reveal_window = self.reveal_window().get();
         require!(
             current_time <= commit_info.commit_timestamp + reveal_window,
@@ -95,7 +107,10 @@ pub trait CommitRevealModule:
         );
 
         let commit_info = self.commits(task_id).get();
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
         let reveal_window = self.reveal_window().get();
 
         require!(

@@ -62,19 +62,13 @@ export class XwapReporter {
             }
 
             // Scale to x1e18 for on-chain storage
-            console.log("xwap_reporter.ts executing line A...");
             const priceScaled = BigInt(Math.round(usdPrice * 1e9)) * BigInt(1e9);
 
-            console.log("xwap_reporter.ts executing line B...");
             const senderAddress = this.signer.getAddress();
-            console.log("xwap_reporter.ts executing line C...");
             const account = new Account(senderAddress);
-            console.log("xwap_reporter.ts executing line D...");
             const accountOnChain = await this.provider.getAccount(senderAddress);
-            console.log("xwap_reporter.ts executing line E...");
             account.update(accountOnChain);
 
-            console.log("xwap_reporter.ts executing line F...");
             const tx = new SmartContract({ address: this.xwapAddress }).call({
                 func: new ContractFunction("reportPrice"),
                 args: [new BigUIntValue(priceScaled)],
@@ -82,16 +76,14 @@ export class XwapReporter {
                 caller: senderAddress,
                 chainID: "T",
             });
-            console.log("xwap_reporter.ts executing line G...");
 
             tx.setNonce(account.nonce);
-            console.log("xwap_reporter.ts executing line H...");
             const signature = await this.signer.sign(tx.serializeForSigning());
-            console.log("xwap_reporter.ts executing line I...");
             tx.applySignature(signature);
-            console.log("xwap_reporter.ts executing line J...");
             await this.provider.sendTransaction(tx);
-            console.log("xwap_reporter.ts executing line K...");
+
+            const watcher = new TransactionWatcher(this.provider);
+            await watcher.awaitCompleted(tx);
 
             this.log(`reportPrice: ${token} = $${usdPrice.toFixed(2)} (${priceScaled.toString()} x1e18)`);
             return true;
@@ -139,6 +131,9 @@ export class XwapReporter {
             tx.applySignature(signature);
             await this.provider.sendTransaction(tx);
 
+            const watcher = new TransactionWatcher(this.provider);
+            await watcher.awaitCompleted(tx);
+
             this.log(`updatePrice: normA=${normA}, normB=${normB}`);
             return true;
         } catch (err: any) {
@@ -163,19 +158,21 @@ export class XwapReporter {
      * Returns true if gate is open, consensus ok, and data is fresh.
      */
     async isSafeToExecute(): Promise<boolean> {
-        try {
-            const query = new SmartContract({ address: this.xwapAddress }).createQuery({
-                func: new ContractFunction("isSafeToExecute")
-            });
-            const result = await this.provider.queryContract(query);
+        return this.withRetry(async () => {
+            try {
+                const query = new SmartContract({ address: this.xwapAddress }).createQuery({
+                    func: new ContractFunction("isSafeToExecute")
+                });
+                const result = await this.provider.queryContract(query);
 
-            if (!result.returnData || result.returnData.length === 0) return false;
-            const buf = Buffer.from(result.returnData[0], "base64");
-            return buf.length > 0 && buf[0] === 1;
-        } catch (err: any) {
-            this.log(`isSafeToExecute query failed: ${err.message || err}`);
-            return false;
-        }
+                if (!result.returnData || result.returnData.length === 0) return false;
+                const buf = Buffer.from(result.returnData[0], "base64");
+                return buf.length > 0 && buf[0] === 1;
+            } catch (err: any) {
+                this.log(`isSafeToExecute query failed: ${err.message || err}`);
+                return false;
+            }
+        });
     }
 
     /**
@@ -183,30 +180,50 @@ export class XwapReporter {
      * Call this at the start of each keeper cycle for observability.
      */
     async logSignals(): Promise<void> {
-        try {
-            const queryPrice = new SmartContract({ address: this.xwapAddress }).createQuery({ func: new ContractFunction("getXwapPrice") });
-            const queryGate = new SmartContract({ address: this.xwapAddress }).createQuery({ func: new ContractFunction("isGateOpen") });
+        return this.withRetry(async () => {
+            try {
+                const queryPrice = new SmartContract({ address: this.xwapAddress }).createQuery({ func: new ContractFunction("getXwapPrice") });
+                const queryGate = new SmartContract({ address: this.xwapAddress }).createQuery({ func: new ContractFunction("isGateOpen") });
 
-            const [priceResult, safeResult] = await Promise.all([
-                this.provider.queryContract(queryPrice),
-                this.provider.queryContract(queryGate),
-            ]);
+                const [priceResult, safeResult] = await Promise.all([
+                    this.provider.queryContract(queryPrice),
+                    this.provider.queryContract(queryGate),
+                ]);
 
-            const priceRaw = priceResult.returnData?.[0]
-                ? BigInt("0x" + Buffer.from(priceResult.returnData[0], "base64").toString("hex") || "0")
-                : 0n;
-            const priceUsd = Number(priceRaw) / 1e18;
+                const priceRaw = priceResult.returnData?.[0]
+                    ? BigInt("0x" + Buffer.from(priceResult.returnData[0], "base64").toString("hex") || "0")
+                    : 0n;
+                const priceUsd = Number(priceRaw) / 1e18;
 
-            const gateOpen = safeResult.returnData?.[0]
-                ? Buffer.from(safeResult.returnData[0], "base64")[0] === 1
-                : false;
+                const gateOpen = safeResult.returnData?.[0]
+                    ? Buffer.from(safeResult.returnData[0], "base64")[0] === 1
+                    : false;
 
-            this.log(
-                `XWAP $${priceUsd.toFixed(4)} | Gate: ${gateOpen ? "🟢 OPEN" : "🔴 CLOSED"}`,
-            );
-        } catch (err: any) {
-            this.log(`logSignals failed: ${err.message || err}`);
+                this.log(
+                    `XWAP $${priceUsd.toFixed(4)} | Gate: ${gateOpen ? "🟢 OPEN" : "🔴 CLOSED"}`,
+                );
+            } catch (err: any) {
+                this.log(`logSignals failed: ${err.message || err}`);
+                throw err;
+            }
+        });
+    }
+
+    private async withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                return await fn();
+            } catch (err: any) {
+                if (err.message && err.message.includes("timeout")) {
+                    if (i === maxRetries - 1) throw err;
+                    this.log(`Query timeout (attempt ${i + 1}/${maxRetries}), retrying in 3s...`);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                } else {
+                    throw err; // Re-throw non-timeout errors
+                }
+            }
         }
+        throw new Error("withRetry: Max retries exceeded");
     }
 
     // ─── Full cycle ────────────────────────────────────────────────────────

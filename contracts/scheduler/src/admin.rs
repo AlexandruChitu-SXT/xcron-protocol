@@ -45,7 +45,8 @@ pub trait AdminModule:
             self.total_successful_execs().get(),
             self.total_failed_execs().get(),
             self.target_blacklist().len(),
-        ).into()
+        )
+            .into()
     }
 
     /// View: check if a target is blacklisted.

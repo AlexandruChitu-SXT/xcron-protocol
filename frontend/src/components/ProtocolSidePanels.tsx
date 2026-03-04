@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatEgld } from '../hooks/useContractQuery';
+import { formatEgld, useContractQuery, bufferToBigInt } from '../hooks/useContractQuery';
 import { CONTRACTS, NETWORK } from '../config';
 import { AnimatedCounter } from './AnimatedCounter';
 
@@ -91,6 +91,78 @@ function NetworkStatus({ stats }: { stats: { block: number; epoch: number; round
                 <div>
                     <div style={{ ...labelStyle }}>Rounds/Epoch</div>
                     <div style={{ ...valueStyle, fontSize: '1rem' }}>{stats.roundsPerEpoch > 0 ? stats.roundsPerEpoch.toLocaleString() : '...'}</div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── XWAP Vitals Widget ─── */
+function XwapVitals() {
+    const { query } = useContractQuery();
+    const [xwapData, setXwapData] = useState({
+        isSafe: false,
+        price: '0',
+        gateOpen: false,
+        loading: true
+    });
+
+    // Hardcoded XWAP testnet address for phase 1.
+    const XWAP_ADDRESS = "erd1qqqqqqqqqqqqqpgqlnu2aqhzmy49sa9lf7vx3jsy3l622fgv7k8snmwahh";
+
+    useEffect(() => {
+        let isMounted = true;
+        async function fetchXwap() {
+            try {
+                const [safeRes, priceRes, gateRes] = await Promise.all([
+                    query(XWAP_ADDRESS, 'isSafeToExecute'),
+                    query(XWAP_ADDRESS, 'getXwapPrice'),
+                    query(XWAP_ADDRESS, 'isGateOpen')
+                ]);
+
+                if (isMounted) {
+                    setXwapData({
+                        // Convert buffer to hex string then compare
+                        isSafe: safeRes.length > 0 && safeRes[0].toString('hex') === '01',
+                        price: priceRes.length > 0 ? (Number(bufferToBigInt(priceRes[0])) / 1e18).toFixed(2) : '0',
+                        gateOpen: gateRes.length > 0 && gateRes[0].toString('hex') === '01',
+                        loading: false
+                    });
+                }
+            } catch (e) {
+                if (isMounted) setXwapData(prev => ({ ...prev, loading: false }));
+            }
+        }
+        fetchXwap();
+        const idx = setInterval(fetchXwap, 30000);
+        return () => { isMounted = false; clearInterval(idx); };
+    }, [query]);
+
+    return (
+        <div style={{ ...widgetStyle, background: 'rgba(168,85,247,0.06)', borderColor: 'rgba(168,85,247,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ ...labelStyle, color: 'rgb(168,85,247)', marginBottom: 0 }}>XWAP Oracle Vitals</div>
+                {xwapData.loading ? (
+                    <span className="skeleton skeleton-stat" style={{ width: 40, height: 16 }} />
+                ) : (
+                    <div style={{ padding: '2px 6px', borderRadius: 4, background: xwapData.isSafe ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: xwapData.isSafe ? 'rgb(34,197,94)' : 'rgb(239,68,68)', fontSize: '0.65rem', fontWeight: 800 }}>
+                        {xwapData.isSafe ? 'SAFE' : 'LOCKED'}
+                    </div>
+                )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 16 }}>
+                <div>
+                    <div style={{ ...valueStyle, color: 'rgb(168,85,247)' }}>
+                        {xwapData.loading ? '...' : `$${xwapData.price}`}
+                    </div>
+                    <div style={subStyle}>EWMA EGLD Price</div>
+                </div>
+                <div>
+                    <div style={{ ...valueStyle, color: xwapData.gateOpen ? 'rgb(34,197,94)' : 'rgb(239,68,68)' }}>
+                        {xwapData.loading ? '...' : (xwapData.gateOpen ? 'OPEN' : 'CLOSED')}
+                    </div>
+                    <div style={subStyle}>Safety Gate</div>
                 </div>
             </div>
         </div>
@@ -213,6 +285,7 @@ export function RightSidePanel() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <NetworkStatus stats={netStats} />
+            <XwapVitals />
             {/* Top Keepers */}
             <div style={widgetStyle}>
                 <div style={{ ...labelStyle, color: 'rgb(232,146,124)' }}>Top Keepers</div>

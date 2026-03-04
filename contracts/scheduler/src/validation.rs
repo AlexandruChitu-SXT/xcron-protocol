@@ -45,13 +45,31 @@ pub trait ValidationModule: crate::storage::StorageModule {
         // Block dangerous system endpoints
         let ep_bytes = endpoint.to_boxed_bytes();
         let ep_slice = ep_bytes.as_slice();
-        require!(ep_slice != b"upgradeContract", "S-1: Dangerous endpoint blocked");
-        require!(ep_slice != b"changeOwner", "S-1: Dangerous endpoint blocked");
-        require!(ep_slice != b"ChangeOwnerAddress", "S-1: Dangerous endpoint blocked");
+        require!(
+            ep_slice != b"upgradeContract",
+            "S-1: Dangerous endpoint blocked"
+        );
+        require!(
+            ep_slice != b"changeOwner",
+            "S-1: Dangerous endpoint blocked"
+        );
+        require!(
+            ep_slice != b"ChangeOwnerAddress",
+            "S-1: Dangerous endpoint blocked"
+        );
         require!(ep_slice != b"setOwner", "S-1: Dangerous endpoint blocked");
-        require!(ep_slice != b"ESDTTransfer", "S-1: Dangerous endpoint blocked");
-        require!(ep_slice != b"ESDTNFTTransfer", "S-1: Dangerous endpoint blocked");
-        require!(ep_slice != b"MultiESDTNFTTransfer", "S-1: Dangerous endpoint blocked");
+        require!(
+            ep_slice != b"ESDTTransfer",
+            "S-1: Dangerous endpoint blocked"
+        );
+        require!(
+            ep_slice != b"ESDTNFTTransfer",
+            "S-1: Dangerous endpoint blocked"
+        );
+        require!(
+            ep_slice != b"MultiESDTNFTTransfer",
+            "S-1: Dangerous endpoint blocked"
+        );
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -72,7 +90,10 @@ pub trait ValidationModule: crate::storage::StorageModule {
 
     /// Verify a task's trigger condition is met (task is "ripe").
     fn require_task_ripe(&self, _task_id: u64, task: &common::types::Task<Self::Api>) {
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
 
         // H-3: TTL expiry check — prevent execution of stale tasks
         if task.ttl_seconds > 0 {
@@ -99,7 +120,8 @@ pub trait ValidationModule: crate::storage::StorageModule {
                 // SDK 0.63+: Execute oracle query using raw tx builder.
                 // Builds a cross-contract call to the oracle, passes args,
                 // and decodes the result as BigUint.
-                let raw_result = self.tx()
+                let raw_result = self
+                    .tx()
                     .to(oracle_contract)
                     .raw_call(query_endpoint.clone())
                     .returns(ReturnsRawResult)

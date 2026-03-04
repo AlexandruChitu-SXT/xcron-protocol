@@ -110,7 +110,8 @@ pub trait ViewsModule: crate::storage::StorageModule {
         (
             self.cross_shard_execs().get(),
             self.intra_shard_execs().get(),
-        ).into()
+        )
+            .into()
     }
 
     /// Returns the cached shard ID for a keeper address.

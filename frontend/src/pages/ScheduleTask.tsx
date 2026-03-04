@@ -281,8 +281,8 @@ export function ScheduleTask() {
     const [intervalSeconds, setIntervalSeconds] = useState(
         parseInt(TEMPLATES[initialTemplate].defaults.interval || '0') * SECONDS_PER_ROUND
     );
-    // How many times a recurring task should repeat
     const [remainingExecs, setRemainingExecs] = useState(10);
+    const [requireXwapSafe, setRequireXwapSafe] = useState(false);
 
 
     useEffect(() => {
@@ -294,6 +294,7 @@ export function ScheduleTask() {
         setDelaySeconds(0);
         setIntervalSeconds(parseInt(tmplDefaults.interval || '0') * SECONDS_PER_ROUND);
         setRemainingExecs(10);
+        setRequireXwapSafe(false);
     }, [template]);
 
     const update = (field: string, value: string) => {
@@ -403,8 +404,9 @@ export function ScheduleTask() {
             // NOTE: SECONDS_PER_ROUND = 6 currently, will be ~0.6 after Supernova
             const ttlSeconds = parseInt(form.ttlRounds || '1000') * SECONDS_PER_ROUND;
             const ttlHex = hex64(ttlSeconds);
+            const requireXwapHex = requireXwapSafe ? '01' : '';
 
-            const data = `scheduleTask@${targetAddrHex}@${endpointHex}@${encodedArgsList}@${triggerHex}@${maxGasHex}@${maxRetriesHex}@${ttlHex}`;
+            const data = `scheduleTask@${targetAddrHex}@${endpointHex}@${encodedArgsList}@${triggerHex}@${maxGasHex}@${maxRetriesHex}@${ttlHex}@${requireXwapHex}`;
 
             const result = await signAndSendTransaction({
                 receiver: CONTRACTS.scheduler,
@@ -757,9 +759,10 @@ export function ScheduleTask() {
                                             <details style={{ marginTop: 8 }}>
                                                 <summary style={{
                                                     cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)',
-                                                    padding: '6px 0', userSelect: 'none',
+                                                    padding: '6px 0', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 6
                                                 }}>
-                                                    ⚙️ Advanced Settings
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+                                                    Advanced Settings
                                                 </summary>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
                                                     <div className="form-group">
@@ -789,15 +792,19 @@ export function ScheduleTask() {
 
                                 {/* Extras — Keeper Advanced Features */}
                                 <details style={{ marginBottom: 4 }}>
-                                    <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '4px 0', userSelect: 'none' }}>
-                                        ⚡ Advanced Keeper Features
+                                    <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '4px 0', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+                                        Advanced Keeper Features
                                     </summary>
 
                                     {/* Price Condition — Real keeper feature */}
                                     <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(6,182,212,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(6,182,212,0.20)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>🧬 Price Condition</span>
+                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-8.36l5.67-5.67" /></svg>
+                                                    Price Condition
+                                                </span>
                                                 <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(6,182,212,0.15)', color: 'rgb(6,182,212)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Keeper</span>
                                             </div>
                                         </div>
@@ -807,8 +814,9 @@ export function ScheduleTask() {
                                             <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_THRESHOLD=50</code>{' '}
                                             <code style={{ background: 'rgba(6,182,212,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_PRICE_CONDITION=above</code>
                                         </small>
-                                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(6,182,212,0.08)', fontSize: '0.75rem', color: 'rgb(6,182,212)' }}>
-                                            💡 The keeper will skip execution if the price condition is not met — 0 gas wasted.
+                                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(6,182,212,0.08)', fontSize: '0.75rem', color: 'rgb(6,182,212)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5" /><path d="M9 18h6" /><path d="M10 22h4" /></svg>
+                                            The keeper will skip execution if the price condition is not met — 0 gas wasted.
                                         </div>
                                     </div>
 
@@ -816,7 +824,10 @@ export function ScheduleTask() {
                                     <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(168,85,247,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(168,85,247,0.20)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>🤖 AI-Optimized Execution</span>
+                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg>
+                                                    AI-Optimized Execution
+                                                </span>
                                                 <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(168,85,247,0.15)', color: 'rgb(168,85,247)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Keeper</span>
                                             </div>
                                         </div>
@@ -825,9 +836,37 @@ export function ScheduleTask() {
                                             Auto-executes after 5 delays (anti-starvation). Prefers off-peak hours (UTC 02:00-06:00).
                                             Enable: <code style={{ background: 'rgba(168,85,247,0.12)', padding: '1px 4px', borderRadius: 3, fontSize: '0.72rem' }}>XCRON_AI_OPTIMIZED=true</code>
                                         </small>
-                                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(168,85,247,0.08)', fontSize: '0.75rem', color: 'rgb(168,85,247)' }}>
-                                            ✨ Saves gas by executing at optimal network moments — no extra cost for users.
+                                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(168,85,247,0.08)', fontSize: '0.75rem', color: 'rgb(168,85,247)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M7 5H3" /><path d="M21 17v4" /><path d="M23 19h-4" /></svg>
+                                            Saves gas by executing at optimal network moments — no extra cost for users.
                                         </div>
+                                    </div>
+
+                                    {/* XWAP Volatility Gate — Real Contract Feature */}
+                                    <div className="form-section" style={{ marginBottom: 4, padding: 8, background: 'rgba(251,191,36,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(251,191,36,0.20)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setRequireXwapSafe(!requireXwapSafe)}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                                                    Volatility Protection
+                                                </span>
+                                                <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(251,191,36,0.15)', color: 'rgb(251,191,36)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>On-Chain</span>
+                                            </div>
+                                            <div style={{
+                                                width: 36, height: 20, borderRadius: 10, background: requireXwapSafe ? 'rgb(251,191,36)' : 'var(--bg-card)',
+                                                border: `1px solid ${requireXwapSafe ? 'rgb(251,191,36)' : 'var(--border-primary)'}`,
+                                                position: 'relative', transition: 'all 0.2s',
+                                            }}>
+                                                <div style={{
+                                                    width: 14, height: 14, borderRadius: 7, background: '#fff',
+                                                    position: 'absolute', top: 2, left: requireXwapSafe ? 18 : 2, transition: 'all 0.2s',
+                                                }} />
+                                            </div>
+                                        </div>
+                                        <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: 6, lineHeight: 1.5 }}>
+                                            The task will <strong>pause execution</strong> during severe market volatility. Evaluated natively on-chain via the <strong>XWAP Oracle</strong>.
+                                            Recommended for DeFi swaps and liquidations to prevent high slippage or sandwich attacks.
+                                        </small>
                                     </div>
                                 </details>
 
@@ -838,7 +877,7 @@ export function ScheduleTask() {
                                     marginBottom: 8, fontSize: '0.72rem', color: 'rgba(34,197,94,0.85)',
                                     display: 'flex', alignItems: 'center', gap: 8,
                                 }}>
-                                    <span style={{ fontSize: '1rem' }}>🔗</span>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
                                     <span>
                                         <strong>Task Chaining:</strong> After creating multiple tasks, link them in{' '}
                                         <a href="/tasks" style={{ color: 'rgb(34,197,94)', textDecoration: 'underline' }}>My Tasks</a>
@@ -860,8 +899,9 @@ export function ScheduleTask() {
                             {/* Template About — collapsible */}
                             {template !== 'custom' && template !== 'quicktest' && (
                                 <details style={{ marginTop: 12 }}>
-                                    <summary style={{ cursor: 'pointer', fontSize: '0.78rem', color: color, fontWeight: 600, padding: '6px 0' }}>
-                                        ℹ️ About {tmpl.title}
+                                    <summary style={{ cursor: 'pointer', fontSize: '0.78rem', color: color, fontWeight: 600, padding: '6px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                                        About {tmpl.title}
                                     </summary>
                                     <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, padding: '8px 0' }}>
                                         {template === 'compound' && 'Auto-compounding reinvests your staking/farm rewards automatically. At 20% APR, daily compounding yields ~22% APY.'}

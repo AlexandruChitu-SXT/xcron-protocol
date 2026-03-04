@@ -43,6 +43,12 @@ pub trait ConfigModule: crate::storage::StorageModule {
         self.rewards_addr().set(&addr);
     }
 
+    #[only_owner]
+    #[endpoint(setXwapAddress)]
+    fn set_xwap_address(&self, addr: ManagedAddress) {
+        self.xwap_address().set(&addr);
+    }
+
     /// Phase 1: whitelist a keeper by address.
     /// Also adds to keeper_list for round-robin task assignment.
     #[only_owner]
@@ -116,7 +122,7 @@ pub trait ConfigModule: crate::storage::StorageModule {
             .to(&rewards_addr)
             .raw_call("receiveExecutionFee")
             .argument(&caller) // keeper who flushed
-            .argument(&0u64)   // task_id = 0 (bulk flush)
+            .argument(&0u64) // task_id = 0 (bulk flush)
             .egld(&accrued)
             .gas(10_000_000u64)
             .transfer_execute();
@@ -126,5 +132,11 @@ pub trait ConfigModule: crate::storage::StorageModule {
     #[view(getAccruedProtocolFees)]
     fn get_accrued_protocol_fees(&self) -> BigUint {
         self.accrued_protocol_fees().get()
+    }
+
+    /// View: Get the XWAP oracle address.
+    #[view(getXwapAddress)]
+    fn get_xwap_address(&self) -> ManagedAddress {
+        self.xwap_address().get()
     }
 }

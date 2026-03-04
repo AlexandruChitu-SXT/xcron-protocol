@@ -196,15 +196,26 @@ async function main(): Promise<void> {
         try {
             // -- 1. AI & Core Oracle Cycle --
             // Call XWAP every cycle to keep the on-chain EWMA fresh
-            // Simulated reserve values for testnet since we don't have a real xExchange pool
-            const simulatedReserveA = 1000n * 10n ** 18n; // 1000 EGLD
-            const simulatedReserveB = 4000n * 10n ** 6n;  // $4000 USDC -> EGLD=$4.00
+            // Fetch real EGLD price to simulate realistic on-chain xExchange reserves
+            let simulatedReserveA = 1000n * 10n ** 18n; // Base 1000 EGLD liquidity
+            let simulatedReserveB = 0n;
 
             try {
-                logger.debug("Main", "Running XWAP Reporter cycle...");
-                const isSafe = await xwapReporter.runCycle(simulatedReserveA, 18, simulatedReserveB, 6);
-                if (!isSafe) {
-                    logger.warn("Main", "🚨 XWAP reports system is NOT safe! Gate is closed.");
+                logger.debug("Main", "Fetching real EGLD price for XWAP Oracle...");
+                const realEgldPrice = await priceService.getPrice("EGLD");
+                if (realEgldPrice && realEgldPrice > 0) {
+                    // USD price with 6 decimals (USDC format)
+                    const priceWithDecimals = BigInt(Math.round(realEgldPrice * 1e6));
+                    // reserveB = 1000 EGLD * price
+                    simulatedReserveB = 1000n * priceWithDecimals;
+
+                    logger.debug("Main", `Running XWAP Reporter cycle with dynamic reserves ($${realEgldPrice.toFixed(2)} EGLD)`);
+                    const isSafe = await xwapReporter.runCycle(simulatedReserveA, 18, simulatedReserveB, 6);
+                    if (!isSafe) {
+                        logger.warn("Main", "🚨 XWAP reports system is NOT safe! Gate is closed.");
+                    }
+                } else {
+                    logger.warn("Main", "Could not fetch EGLD price from PriceService. Skipping XWAP cycle.");
                 }
             } catch (err: any) {
                 logger.error("Main", `XWAP Reporter cycle failed: ${err.message}`);

@@ -61,9 +61,5 @@ pub trait EventsModule {
 
     /// Emitted when protocol fee is forwarded to the Rewards contract.
     #[event("protocolFeePaid")]
-    fn protocol_fee_paid_event(
-        &self,
-        #[indexed] task_id: u64,
-        amount: &BigUint,
-    );
+    fn protocol_fee_paid_event(&self, #[indexed] task_id: u64, amount: &BigUint);
 }

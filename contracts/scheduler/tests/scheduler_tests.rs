@@ -22,7 +22,6 @@ fn deploy_scenario() {
     world().run("scenarios/deploy.scen.json");
 }
 
-
 #[test]
 fn schedule_and_cancel() {
     world().run("scenarios/schedule_and_cancel.scen.json");
@@ -194,4 +193,3 @@ fn clone_key_expired() {
 fn clone_key_revoke() {
     world().run("scenarios/clone_key_revoke.scen.json");
 }
-

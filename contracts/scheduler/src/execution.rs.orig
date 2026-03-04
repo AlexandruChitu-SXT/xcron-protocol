@@ -26,40 +26,12 @@ pub trait ExecutionModule:
         let keeper = self.blockchain().get_caller();
 
         // Checks
-        require!(
-            task.status == common::types::TaskStatus::Pending,
-            "Task not Pending"
-        );
+        require!(task.status == common::types::TaskStatus::Pending, "Task not Pending");
         self.require_registered_keeper(&keeper);
         self.require_task_ripe(task_id, &task);
 
         // S-1: Verify target is still safe (could have been blacklisted after scheduling)
         self.require_safe_target(&task.target_contract, &task.target_endpoint);
-
-        // S-14: XWAP Oracle Safety Gate (Graceful Degradation)
-        // Opt-in protection: If the user flagged this task as sensitive to volatility,
-        // we proactively query XWAP and fail execution if the gate is closed.
-        if task.require_xwap_safe {
-            let xwap_addr = self.xwap_address().get();
-            if !xwap_addr.is_zero() {
-                let raw_results = self
-                    .tx()
-                    .to(&xwap_addr)
-                    .raw_call("isSafeToExecute")
-                    .returns(multiversx_sc::types::ReturnsRawResult)
-                    .sync_call();
-
-                let mut is_safe = false;
-                if raw_results.len() > 0 {
-                    let raw_val = raw_results.get(0);
-                    if !raw_val.is_empty() {
-                        is_safe = true;
-                    }
-                }
-
-                require!(is_safe, "XWAP Oracle reports unsafe market conditions");
-            }
-        }
 
         // Round-robin assignment: fair task distribution among keepers
         let keeper_count = self.keeper_list().len();
@@ -71,15 +43,9 @@ pub trait ExecutionModule:
                 let ripe_time = match &task.trigger {
                     common::types::Trigger::TimeOnce { target_time } => *target_time,
                     common::types::Trigger::TimeRecurring { start_time, .. } => *start_time,
-                    _ => self
-                        .blockchain()
-                        .get_block_timestamp_seconds()
-                        .as_u64_seconds(),
+                    _ => self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
                 };
-                let current_time = self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds();
+                let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                 require!(
                     current_time >= ripe_time + common::constants::ROUND_ROBIN_GRACE_SECONDS,
                     "Task assigned to another keeper -- wait 30s grace period"
@@ -89,30 +55,26 @@ pub trait ExecutionModule:
 
         // C-3: Validate gas budget with cross-shard awareness
         // Dynamic callback gas: lower for intra-shard (less coordination needed)
-        let target_shard = self
-            .blockchain()
-            .get_shard_of_address(&task.target_contract);
-        let self_shard = self
-            .blockchain()
-            .get_shard_of_address(&self.blockchain().get_sc_address());
+        let target_shard = self.blockchain().get_shard_of_address(&task.target_contract);
+        let self_shard = self.blockchain().get_shard_of_address(&self.blockchain().get_sc_address());
         let is_cross_shard = target_shard != self_shard;
 
         // Shard-aware gas: if keeper registered their shard, check affinity
         let keeper_shard_cached = self.keeper_shard(&keeper).get();
         let cross_shard_overhead = if !is_cross_shard {
-            0u64 // Intra-shard: no overhead
+            0u64  // Intra-shard: no overhead
         } else if keeper_shard_cached == target_shard {
             // Keeper is in same shard as target — only scheduler→keeper is cross-shard
-            task.max_gas * 15 / 100 // 15% vs 30% — half the overhead
+            task.max_gas * 15 / 100  // 15% vs 30% — half the overhead
         } else {
-            task.max_gas * 30 / 100 // Full cross-shard overhead
+            task.max_gas * 30 / 100  // Full cross-shard overhead
         };
 
         // Dynamic callback gas: cross-shard callbacks need more gas for coordination
         let callback_gas = if is_cross_shard {
-            common::constants::CALLBACK_GAS_RESERVE // 25M for cross-shard
+            common::constants::CALLBACK_GAS_RESERVE  // 25M for cross-shard
         } else {
-            common::constants::CALLBACK_GAS_RESERVE * 80 / 100 // 20M for intra-shard
+            common::constants::CALLBACK_GAS_RESERVE * 80 / 100  // 20M for intra-shard
         };
 
         let min_gas_needed = task.max_gas + cross_shard_overhead + callback_gas + 10_000_000u64;
@@ -164,10 +126,7 @@ pub trait ExecutionModule:
             ManagedAsyncCallResult::Ok(_) => {
                 // ✅ Target executed successfully — pay keeper and protocol
                 task.status = common::types::TaskStatus::Completed;
-                task.completed_at = self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds();
+                task.completed_at = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                 self.tasks(task_id).set(&task);
                 self.owner_tasks(&task.owner).swap_remove(&task_id);
 
@@ -178,12 +137,8 @@ pub trait ExecutionModule:
                 self.target_failure_count(&task.target_contract).set(0u64);
 
                 // Cross-shard metrics
-                let target_shard = self
-                    .blockchain()
-                    .get_shard_of_address(&task.target_contract);
-                let self_shard = self
-                    .blockchain()
-                    .get_shard_of_address(&self.blockchain().get_sc_address());
+                let target_shard = self.blockchain().get_shard_of_address(&task.target_contract);
+                let self_shard = self.blockchain().get_shard_of_address(&self.blockchain().get_sc_address());
                 if target_shard != self_shard {
                     self.cross_shard_execs().update(|v| *v += 1);
                 } else {
@@ -214,12 +169,7 @@ pub trait ExecutionModule:
                 {
                     let min_dep = self.min_deposit().get();
                     if *remaining_execs > 1 && remaining_deposit >= min_dep {
-                        self.reschedule_recurring(
-                            &task,
-                            *interval,
-                            *remaining_execs - 1,
-                            remaining_deposit,
-                        );
+                        self.reschedule_recurring(&task, *interval, *remaining_execs - 1, remaining_deposit);
                     } else if remaining_deposit > BigUint::zero() {
                         self.send().direct_egld(&task.owner, &remaining_deposit);
                         self.user_refunded_event(task_id, &task.owner, &remaining_deposit);
@@ -249,10 +199,7 @@ pub trait ExecutionModule:
                             && post_task.status == common::types::TaskStatus::Pending
                         {
                             // Update trigger time to NOW so keeper picks it up immediately
-                            let now = self
-                                .blockchain()
-                                .get_block_timestamp_seconds()
-                                .as_u64_seconds();
+                            let now = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                             match &mut post_task.trigger {
                                 common::types::Trigger::TimeOnce { target_time } => {
                                     *target_time = now;
@@ -272,10 +219,7 @@ pub trait ExecutionModule:
             ManagedAsyncCallResult::Err(_) => {
                 // ❌ Target execution failed — refund user, no keeper payment
                 task.status = common::types::TaskStatus::Failed;
-                task.completed_at = self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds();
+                task.completed_at = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                 self.tasks(task_id).set(&task);
                 self.owner_tasks(&task.owner).swap_remove(&task_id);
 
@@ -285,8 +229,7 @@ pub trait ExecutionModule:
                 // S-6: Track per-target failure count
                 let failures = self.target_failure_count(&task.target_contract).get();
                 let new_failures = failures + 1;
-                self.target_failure_count(&task.target_contract)
-                    .set(new_failures);
+                self.target_failure_count(&task.target_contract).set(new_failures);
 
                 // S-7: Auto-blacklist targets with >10 consecutive failures
                 if new_failures >= 10 {
@@ -315,10 +258,7 @@ pub trait ExecutionModule:
             "Task not in Executing state"
         );
 
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let stuck_threshold = 60 * 60; // 1 hour
         require!(
             current_time > task.created_at + stuck_threshold,
@@ -346,10 +286,7 @@ pub trait ExecutionModule:
             "Not authorized to expire tasks"
         );
 
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let mut processed: usize = 0;
         for task_id in task_ids {
             if processed >= common::constants::MAX_EXPIRE_BATCH {

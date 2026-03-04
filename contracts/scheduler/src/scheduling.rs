@@ -29,6 +29,7 @@ pub trait SchedulingModule:
         max_gas: u64,
         max_retries: u8,
         ttl_seconds: u64,
+        require_xwap_safe: bool,
         requested_deposit: OptionalValue<BigUint>,
     ) -> u64 {
         self.require_not_paused();
@@ -53,15 +54,22 @@ pub trait SchedulingModule:
 
         // Checks
         require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
-        require!(max_gas >= common::constants::MIN_GAS_LIMIT, "max_gas too low");
-        require!(ttl_seconds >= common::constants::MIN_TTL_SECONDS, "TTL too short");
+        require!(
+            max_gas >= common::constants::MIN_GAS_LIMIT,
+            "max_gas too low"
+        );
+        require!(
+            ttl_seconds >= common::constants::MIN_TTL_SECONDS,
+            "TTL too short"
+        );
 
         // S-1: Full target safety validation
         self.require_safe_target(&target_contract, &target_endpoint);
 
         // S-13: Endpoint name validation
         require!(
-            target_endpoint.len() >= 1 && target_endpoint.len() <= common::constants::MAX_ENDPOINT_NAME_BYTES,
+            target_endpoint.len() >= 1
+                && target_endpoint.len() <= common::constants::MAX_ENDPOINT_NAME_BYTES,
             "S-13: Invalid endpoint name length (1-64 bytes)"
         );
 
@@ -82,7 +90,8 @@ pub trait SchedulingModule:
                 "S-11: Too many tasks this round (anti-spam)"
             );
         }
-        self.tasks_per_round(&caller, current_round).set(tasks_this_round + 1);
+        self.tasks_per_round(&caller, current_round)
+            .set(tasks_this_round + 1);
 
         // S-12: Argument size validation
         require!(
@@ -100,7 +109,10 @@ pub trait SchedulingModule:
         let task_id = self.task_nonce().get() + 1;
         self.task_nonce().set(task_id);
 
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
 
         let task = common::types::Task {
             id: task_id,
@@ -119,6 +131,7 @@ pub trait SchedulingModule:
             assigned_keeper: None,
             completed_at: 0,
             post_task_id: None,
+            require_xwap_safe,
         };
 
         self.tasks(task_id).set(&task);
@@ -145,7 +158,10 @@ pub trait SchedulingModule:
             task.owner == raw_caller || task.owner == effective_owner,
             "Not task owner"
         );
-        require!(task.status == common::types::TaskStatus::Pending, "Can only cancel Pending tasks");
+        require!(
+            task.status == common::types::TaskStatus::Pending,
+            "Can only cancel Pending tasks"
+        );
 
         // Effects
         task.status = common::types::TaskStatus::Cancelled;
@@ -166,7 +182,10 @@ pub trait SchedulingModule:
         let caller = self.blockchain().get_caller();
 
         require!(task.owner == caller, "Not task owner");
-        require!(task.status == common::types::TaskStatus::Pending, "Can only set metadata on Pending tasks");
+        require!(
+            task.status == common::types::TaskStatus::Pending,
+            "Can only set metadata on Pending tasks"
+        );
         require!(metadata.len() <= 512, "Metadata too large (max 512 bytes)");
 
         self.task_metadata(task_id).set(&metadata);

@@ -13,8 +13,7 @@ multiversx_sc::imports!();
 /// - Refunds always go to the main wallet, never the clone
 #[multiversx_sc::module]
 pub trait CloneKeysModule:
-    crate::storage::StorageModule
-    + common::pausable::PausableModule
+    crate::storage::StorageModule + common::pausable::PausableModule
 {
     // ═══════════════════════════════════════════════════════════
     //  EVENTS (colocated to avoid SDK 0.63 macro issue)
@@ -41,11 +40,7 @@ pub trait CloneKeysModule:
 
     /// Emitted when a main wallet adds more funds to a Clone-Key.
     #[event("cloneKeyFunded")]
-    fn clone_key_funded_event(
-        &self,
-        #[indexed] clone_key: &ManagedAddress,
-        added_amount: &BigUint,
-    );
+    fn clone_key_funded_event(&self, #[indexed] clone_key: &ManagedAddress, added_amount: &BigUint);
     // ═══════════════════════════════════════════════════════════
     //  PUBLIC ENDPOINTS
     // ═══════════════════════════════════════════════════════════
@@ -56,17 +51,16 @@ pub trait CloneKeysModule:
     /// The clone_address should be a fresh wallet generated client-side.
     #[payable("EGLD")]
     #[endpoint(authorizeCloneKey)]
-    fn authorize_clone_key(
-        &self,
-        clone_address: ManagedAddress,
-        ttl_seconds: u64,
-    ) {
+    fn authorize_clone_key(&self, clone_address: ManagedAddress, ttl_seconds: u64) {
         self.require_not_paused();
         let caller = self.blockchain().get_caller();
         let deposit = self.call_value().egld().clone_value();
 
         // Validate deposit (spend limit)
-        require!(deposit > BigUint::zero(), "Must deposit EGLD as spend limit");
+        require!(
+            deposit > BigUint::zero(),
+            "Must deposit EGLD as spend limit"
+        );
         require!(
             deposit <= BigUint::from(common::constants::MAX_CLONE_KEY_SPEND_LIMIT),
             "Spend limit exceeds maximum (2 EGLD)"
@@ -83,7 +77,10 @@ pub trait CloneKeysModule:
         );
 
         // Cannot authorize self as clone
-        require!(clone_address != caller, "Cannot authorize self as Clone-Key");
+        require!(
+            clone_address != caller,
+            "Cannot authorize self as Clone-Key"
+        );
 
         // Cannot authorize an already-active clone key
         require!(
@@ -99,7 +96,10 @@ pub trait CloneKeysModule:
         );
 
         // Calculate expiry
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
         let expiry = current_time + ttl_seconds;
 
         // Store clone key properties
@@ -110,7 +110,8 @@ pub trait CloneKeysModule:
             expiry_timestamp: expiry,
         };
         self.clone_key_props(&clone_address).set(&props);
-        self.wallet_clone_keys(&caller).insert(clone_address.clone());
+        self.wallet_clone_keys(&caller)
+            .insert(clone_address.clone());
 
         // Emit event
         self.clone_key_authorized_event(&caller, &clone_address, expiry, &deposit);
@@ -176,7 +177,10 @@ pub trait CloneKeysModule:
         );
 
         // Check expiry — no point funding an expired key
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
         require!(
             current_time < props.expiry_timestamp,
             "Clone-Key has expired — revoke and create a new one"
@@ -243,7 +247,10 @@ pub trait CloneKeysModule:
         }
 
         let props = self.clone_key_props(&caller).get();
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
 
         // Expired clone keys are treated as non-existent
         if current_time >= props.expiry_timestamp {
@@ -261,7 +268,10 @@ pub trait CloneKeysModule:
         let mut props = self.clone_key_props(clone_address).get();
 
         // Check expiry
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
         require!(
             current_time < props.expiry_timestamp,
             "Clone-Key has expired"

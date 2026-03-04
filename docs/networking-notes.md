@@ -112,3 +112,11 @@
 **Respuesta sugerida:** Ver opciones en la conversación principal.
 
 **Estado:** Pendiente de respuesta de Alexandru.
+
+## Teresa Almeida (@tuhanlife) - MerlinLayer2
+
+**Quién es:** Posible DevRel o reclutadora del ecosistema MerlinLayer2 (aparenta ser una L2 de Bitcoin o similar cruzado).
+**Interacción 4 mar 2026 (DM recibido):**
+> "Hey, sorry to message out of the blue. I've seen a few of your posts and comments and was curious if you'd be open to a quick chat about small ways to contribute around @MerlinLayer2 alongside what you're already working on?"
+**Análisis:** Está "pescando" talento (scouting). Ha visto que Alexandru está construyendo activamente y le propone colaborar con MerlinLayer2 "sin dejar de hacer lo que ya hace".
+**Estado:** Pendiente de respuesta.

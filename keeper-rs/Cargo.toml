@@ -34,3 +34,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Utils
 chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
+
+# TEE Enclave crypto (Pillar B)
+aes-gcm = "0.10"
+hkdf = "0.12"
+hmac = "0.12"
+rand = "0.8"

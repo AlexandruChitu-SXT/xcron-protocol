@@ -10,6 +10,8 @@ mod types;
 mod price_checker;
 mod gas_optimizer;
 mod solver;
+mod tee_enclave;
+mod zk_prover;
 
 use config::KeeperConfig;
 use monitor::TaskMonitor;

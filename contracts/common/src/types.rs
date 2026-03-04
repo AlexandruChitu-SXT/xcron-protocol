@@ -52,6 +52,9 @@ pub struct Task<M: ManagedTypeApi> {
     /// Optional ID of a task to activate upon successful completion (task chaining).
     /// The chained task must exist, belong to the same owner, and be in Pending status.
     pub post_task_id: Option<u64>,
+    /// Whether this task requires the XWAP Oracle Gate to be OPEN before executing.
+    /// Used to opt-in to high volatility protection.
+    pub require_xwap_safe: bool,
 }
 
 /// Current status of a task in its lifecycle.

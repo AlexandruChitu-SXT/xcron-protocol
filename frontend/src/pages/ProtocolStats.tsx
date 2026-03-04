@@ -218,7 +218,14 @@ export function ProtocolStats() {
                         </div>
                         <div style={{ textAlign: 'center' }}>
                             <div style={{ fontSize: '0.75rem', color: successRate >= 90 ? '#00e676' : successRate >= 50 ? '#ffa726' : '#ff5252', fontWeight: 700 }}>
-                                {successRate >= 90 ? '🟢 Excellent' : successRate >= 50 ? '🟡 Fair' : '🔴 Needs Attention'}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <div style={{
+                                        width: 8, height: 8, borderRadius: '50%',
+                                        background: successRate >= 90 ? 'rgb(34,197,94)' : successRate >= 50 ? 'rgb(251,191,36)' : 'rgb(239,68,68)',
+                                        boxShadow: `0 0 10px ${successRate >= 90 ? 'rgba(34,197,94,0.5)' : successRate >= 50 ? 'rgba(251,191,36,0.5)' : 'rgba(239,68,68,0.5)'}`
+                                    }} />
+                                    <span>{successRate >= 90 ? 'Excellent' : successRate >= 50 ? 'Fair' : 'Needs Attention'}</span>
+                                </div>
                             </div>
                             <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: 4 }}>
                                 Based on execution success rate

@@ -555,9 +555,10 @@ export function KeeperPanel() {
                                 <div style={{ color: '#4ade80', fontWeight: 600 }}>npm install && npm start</div>
                             </div>
 
-                            <p style={{ marginTop: 12, fontSize: '0.88rem', color: '#fbbf24' }}>
-                                ⚠ Keep your node online 24/7. Missing a task assignment will result in a slash.
-                            </p>
+                            <div className="form-hint" style={{ marginTop: 12, color: 'rgb(249,115,22)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+                                <span>Keep your node online 24/7. Missing a task assignment will result in a slash.</span>
+                            </div>
                         </>
                     )}
                 </div>

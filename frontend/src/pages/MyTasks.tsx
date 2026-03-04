@@ -229,9 +229,9 @@ export function MyTasks() {
     }
 
     return (
-        <div className="page" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingTop: '80px' }}>
             {/* Header Overlay */}
-            <div style={{ position: 'absolute', top: 80, left: 0, right: 0, padding: '20px 40px', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', background: 'linear-gradient(to bottom, rgba(3,7,18,0.9) 0%, transparent 100%)', pointerEvents: 'none' }}>
+            <div style={{ padding: '20px 40px', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', background: 'linear-gradient(to bottom, rgba(3,7,18,0.9) 0%, transparent 100%)', pointerEvents: 'none', flexShrink: 0 }}>
                 <div style={{ pointerEvents: 'auto' }}>
                     <TypewriterTitle as="h1" text="Visual Canvas" speed={70} />
                     <TypewriterTitle as="p" text="Task Chaining & Intents Network Map" speed={30} />
@@ -255,7 +255,7 @@ export function MyTasks() {
                     background: 'transparent',
                     overflow: 'hidden',
                     cursor: isDragging ? 'grabbing' : 'grab',
-                    marginTop: 0,
+                    minHeight: '500px', // Fallback for small screens
                     backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
                     backgroundSize: '100% 100%, 40px 40px, 40px 40px',
                     backgroundPosition: `${transform.x}px ${transform.y}px`,

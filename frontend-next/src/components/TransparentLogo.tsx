@@ -4,9 +4,10 @@ import { useEffect, useRef } from 'react';
 
 interface TransparentLogoProps {
     className?: string;
+    src?: string;
 }
 
-export function TransparentLogo({ className }: TransparentLogoProps) {
+export function TransparentLogo({ className, src = '/logo.png' }: TransparentLogoProps) {
     const logoCanvasRef = useRef<HTMLCanvasElement>(null);
 
     // Process logo: remove black background
@@ -15,7 +16,7 @@ export function TransparentLogo({ className }: TransparentLogoProps) {
         if (!canvas) return;
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.src = '/logo.png';
+        img.src = src;
         img.onload = () => {
             canvas.width = img.width;
             canvas.height = img.height;
@@ -39,7 +40,7 @@ export function TransparentLogo({ className }: TransparentLogoProps) {
             }
             ctx.putImageData(imageData, 0, 0);
         };
-    }, []);
+    }, [src]);
 
     return <canvas ref={logoCanvasRef} className={className} />;
 }

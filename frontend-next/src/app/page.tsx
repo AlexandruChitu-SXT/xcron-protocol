@@ -10,7 +10,7 @@ import { LiveActivityFeed } from '@/components/LiveActivityFeed';
 import { ProtocolRadar } from '@/components/ProtocolRadar';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { TypewriterTitle } from '@/components/TypewriterTitle';
-import { XCronLogo } from '@/components/XCronLogo';
+import { TransparentLogo } from '@/components/TransparentLogo';
 
 interface ProtocolStats {
   totalTasks: number;
@@ -117,8 +117,8 @@ export default function Dashboard() {
         <div className="hero-section" style={{ paddingBottom: 0 }}>
           {/* Logo — standalone centered (Moved to top) */}
           <div className="flex justify-center pt-2 pb-6">
-            <div className="w-[320px] aspect-square relative pointer-events-none drop-shadow-[0_0_40px_rgba(34,211,238,0.15)] flex items-center justify-center">
-              <XCronLogo size={320} className="scale-[1.2]" />
+            <div className="w-[320px] aspect-square relative animate-[pulse_4s_ease-in-out_infinite] pointer-events-none drop-shadow-[0_0_40px_rgba(34,211,238,0.15)] flex items-center justify-center">
+              <TransparentLogo src="/logo.png" className="w-full h-full object-contain scale-[1.2]" />
             </div>
           </div>
 

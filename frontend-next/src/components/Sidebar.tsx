@@ -44,31 +44,64 @@ export function Sidebar() {
                 <div className="p-6">
                     <Link href="/" className="flex items-center gap-4 group mb-4">
                         <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-300 pointer-events-none drop-shadow-[0_0_20px_rgba(192,132,252,0.3)] shrink-0">
-                            {/* Órbitas 3D estilo MultiversX Telemetry */}
-                            <div className="absolute inset-[-15%] [transform:rotateX(70deg)] [transform-style:preserve-3d] group-hover:scale-110 transition-transform duration-700 relative">
-                                <div className="w-full h-full rounded-full border border-cyan-400/30 animate-[spin_5s_linear_infinite]">
-                                    {/* Esfera brillante horizontal */}
-                                    <div className="absolute top-[-4px] inset-x-1/2 w-2 h-2 bg-white rounded-full 
-                                        shadow-[0_0_10px_2px_#22d3ee,0_0_20px_5px_rgba(34,211,238,0.6),0_0_30px_8px_rgba(34,211,238,0.3)]">
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="absolute inset-[-15%] [transform:rotateZ(60deg)_rotateX(70deg)] [transform-style:preserve-3d] group-hover:scale-110 transition-transform duration-700">
-                                <div className="w-full h-full rounded-full border border-cyan-400/20 animate-[spin_7s_linear_infinite_reverse]">
-                                    {/* Esfera brillante inclinada cruzada */}
-                                    <div className="absolute bottom-1/4 left-[-4px] w-2 h-2 bg-white rounded-full 
-                                        shadow-[0_0_10px_2px_#22d3ee,0_0_20px_5px_rgba(34,211,238,0.4)]">
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="absolute inset-[-15%] [transform:rotateZ(-60deg)_rotateX(70deg)] [transform-style:preserve-3d] group-hover:scale-110 transition-transform duration-700">
-                                <div className="w-full h-full rounded-full border border-purple-500/30 animate-[spin_9s_linear_infinite]">
-                                    {/* Esfera brillante inclinada cruzada púrpura */}
-                                    <div className="absolute top-1/4 right-[-4px] w-2 h-2 bg-white rounded-full 
-                                        shadow-[0_0_10px_2px_#c084fc,0_0_20px_5px_rgba(192,132,252,0.6),0_0_30px_8px_rgba(192,132,252,0.3)]">
-                                    </div>
-                                </div>
-                            </div>
+                            {/* Órbitas 3D perfectas en SVG (Evita el achatamiento de los hijos por rotateX) */}
+                            <svg className="absolute inset-[-20%] w-[140%] h-[140%] overflow-visible group-hover:scale-110 transition-transform duration-700" viewBox="0 0 100 100">
+                                <defs>
+                                    <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+                                        <feGaussianBlur stdDeviation="1.5" result="blur" />
+                                        <feComponentTransfer in="blur" result="glow">
+                                            <feFuncA type="linear" slope="2" />
+                                        </feComponentTransfer>
+                                        <feMerge>
+                                            <feMergeNode in="glow" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                    <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+                                        <feGaussianBlur stdDeviation="1.5" result="blur" />
+                                        <feComponentTransfer in="blur" result="glow">
+                                            <feFuncA type="linear" slope="2" />
+                                        </feComponentTransfer>
+                                        <feMerge>
+                                            <feMergeNode in="glow" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+
+                                {/* Órbita 1: Horizontal */}
+                                <g transform="rotate(0 50 50)">
+                                    <ellipse cx="50" cy="50" rx="45" ry="12" fill="none" className="stroke-cyan-400/40" strokeWidth="0.5" />
+                                    <circle r="1.5" fill="#22d3ee" filter="url(#glow-cyan)">
+                                        <animateMotion dur="5s" repeatCount="indefinite" path="M 95 50 A 45 12 0 1 0 5 50 A 45 12 0 1 0 95 50" />
+                                    </circle>
+                                    <circle r="0.5" fill="#fff">
+                                        <animateMotion dur="5s" repeatCount="indefinite" path="M 95 50 A 45 12 0 1 0 5 50 A 45 12 0 1 0 95 50" />
+                                    </circle>
+                                </g>
+
+                                {/* Órbita 2: Inclinada 60deg (Dirección opuesta) */}
+                                <g transform="rotate(60 50 50)">
+                                    <ellipse cx="50" cy="50" rx="45" ry="12" fill="none" className="stroke-cyan-400/20" strokeWidth="0.5" />
+                                    <circle r="1.5" fill="#22d3ee" filter="url(#glow-cyan)">
+                                        <animateMotion dur="7s" repeatCount="indefinite" path="M 95 50 A 45 12 0 1 1 5 50 A 45 12 0 1 1 95 50" />
+                                    </circle>
+                                    <circle r="0.5" fill="#fff">
+                                        <animateMotion dur="7s" repeatCount="indefinite" path="M 95 50 A 45 12 0 1 1 5 50 A 45 12 0 1 1 95 50" />
+                                    </circle>
+                                </g>
+
+                                {/* Órbita 3: Inclinada -60deg */}
+                                <g transform="rotate(-60 50 50)">
+                                    <ellipse cx="50" cy="50" rx="45" ry="12" fill="none" className="stroke-purple-500/30" strokeWidth="0.5" />
+                                    <circle r="1.5" fill="#c084fc" filter="url(#glow-purple)">
+                                        <animateMotion dur="9s" repeatCount="indefinite" path="M 95 50 A 45 12 0 1 0 5 50 A 45 12 0 1 0 95 50" />
+                                    </circle>
+                                    <circle r="0.5" fill="#fff">
+                                        <animateMotion dur="9s" repeatCount="indefinite" path="M 95 50 A 45 12 0 1 0 5 50 A 45 12 0 1 0 95 50" />
+                                    </circle>
+                                </g>
+                            </svg>
 
                             <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3] group-hover:scale-[1.4] transition-transform duration-500 relative z-10" />
                         </div>

@@ -44,7 +44,7 @@ export function Sidebar() {
                 <div className="p-6">
                     <Link href="/" className="flex items-center gap-2 group">
                         <div className="w-16 h-16 flex items-center justify-center transition-all duration-300 pointer-events-none drop-shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-                            <TransparentLogo src="/logo.png" className="w-full h-full object-contain scale-[1.3] group-hover:scale-[1.4] transition-transform duration-300" />
+                            <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3] group-hover:scale-[1.4] transition-transform duration-300" />
                         </div>
                         <span className="text-xl font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">
                             XCron

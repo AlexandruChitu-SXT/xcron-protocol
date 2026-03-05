@@ -158,3 +158,21 @@ Basically, we allow anyone to schedule smart contract executions (like recurring
 To answer your question directly: I am 100% focused on building XCron Protocol. It is a decentralized automation layer built entirely on MultiversX. 
 
 Basically, we allow anyone to schedule smart contract executions (like recurring swaps, DCA, compounders, etc.) without us ever holding their funds. We give developers and users the infrastructure to put their DeFi strategies on autopilot trustlessly. Right now, I'm fully immersed in developing our 'Vanguard' update."
+
+---
+
+## Beam Light Wallet | Privacy by default (@beampaywallet)
+
+**Quién es:** Proyecto/Wallet enfocada en privacidad "Privacy by default".
+
+**Interacción 5 mar 2026:**
+- Respondieron al hilo de la Arquitectura de 3 Pilares de XCron:
+  > "absolutely. scheduling without privacy is just building half a solution. how are you ensuring the compute layer stays decentralized?"
+
+**Análisis ("compute layer"):**
+- Avalan la visión de privacidad de XCron. 
+- Preguntan cómo aseguramos que los servidores que ejecutan la automatización (Keepers) no sean un punto centralizado (ej: un simple servidor en AWS).
+
+**Nuestra respuesta / arquitectura (Sí, estamos preparados):**
+- La capa de cómputo (execution) es la "Keeper Network": una red pública ("permissionless") donde cualquiera puede correr un nodo.
+- El cálculo complejo se respalda con **ZK Coprocessors / TEEs**, haciendo que la ejecución sea verificable criptográficamente on-chain sin revelar los datos ni requerir confianza en un servidor central.

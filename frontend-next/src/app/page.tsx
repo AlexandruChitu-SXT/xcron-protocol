@@ -117,8 +117,8 @@ export default function Dashboard() {
           {/* Logo — standalone centered (Moved to top) */}
           <div className="flex justify-center pt-0 pb-0 -mt-8">
             <div className="w-[346px] aspect-square relative animate-[pulse_4s_ease-in-out_infinite] pointer-events-none flex items-center justify-center">
-              {/* Magical Glow Behind - Same as Schedule Task widget but slightly reduced */}
-              <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/50 via-purple-500/50 to-cyan-500/50 blur-xl -z-10 rounded-full opacity-30 mix-blend-screen" />
+              {/* Magical Glow Behind - Smaller diameter so it stays compact behind the logo */}
+              <div className="absolute inset-10 bg-gradient-to-r from-cyan-500/50 via-purple-500/50 to-cyan-500/50 blur-2xl -z-10 rounded-full opacity-40 mix-blend-screen" />
               <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3]" />
             </div>
           </div>

@@ -42,10 +42,10 @@
   --text-muted: rgba(232, 245, 240, 0.55);
   --text-accent: #50c878;
 
-  --accent: #009b77;
+  --accent: #c084fc;
   --accent-light: #50c878;
-  --accent-dark: #006b3c;
-  --accent-glow: rgba(0, 155, 119, 0.22);
+  --accent-dark: #06b6d4;
+  --accent-glow: rgba(192, 132, 252, 0.22);
 
   --success: #a7f3d0;
   --success-bg: rgba(167, 243, 208, 0.15);
@@ -66,7 +66,7 @@
   --shadow-sm: 0 2px 12px rgba(0, 20, 20, 0.3);
   --shadow-md: 0 8px 32px rgba(0, 20, 20, 0.35);
   --shadow-lg: 0 16px 48px rgba(0, 20, 20, 0.4);
-  --shadow-glow: 0 0 30px rgba(0, 155, 119, 0.15);
+  --shadow-glow: 0 0 30px rgba(192, 132, 252, 0.15);
 
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -432,13 +432,13 @@ a:hover {
 .btn-primary {
   background: var(--accent);
   color: white;
-  box-shadow: 0 2px 12px rgba(0, 155, 119, 0.3);
+  box-shadow: 0 2px 12px rgba(192, 132, 252, 0.3);
 }
 
 .btn-primary:hover {
   background: var(--accent-dark);
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 155, 119, 0.4);
+  box-shadow: 0 6px 24px rgba(192, 132, 252, 0.4);
 }
 
 .btn-primary:disabled {
@@ -474,12 +474,12 @@ a:hover {
   font-weight: 700;
   padding: 10px 24px;
   border-radius: var(--radius-md);
-  box-shadow: 0 2px 16px rgba(0, 155, 119, 0.3);
+  box-shadow: 0 2px 16px rgba(192, 132, 252, 0.3);
 }
 
 .btn-connect:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(0, 155, 119, 0.4);
+  box-shadow: 0 6px 28px rgba(192, 132, 252, 0.4);
 }
 
 .btn-sm {
@@ -2440,7 +2440,7 @@ a:hover {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #009b77, #006b3c);
+  background: linear-gradient(135deg, #c084fc, #06b6d4);
   border: 2px solid rgba(255, 255, 255, 0.12);
   color: white;
   font-size: 1.4rem;
@@ -2449,25 +2449,25 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(0, 155, 119, 0.35);
+  box-shadow: 0 4px 20px rgba(192, 132, 252, 0.35);
   transition: all 0.3s ease;
   animation: cronPulse 3s ease-in-out infinite;
 }
 
 .cron-fab:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 28px rgba(0, 155, 119, 0.5);
+  box-shadow: 0 6px 28px rgba(192, 132, 252, 0.5);
 }
 
 @keyframes cronPulse {
 
   0%,
   100% {
-    box-shadow: 0 4px 20px rgba(0, 155, 119, 0.35);
+    box-shadow: 0 4px 20px rgba(192, 132, 252, 0.35);
   }
 
   50% {
-    box-shadow: 0 4px 24px rgba(0, 155, 119, 0.55);
+    box-shadow: 0 4px 24px rgba(192, 132, 252, 0.55);
   }
 }
 
@@ -2494,14 +2494,14 @@ a:hover {
   backdrop-filter: blur(24px) saturate(1.3);
   -webkit-backdrop-filter: blur(24px) saturate(1.3);
   /* Animated glowing border — works with overflow:hidden */
-  border: 1px solid rgba(0, 255, 180, 0.25);
+  border: 1px solid rgba(34, 211, 238, 0.25);
   box-shadow:
-    0 0 0 1px rgba(0, 200, 150, 0.1),
-    0 0 15px rgba(0, 255, 180, 0.08),
-    0 0 40px rgba(0, 200, 150, 0.04),
+    0 0 0 1px rgba(192, 132, 252, 0.1),
+    0 0 15px rgba(34, 211, 238, 0.08),
+    0 0 40px rgba(192, 132, 252, 0.04),
     0 8px 32px rgba(0, 0, 0, 0.6),
     0 24px 60px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(0, 255, 180, 0.15);
+    inset 0 1px 0 rgba(34, 211, 238, 0.15);
   animation:
     cronSlideIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1),
     cronBorderGlow 4s ease-in-out infinite;
@@ -2512,14 +2512,14 @@ a:hover {
 
   0%,
   100% {
-    border-color: rgba(0, 255, 180, 0.25);
+    border-color: rgba(34, 211, 238, 0.25);
     box-shadow:
-      0 0 0 1px rgba(0, 200, 150, 0.1),
-      0 0 15px rgba(0, 255, 180, 0.08),
-      0 0 40px rgba(0, 200, 150, 0.04),
+      0 0 0 1px rgba(192, 132, 252, 0.1),
+      0 0 15px rgba(34, 211, 238, 0.08),
+      0 0 40px rgba(192, 132, 252, 0.04),
       0 8px 32px rgba(0, 0, 0, 0.6),
       0 24px 60px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(0, 255, 180, 0.15);
+      inset 0 1px 0 rgba(34, 211, 238, 0.15);
   }
 
   33% {
@@ -2560,8 +2560,8 @@ a:hover {
 /* ── Header — Premium glassmorphic ── */
 .cron-header {
   padding: 16px 20px;
-  background: linear-gradient(180deg, rgba(0, 200, 150, 0.06) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(0, 255, 180, 0.08);
+  background: linear-gradient(180deg, rgba(192, 132, 252, 0.06) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(34, 211, 238, 0.08);
   position: relative;
   z-index: 2;
   display: flex;
@@ -2592,9 +2592,9 @@ a:hover {
 }
 
 .cron-tts-btn.active {
-  background: rgba(0, 200, 150, 0.15);
-  border-color: rgba(0, 200, 150, 0.3);
-  color: #4ade80;
+  background: rgba(192, 132, 252, 0.15);
+  border-color: rgba(192, 132, 252, 0.3);
+  color: #22d3ee;
 }
 
 /* ── Mic Button ── */
@@ -2608,7 +2608,7 @@ a:hover {
 
 .cron-mic-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(0, 200, 150, 0.3) !important;
+  border-color: rgba(192, 132, 252, 0.3) !important;
 }
 
 .cron-mic-btn.cron-mic-active {
@@ -2694,14 +2694,14 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(0, 200, 150, 0.25), rgba(0, 150, 255, 0.15));
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.25), rgba(0, 150, 255, 0.15));
   border-radius: 14px;
   position: relative;
-  border: 1px solid rgba(0, 255, 180, 0.15);
+  border: 1px solid rgba(34, 211, 238, 0.15);
 }
 
 .cron-header-icon span {
-  color: #4ade80;
+  color: #22d3ee;
   font-size: 0.65rem;
 }
 
@@ -2727,9 +2727,9 @@ a:hover {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4ade80;
+  background: #22d3ee;
   display: inline-block;
-  box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
   animation: cronOnlinePulse 2s ease-in-out infinite;
 }
 
@@ -2737,16 +2737,16 @@ a:hover {
 
   0%,
   100% {
-    box-shadow: 0 0 4px rgba(74, 222, 128, 0.3);
+    box-shadow: 0 0 4px rgba(34, 211, 238, 0.3);
   }
 
   50% {
-    box-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.6);
   }
 }
 
 .cron-connect-link {
-  color: #4ade80;
+  color: #22d3ee;
   cursor: pointer;
   font-weight: 500;
   transition: color 0.2s;
@@ -2766,7 +2766,7 @@ a:hover {
   flex-direction: column;
   gap: 10px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 200, 150, 0.15) transparent;
+  scrollbar-color: rgba(192, 132, 252, 0.15) transparent;
   position: relative;
   z-index: 2;
 }
@@ -2776,7 +2776,7 @@ a:hover {
 }
 
 .cron-messages::-webkit-scrollbar-thumb {
-  background: rgba(0, 200, 150, 0.2);
+  background: rgba(192, 132, 252, 0.2);
   border-radius: 3px;
 }
 
@@ -2818,10 +2818,10 @@ a:hover {
 }
 
 .cron-msg-user .cron-bubble {
-  background: linear-gradient(135deg, #00c896, #009b77);
+  background: linear-gradient(135deg, #22d3ee, #c084fc);
   color: #fff;
   border-bottom-right-radius: 6px;
-  box-shadow: 0 2px 12px rgba(0, 155, 119, 0.25);
+  box-shadow: 0 2px 12px rgba(192, 132, 252, 0.25);
 }
 
 .cron-msg-bot .cron-bubble {
@@ -2849,7 +2849,7 @@ a:hover {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #00c896, #00a0ff);
+  background: linear-gradient(135deg, #22d3ee, #00a0ff);
   animation: cronBounce 1.4s ease-in-out infinite;
 }
 
@@ -2880,7 +2880,7 @@ a:hover {
 .cron-action-card {
   margin-top: 8px;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-  border: 1px solid rgba(0, 200, 150, 0.12);
+  border: 1px solid rgba(192, 132, 252, 0.12);
   border-radius: 14px;
   overflow: hidden;
   backdrop-filter: blur(6px);
@@ -2910,9 +2910,9 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(0, 200, 150, 0.12), rgba(0, 150, 255, 0.08));
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.12), rgba(0, 150, 255, 0.08));
   border-radius: 10px;
-  border: 1px solid rgba(0, 200, 150, 0.1);
+  border: 1px solid rgba(192, 132, 252, 0.1);
 }
 
 .cron-action-desc {
@@ -2937,7 +2937,7 @@ a:hover {
 }
 
 .cron-action-success {
-  color: #4ade80;
+  color: #22d3ee;
 }
 
 .cron-action-confirmed {
@@ -2958,8 +2958,8 @@ a:hover {
   display: flex;
   gap: 10px;
   padding: 14px 16px;
-  border-top: 1px solid rgba(0, 255, 180, 0.06);
-  background: linear-gradient(180deg, transparent, rgba(0, 200, 150, 0.03));
+  border-top: 1px solid rgba(34, 211, 238, 0.06);
+  background: linear-gradient(180deg, transparent, rgba(192, 132, 252, 0.03));
   position: relative;
   z-index: 2;
 }
@@ -2978,9 +2978,9 @@ a:hover {
 }
 
 .cron-input-bar input:focus {
-  border-color: rgba(0, 200, 150, 0.4);
+  border-color: rgba(192, 132, 252, 0.4);
   background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 3px rgba(0, 200, 150, 0.08), 0 0 20px rgba(0, 200, 150, 0.06);
+  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.08), 0 0 20px rgba(192, 132, 252, 0.06);
 }
 
 .cron-input-bar input::placeholder {
@@ -2991,7 +2991,7 @@ a:hover {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #00c896, #009b77);
+  background: linear-gradient(135deg, #22d3ee, #c084fc);
   border: none;
   color: white;
   cursor: pointer;
@@ -3000,13 +3000,13 @@ a:hover {
   justify-content: center;
   transition: all 0.25s ease;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 155, 119, 0.3);
+  box-shadow: 0 2px 8px rgba(192, 132, 252, 0.3);
 }
 
 .cron-input-bar button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #00dba6, #00b38a);
+  background: linear-gradient(135deg, #e879f9, #c084fc);
   transform: scale(1.05);
-  box-shadow: 0 4px 16px rgba(0, 155, 119, 0.4);
+  box-shadow: 0 4px 16px rgba(192, 132, 252, 0.4);
 }
 
 .cron-input-bar button:disabled {
@@ -3028,10 +3028,10 @@ a:hover {
   align-items: center;
   gap: 5px;
   padding: 6px 14px;
-  background: linear-gradient(135deg, rgba(0, 200, 150, 0.1), rgba(0, 150, 255, 0.06));
-  border: 1px solid rgba(0, 200, 150, 0.18);
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.1), rgba(0, 150, 255, 0.06));
+  border: 1px solid rgba(192, 132, 252, 0.18);
   border-radius: 20px;
-  color: #5af0b0;
+  color: #e0e7ff;
   font-size: 0.73rem;
   font-weight: 500;
   cursor: pointer;
@@ -3042,11 +3042,11 @@ a:hover {
 }
 
 .cron-chip:hover {
-  background: linear-gradient(135deg, rgba(0, 200, 150, 0.22), rgba(0, 150, 255, 0.12));
-  border-color: rgba(0, 255, 180, 0.4);
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.22), rgba(0, 150, 255, 0.12));
+  border-color: rgba(34, 211, 238, 0.4);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 200, 150, 0.15);
-  color: #7dffc8;
+  box-shadow: 0 4px 12px rgba(192, 132, 252, 0.15);
+  color: #ffffff;
 }
 
 .cron-chip-icon {
@@ -3058,11 +3058,11 @@ a:hover {
   display: inline-block;
   width: 2px;
   height: 1em;
-  background: #4ade80;
+  background: #22d3ee;
   margin-left: 2px;
   vertical-align: text-bottom;
   animation: cronBlink 0.8s ease-in-out infinite;
-  box-shadow: 0 0 4px rgba(74, 222, 128, 0.5);
+  box-shadow: 0 0 4px rgba(34, 211, 238, 0.5);
 }
 
 @keyframes cronBlink {
@@ -3101,7 +3101,7 @@ a:hover {
   display: block;
   padding: 6px 14px 10px;
   font-size: 0.72rem;
-  color: #4ade80;
+  color: #22d3ee;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
@@ -3123,7 +3123,7 @@ a:hover {
 }
 
 .cron-fab-text span {
-  color: #4ade80;
+  color: #22d3ee;
   font-size: 0.6rem;
 }
 

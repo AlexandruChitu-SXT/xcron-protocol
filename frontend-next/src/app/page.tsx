@@ -6,7 +6,6 @@ import { useWallet } from '@/hooks/useWallet';
 import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '@/hooks/useContractQuery';
 import { CONTRACTS, NETWORK } from '@/config';
 import Link from 'next/link';
-import { LiveActivityFeed } from '@/components/LiveActivityFeed';
 import { ProtocolRadar } from '@/components/ProtocolRadar';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { TypewriterTitle } from '@/components/TypewriterTitle';
@@ -219,13 +218,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Network Activity */}
-        <div className="max-w-4xl mx-auto mt-6">
-          <LiveActivityFeed />
-        </div>
-
-        {/* How It Works */}
-        <div className="section mt-8">
+        {/* How It Works (increased margin-top to fill space left by telemetry) */}
+        <div className="section mt-12">
           <TypewriterTitle text="How It Works" className="section-title-center" />
           <div className="how-it-works">
             <div className="hiw-step">

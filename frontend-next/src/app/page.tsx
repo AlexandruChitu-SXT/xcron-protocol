@@ -115,9 +115,11 @@ export default function Dashboard() {
       <div className="app-container">
         <div className="hero-section" style={{ paddingBottom: 0 }}>
           {/* Logo — standalone centered (Moved to top) */}
-          <div className="flex justify-center pt-2 pb-6">
-            <div className="w-[320px] aspect-square relative animate-[pulse_4s_ease-in-out_infinite] pointer-events-none drop-shadow-[0_0_40px_rgba(34,211,238,0.15)] flex items-center justify-center">
-              <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.2]" />
+          <div className="flex justify-center pt-0 pb-2 -mt-4">
+            <div className="w-[260px] aspect-square relative animate-[pulse_4s_ease-in-out_infinite] pointer-events-none flex items-center justify-center">
+              {/* Magical Glow Behind - Same as Schedule Task widget */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/50 via-purple-500/50 to-cyan-500/50 blur-2xl -z-10 rounded-full opacity-50 mix-blend-screen" />
+              <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.25]" />
             </div>
           </div>
 

@@ -42,11 +42,18 @@ export function Sidebar() {
             {/* Mobile toggle logic omitted for brevity but container maintained */}
             <aside className="w-[280px] h-full flex flex-col bg-transparent shrink-0 hidden md:flex">
                 <div className="p-6">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <div className="w-16 h-16 flex items-center justify-center transition-all duration-300 pointer-events-none drop-shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-                            <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3] group-hover:scale-[1.4] transition-transform duration-300" />
+                    <Link href="/" className="flex items-center gap-4 group mb-4">
+                        <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-300 pointer-events-none drop-shadow-[0_0_20px_rgba(192,132,252,0.3)] shrink-0">
+                            {/* Orbital Ring 1 */}
+                            <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400/40 animate-[spin_10s_linear_infinite] group-hover:border-cyan-400/70 transition-colors duration-500 scale-[1.15]"></div>
+                            {/* Orbital Ring 2 */}
+                            <div className="absolute inset-0 rounded-full border border-purple-500/30 animate-[spin_15s_linear_infinite_reverse] group-hover:border-purple-500/60 transition-colors duration-500 scale-[1.3]">
+                                <div className="absolute top-0 right-1/4 w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_#22d3ee]"></div>
+                            </div>
+
+                            <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3] group-hover:scale-[1.4] transition-transform duration-500 relative z-10" />
                         </div>
-                        <span className="text-xl font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">
+                        <span className="text-3xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 drop-shadow-[0_2px_15px_rgba(34,211,238,0.25)] transition-all duration-500">
                             XCron
                         </span>
                     </Link>

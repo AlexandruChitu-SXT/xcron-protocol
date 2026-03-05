@@ -29,13 +29,24 @@ export function TransparentLogo({ className, src = '/logo.png' }: TransparentLog
 
             for (let p = 0; p < data.length; p += 4) {
                 const r = data[p], g = data[p + 1], b = data[p + 2];
-                const brightness = r * 0.299 + g * 0.587 + b * 0.114;
-                // Remove dark background and dim glow halo
-                if (brightness < 80) {
-                    data[p + 3] = 0; // completely transparent
-                } else if (brightness < 120) {
-                    // semi-transparent
-                    data[p + 3] = Math.round(((brightness - 80) / 40) * 255);
+                // Luma calculation
+                const luma = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+
+                // If the pixel is pure black (or very close), make it transparent
+                if (luma < 0.02) {
+                    data[p + 3] = 0;
+                } else {
+                    // Maximum channel value dictates the opacity needed to reproduce this color
+                    // against a dark background
+                    const maxColor = Math.max(r, g, b) / 255;
+                    // We map the alpha directly to the max color intensity (with a slight boost for glow)
+                    // and un-premultiply the RGB so that when it is drawn with this alpha, it matches original
+                    const alpha = Math.min(1.0, maxColor * 1.5);
+
+                    data[p] = Math.min(255, r / alpha);
+                    data[p + 1] = Math.min(255, g / alpha);
+                    data[p + 2] = Math.min(255, b / alpha);
+                    data[p + 3] = Math.round(alpha * 255);
                 }
             }
             ctx.putImageData(imageData, 0, 0);

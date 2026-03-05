@@ -123,7 +123,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <h1 className="text-4xl md:text-[2.6rem] font-black tracking-tight mb-2 -mt-6 text-transparent bg-clip-text bg-gradient-to-r from-[#c4705a] via-[#d08a6e] to-[#c4705a] drop-shadow-sm title-animate-in relative z-10">
+          <h1 className="text-4xl md:text-[2.6rem] font-black tracking-tight mb-2 -mt-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 drop-shadow-[0_2px_15px_rgba(34,211,238,0.25)] title-animate-in relative z-10">
             Agentic Automation Protocol
           </h1>
           <p className="hero-sub text-white/90 text-sm md:text-base max-w-[520px] mx-auto leading-relaxed mb-4 title-animate-in relative z-10" style={{ animationDelay: '0.1s' }}>

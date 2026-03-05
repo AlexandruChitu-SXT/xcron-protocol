@@ -1362,8 +1362,7 @@ a:hover {
 .hero-section h1 {
   font-size: 2.6rem;
   font-weight: 900;
-  background: linear-gradient(135deg, #c4705a 0%, #d08a6e 40%, #c4705a 100%);
-  background-clip: text;
+  /* Eliminado background linear-gradient fijo para permitir clases de Tailwind (bg-gradient-to-r) */
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 10px;
@@ -3153,78 +3152,80 @@ a:hover {
     font-size: 0.68rem;
     padding: 4px 10px;
   }
-}/* ══════════════════════════════════════════
+}
+
+/* ══════════════════════════════════════════
    XCron Professional SVG Logo
    Neon glow with subtle pulse animation
    ══════════════════════════════════════════ */
 
 .xcron-logo-wrapper {
-    margin: 0 auto 12px;
-    position: relative;
-    z-index: 2;
+  margin: 0 auto 12px;
+  position: relative;
+  z-index: 2;
 }
 
 .xcron-logo-svg {
-    width: 100%;
-    height: 100%;
-    display: block;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* ── "cron" text styling ── */
 .logo-cron-text {
-    font-family: 'Inter', -apple-system, sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 3px;
-    fill: #b0ffe0;
-    text-transform: lowercase;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  fill: #b0ffe0;
+  text-transform: lowercase;
 }
 
 /* ── Subtle pulse animation on the glow ── */
 .logo-x-star {
-    animation: starPulse 4s ease-in-out infinite;
+  animation: starPulse 4s ease-in-out infinite;
 }
 
 .logo-chain-circle {
-    animation: chainPulse 5s ease-in-out infinite;
+  animation: chainPulse 5s ease-in-out infinite;
 }
 
 .logo-clock-marks {
-    animation: clockPulse 6s ease-in-out infinite;
+  animation: clockPulse 6s ease-in-out infinite;
 }
 
 @keyframes starPulse {
 
-    0%,
-    100% {
-        opacity: 0.95;
-    }
+  0%,
+  100% {
+    opacity: 0.95;
+  }
 
-    50% {
-        opacity: 1;
-    }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes chainPulse {
 
-    0%,
-    100% {
-        opacity: 0.85;
-    }
+  0%,
+  100% {
+    opacity: 0.85;
+  }
 
-    50% {
-        opacity: 1;
-    }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes clockPulse {
 
-    0%,
-    100% {
-        opacity: 0.45;
-    }
+  0%,
+  100% {
+    opacity: 0.45;
+  }
 
-    50% {
-        opacity: 0.6;
-    }
+  50% {
+    opacity: 0.6;
+  }
 }

@@ -44,11 +44,17 @@ export function Sidebar() {
                 <div className="p-6">
                     <Link href="/" className="flex items-center gap-4 group mb-4">
                         <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-300 pointer-events-none drop-shadow-[0_0_20px_rgba(192,132,252,0.3)] shrink-0">
-                            {/* Orbital Ring 1 */}
-                            <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400/40 animate-[spin_10s_linear_infinite] group-hover:border-cyan-400/70 transition-colors duration-500 scale-[1.15]"></div>
-                            {/* Orbital Ring 2 */}
-                            <div className="absolute inset-0 rounded-full border border-purple-500/30 animate-[spin_15s_linear_infinite_reverse] group-hover:border-purple-500/60 transition-colors duration-500 scale-[1.3]">
-                                <div className="absolute top-0 right-1/4 w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_#22d3ee]"></div>
+                            {/* Órbitas 3D estilo MultiversX Telemetry */}
+                            <div className="absolute inset-[-15%] [transform:rotateX(70deg)] [transform-style:preserve-3d] group-hover:scale-110 transition-transform duration-700">
+                                <div className="w-full h-full rounded-full border border-cyan-400/40 animate-[spin_12s_linear_infinite]"></div>
+                            </div>
+                            <div className="absolute inset-[-15%] [transform:rotateZ(60deg)_rotateX(70deg)] [transform-style:preserve-3d] group-hover:scale-110 transition-transform duration-700">
+                                <div className="w-full h-full rounded-full border border-cyan-400/30 animate-[spin_15s_linear_infinite_reverse]">
+                                    <div className="absolute top-0 right-1/4 w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_#22d3ee]"></div>
+                                </div>
+                            </div>
+                            <div className="absolute inset-[-15%] [transform:rotateZ(-60deg)_rotateX(70deg)] [transform-style:preserve-3d] group-hover:scale-110 transition-transform duration-700">
+                                <div className="w-full h-full rounded-full border border-purple-500/40 animate-[spin_18s_linear_infinite]"></div>
                             </div>
 
                             <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3] group-hover:scale-[1.4] transition-transform duration-500 relative z-10" />

@@ -118,7 +118,7 @@ export default function Dashboard() {
           {/* Logo — standalone centered (Moved to top) */}
           <div className="flex justify-center pt-2 pb-6">
             <div className="w-[320px] aspect-square relative animate-[pulse_4s_ease-in-out_infinite] pointer-events-none drop-shadow-[0_0_40px_rgba(34,211,238,0.15)] flex items-center justify-center">
-              <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.2]" />
+              <TransparentLogo src="/logo.png" className="w-full h-full object-contain scale-[1.2]" />
             </div>
           </div>
 

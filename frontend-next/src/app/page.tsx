@@ -115,28 +115,24 @@ export default function Dashboard() {
       <div className="app-container">
         <div className="hero-section" style={{ paddingBottom: 0 }}>
           {/* Logo — standalone centered (Moved to top) */}
-          <div className="flex justify-center pt-0 pb-2 -mt-4">
-            <div className="w-[260px] aspect-square relative animate-[pulse_4s_ease-in-out_infinite] pointer-events-none flex items-center justify-center">
+          <div className="flex justify-center pt-0 pb-0 -mt-2">
+            <div className="w-[300px] aspect-square relative animate-[pulse_4s_ease-in-out_infinite] pointer-events-none flex items-center justify-center">
               {/* Magical Glow Behind - Same as Schedule Task widget */}
               <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/50 via-purple-500/50 to-cyan-500/50 blur-2xl -z-10 rounded-full opacity-50 mix-blend-screen" />
-              <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.25]" />
+              <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3]" />
             </div>
           </div>
 
-          <h1 className="text-4xl md:text-[2.6rem] font-black tracking-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#c4705a] via-[#d08a6e] to-[#c4705a] drop-shadow-sm title-animate-in">
+          <h1 className="text-4xl md:text-[2.6rem] font-black tracking-tight mb-2 -mt-6 text-transparent bg-clip-text bg-gradient-to-r from-[#c4705a] via-[#d08a6e] to-[#c4705a] drop-shadow-sm title-animate-in relative z-10">
             Agentic Automation Protocol
           </h1>
-          <p className="hero-sub text-white/90 text-sm md:text-base max-w-[520px] mx-auto leading-relaxed mb-4 title-animate-in" style={{ animationDelay: '0.1s' }}>
+          <p className="hero-sub text-white/90 text-sm md:text-base max-w-[520px] mx-auto leading-relaxed mb-4 title-animate-in relative z-10" style={{ animationDelay: '0.1s' }}>
             The coordination layer for autonomous agents on MultiversX. Schedule on-chain actions, let decentralized keepers execute them trustlessly.
           </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 0, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 0, flexWrap: 'wrap', position: 'relative', zIndex: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-glass)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-primary)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }} />
               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Lifetime Executions: <span style={{ color: 'var(--text-primary)' }}>{txStats.lifetime.toLocaleString()}</span></span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-glass)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-primary)' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Successful: <span style={{ color: 'var(--text-primary)' }}>{txStats.daily.toLocaleString()}</span></span>
             </div>
           </div>
           {!wallet.connected && (

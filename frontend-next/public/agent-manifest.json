@@ -1,0 +1,19 @@
+{
+    "name": "XCron Keeper",
+    "version": "1.0.0",
+    "description": "Decentralized autonomous execution node for the XCron Protocol. Schedules and triggers on-chain smart contract calls reliably.",
+    "author": "XCron Protocol",
+    "logoUrl": "https://xcron.io/xcron-logo-x.jpg",
+    "links": {
+        "website": "https://xcron.io",
+        "twitter": "https://x.com/AlejandroChitu",
+        "github": "https://github.com/AlexandruChitu-SXT/xcron-protocol"
+    },
+    "tags": [
+        "automation",
+        "scheduler",
+        "cron",
+        "defi",
+        "infrastructure"
+    ]
+}

@@ -101,3 +101,6 @@ xcron_promo*.mp4
 xcron_promo*.webp
 .vercel
 mx-8004/
+
+# Local Netlify folder
+.netlify

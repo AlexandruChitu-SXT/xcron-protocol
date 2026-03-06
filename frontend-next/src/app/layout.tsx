@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Sidebar />
 
             {/* Main scrollable content area */}
-            <main className="flex-1 overflow-y-auto w-full">
+            <main className="flex-1 overflow-y-auto w-full pt-16 md:pt-0">
               {/* 
                       Applying the UX principles for optimal proportional layout:
                       - Center aligned

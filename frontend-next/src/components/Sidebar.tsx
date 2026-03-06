@@ -39,8 +39,44 @@ export function Sidebar() {
 
     return (
         <>
-            {/* Mobile toggle logic omitted for brevity but container maintained */}
-            <aside className="w-[280px] h-full flex flex-col bg-transparent shrink-0 hidden md:flex">
+            {/* Mobile Header (Fixed Top) */}
+            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#0a0f19]/90 backdrop-blur-md border-b border-white/5 z-50 flex items-center justify-between px-4">
+                {/* Logo in Mobile Header */}
+                <Link href="/" className="flex items-center gap-2 group">
+                    <div className="w-10 h-10 relative flex items-center justify-center">
+                        <TransparentLogo src="/xcron-logo-x.jpg" className="w-full h-full object-contain scale-[1.3] group-hover:scale-[1.4] transition-transform duration-500 relative z-10" />
+                    </div>
+                    <span className="text-xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400">
+                        XCron
+                    </span>
+                </Link>
+
+                {/* Hamburger Toggle */}
+                <button
+                    onClick={() => setIsMobileOpen(!isMobileOpen)}
+                    className="p-2 text-white/70 hover:text-white transition-colors"
+                    aria-label="Toggle menu"
+                >
+                    {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+            </div>
+
+            {/* Mobile Sidebar Overlay */}
+            {isMobileOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+                    onClick={() => setIsMobileOpen(false)}
+                />
+            )}
+
+            {/* Desktop & Mobile Drawer Sidebar */}
+            <aside
+                className={`
+                    w-[280px] h-full flex flex-col bg-[#0a0f19] md:bg-transparent shrink-0 
+                    fixed md:relative top-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
+                    ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                `}
+            >
                 <div className="p-6">
                     <Link href="/" className="flex items-center gap-4 group mb-4">
                         <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-300 pointer-events-none drop-shadow-[0_0_20px_rgba(192,132,252,0.3)] shrink-0">

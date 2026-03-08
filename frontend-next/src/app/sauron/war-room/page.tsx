@@ -140,7 +140,7 @@ const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
 
                 {/* Digital Readout */}
                 <div className="flex flex-col items-center justify-center ml-2">
-                    <span className="text-4xl font-black text-white drop-shadow-[0_0_8px_rgba(217,70,239,0.5)]"><AnimCounter value={tps} /></span>
+                    <span className="text-4xl font-black text-white "><AnimCounter value={tps} /></span>
                     <span className="text-[10px] text-fuchsia-400 font-bold tracking-widest mt-1 uppercase">TX / Sec</span>
                 </div>
             </div>
@@ -161,7 +161,7 @@ const Pipeline = ({ tick }: { tick: number }) => {
                 {stages.map((stage, i) => (
                     <div key={stage} className="relative z-10 flex flex-col items-center gap-2">
                         <div className={`w-3 h-3 rounded-full transition-all duration-300 ${i === activeIdx ? 'bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,1)] transform scale-125' : i < activeIdx ? 'bg-white/40' : 'bg-black border border-white/20'}`} />
-                        <span className={`text-[9px] font-mono ${i === activeIdx ? 'text-cyan-400 font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : 'text-white'}`}>{stage}</span>
+                        <span className={`text-[9px] font-mono ${i === activeIdx ? 'text-cyan-400 font-bold ' : 'text-white'}`}>{stage}</span>
                     </div>
                 ))}
             </div>
@@ -197,7 +197,7 @@ const PropagationBars = ({ tick }: { tick: number }) => {
                         <div key={node} className="flex flex-col gap-2">
                             <div className="flex justify-between text-xs font-mono font-bold text-white"><span>{node}</span><span>{ping.toFixed(1)}ms</span></div>
                             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                <motion.div className="h-full bg-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]" animate={{ width: `${Math.min(100, (ping / 30) * 100)}%` }} />
+                                <motion.div className="h-full bg-emerald-400 " animate={{ width: `${Math.min(100, (ping / 30) * 100)}%` }} />
                             </div>
                         </div>
                     );
@@ -215,10 +215,10 @@ const GasRing = ({ gasUsed, gasLimit }: { gasUsed: number, gasLimit: number }) =
             <div className="relative w-32 h-32">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                     <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="8" strokeDasharray="251" strokeDashoffset={251 - (251 * fill) / 100} className="transition-all duration-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="8" strokeDasharray="251" strokeDashoffset={251 - (251 * fill) / 100} className="transition-all duration-300 " />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-3xl font-black text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">{fill.toFixed(0)}%</span>
+                    <span className="text-3xl font-black text-white ">{fill.toFixed(0)}%</span>
                 </div>
             </div>
         </div>
@@ -230,7 +230,7 @@ const TxFeed = ({ txSigned }: { txSigned: number }) => {
         <div className="w-full h-full p-6 flex flex-col">
             <div className="text-sm font-bold text-white tracking-widest mb-4 flex justify-between">
                 <span>LIVE TX FEED</span>
-                <span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse">● REC</span>
+                <span className="text-emerald-400 font-bold  animate-pulse">● REC</span>
             </div>
             <div className="flex-1 overflow-hidden flex flex-col gap-2 text-xs font-mono font-bold opacity-80 mt-1">
                 {Array.from({ length: 9 }).map((_, i) => (
@@ -280,8 +280,8 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
                     <span>{Math.round(min).toLocaleString()}</span>
                 </div>
 
-                <div className="absolute inset-y-0 left-12 right-0 border-l-2 border-b-2" style={{ borderColor: color, boxShadow: `-5px 5px 15px -10px ${color}` }}>
-                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full" style={{ filter: `drop-shadow(0 0 6px ${color})` }}>
+                <div className="absolute inset-y-0 left-12 right-0 border-l-2 border-b-2" style={{ borderColor: color, boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }}>
+                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full" style={{ filter: `drop-shadow(0 1px 1px rgba(0,0,0,1))` }}>
                         {data.map((v, i) => {
                             const ratio = (v - min) / range;
                             // Inject jitter matching typical audio EQs dynamically jumping
@@ -342,17 +342,17 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
                 style={{
                     width: `${width}px`,
                     color: '#ffffff',
-                    textShadow: `0 0 5px #ffffff, 0 0 15px ${color}, 0 0 30px ${color}`
+                    WebkitTextStroke: '0.5px black', textShadow: 'none'
                 }}
                 className="flex flex-col"
             >
                 {title && (
                     <div className="pb-4 flex items-center justify-between mb-5 border-b-2"
-                        style={{ borderColor: color, boxShadow: `0 15px 20px -15px ${color}` }}>
+                        style={{ borderColor: color, boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }}>
                         <span className="font-mono text-3xl font-black tracking-[0.2em] uppercase">
                             {title}
                         </span>
-                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: '#fff', boxShadow: `0 0 20px 8px ${color}` }} />
+                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: '#fff', boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }} />
                     </div>
                 )}
                 <div className="flex-1 font-bold text-[16px] leading-relaxed tracking-wide">
@@ -428,7 +428,7 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
             {unit && <span className="text-[14px] lg:text-lg text-white font-bold font-mono shrink-0">{unit}</span>}
         </div>
         {sub && <div className="text-[12px] lg:text-[14px] text-white font-mono mt-1 truncate">{sub}</div>}
-        <div className="absolute bottom-0 left-0 w-1/2 h-[4px] rounded-full" style={{ backgroundColor: '#fff', boxShadow: `0 0 15px 5px ${color}` }} />
+        <div className="absolute bottom-0 left-0 w-1/2 h-[4px] rounded-full" style={{ backgroundColor: '#fff', boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }} />
     </motion.div>
 );
 
@@ -488,7 +488,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                 const dir = new THREE.Vector3().subVectors(masterCenter, satCenter).normalize();
                 const randomPerp = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).cross(dir).normalize();
                 // Radius of the conduit tube
-                const spread = (Math.random() * 2.5);
+                const spread = (Math.random() * 12.0); // Amplio spread para no apelotonar
                 const offset = randomPerp.multiplyScalar(spread);
 
                 // Create a segmented line for this strand
@@ -592,7 +592,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         <group ref={groupRef} position={[0, 0, 0]}>
             {/* The laser pathways/circuitry - Crisp rendering */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.8} depthWrite={false} />
+                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.4} depthWrite={false} />
             </lineSegments>
 
             {/* Invisible Hitboxes for Conduits so cables are clickable */}
@@ -913,7 +913,7 @@ export default function WarRoom() {
     }, [d.tps]);
 
     return (
-        <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans">
+        <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans" style={{ WebkitTextStroke: "0.5px black", textShadow: "none" }}>
             {/* 2D HEADER (Overlays WebGL) */}
             <div className="absolute top-0 left-0 w-full z-[200] px-12 pb-2 flex justify-between items-end pointer-events-none">
                 {/* Neon Sign Structure */}
@@ -929,11 +929,11 @@ export default function WarRoom() {
                             className="text-base font-black tracking-widest text-center flex flex-col items-center whitespace-nowrap"
                             style={{
                                 color: '#00f0ff', // Crisp Vivid Cyan
-                                textShadow: '0 0 1px #00f0ff, 0 0 4px #00f0ff' // Tight, sharp glow
+                                WebkitTextStroke: '0.5px black', textShadow: 'none' // Tight, sharp glow
                             }}
                         >
                             <span>XCRON PROTOCOL BATTLE OF NODES</span>
-                            <span style={{ color: '#ccff00', textShadow: '0 0 1px #ccff00, 0 0 4px #ccff00' }} className="mt-1">SUPERNOVA &apos;26</span>
+                            <span style={{ color: '#ccff00', WebkitTextStroke: '0.5px black', textShadow: 'none' }} className="mt-1">SUPERNOVA &apos;26</span>
                         </h1>
                         <div className="text-[8px] font-mono tracking-[0.4em] font-bold text-white uppercase opacity-90">
                             Global Command WebGL Matrix
@@ -941,7 +941,7 @@ export default function WarRoom() {
                     </div>
                 </div>
                 <div className="flex gap-8 text-[11px] font-mono text-white">
-                    <div className="flex flex-col"><span className="text-white">STATUS</span><span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]">● MATRIX LIVE</span></div>
+                    <div className="flex flex-col"><span className="text-white">STATUS</span><span className="text-emerald-400 font-bold ">● MATRIX LIVE</span></div>
                     <div className="flex flex-col"><span className="text-white">EPOCH // ROUND</span><span className="text-white">{d.epoch} // {d.round}</span></div>
                     <div className="flex flex-col"><span className="text-white">TOTAL WALLETS</span><span className="text-white">{d.totalKeys.toLocaleString()}</span></div>
                     <div className="flex flex-col"><span className="text-white">MASTER BALANCE</span><span className="text-fuchsia-400">{d.walletBalance.toFixed(2)} EGLD</span></div>

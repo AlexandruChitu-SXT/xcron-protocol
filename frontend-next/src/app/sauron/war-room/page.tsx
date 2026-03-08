@@ -91,44 +91,61 @@ function useSimulatedData(tick: number) {
 // ═════════════════════════════════════════════════════════════════════
 
 const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
-    // Treat TPS as a volume level
-    const fillValue = Math.min(100, (tps / 60000) * 100);
-    const numBlocks = 15;
-    const activeBlocks = Math.ceil((fillValue / 100) * numBlocks);
+    // Treat TPS as a volume level up to 60k
+    const MAX_TPS = 60000;
+    const numBlocks = 16;
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
-            <div className="text-sm font-bold text-white tracking-widest mb-4 z-10 w-full text-center">TPS INJECTION RATE</div>
-            <div className="flex gap-6 items-center z-10 w-full justify-center">
+            <div className="text-sm font-bold text-white tracking-widest mb-4 z-10 w-full text-center">TPS INJECTION PIPELINE</div>
+            <div className="flex gap-4 items-center z-10 w-full justify-center">
 
-                {/* Visual EQ Audio Mixer Stack */}
-                <div className="flex flex-col gap-[3px] rotate-180">
-                    {Array.from({ length: numBlocks }).map((_, i) => {
-                        const isActive = i < activeBlocks;
-                        // Color code: Bottom is green, middle yellow, top red (Warning)
-                        const blockColor = i > 12 ? '#f43f5e' : i > 8 ? '#eab308' : '#22d3ee';
-                        return (
-                            <div
-                                key={`tps-eq-${i}`}
-                                className="w-8 h-2.5 rounded-[1px] transition-all duration-300"
-                                style={{
-                                    backgroundColor: isActive ? blockColor : 'rgba(255,255,255,0.05)',
-                                    boxShadow: isActive ? `0 0 10px ${blockColor}` : 'none',
-                                    opacity: isActive ? 1 : 0.3
-                                }}
-                            />
-                        )
-                    })}
+                {/* Visual EQ Audio Mixer Stack (Purple) */}
+                <div className="flex gap-2">
+                    {/* Tick Labels (DJ Board Style) */}
+                    <div className="flex flex-col justify-between text-[9px] font-mono text-white opacity-50 h-full font-bold pt-1 pb-1">
+                        <span>60k</span>
+                        <span>45k</span>
+                        <span>30k</span>
+                        <span>15k</span>
+                        <span>0</span>
+                    </div>
+
+                    <div className="flex flex-col gap-[2px] rotate-180">
+                        {Array.from({ length: numBlocks }).map((_, i) => {
+                            // Calculate base ratio for this block
+                            const blockThreshold = (i / numBlocks) * MAX_TPS;
+
+                            // Add chaotic pipeline jitter bouncing
+                            const jitter = Math.random() * 2000 - 1000;
+                            const isActive = (tps + jitter) >= blockThreshold;
+
+                            // High intensity purple / fuchsia theme
+                            const blockColor = i > 12 ? '#f0abfc' : i > 8 ? '#d946ef' : '#a21caf';
+
+                            return (
+                                <div
+                                    key={`tps-eq-${i}`}
+                                    className="w-8 h-[5px] rounded-[1px] transition-all duration-75" // ultra fast transition
+                                    style={{
+                                        backgroundColor: isActive ? blockColor : 'rgba(255,255,255,0.05)',
+                                        boxShadow: isActive ? `0 0 10px ${blockColor}` : 'none',
+                                        opacity: isActive ? 1 : 0.2
+                                    }}
+                                />
+                            )
+                        })}
+                    </div>
                 </div>
 
                 {/* Digital Readout */}
-                <div className="flex flex-col items-center justify-center">
-                    <span className="text-5xl font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"><AnimCounter value={tps} /></span>
-                    <span className="text-xs text-cyan-400 font-bold tracking-widest mt-1">TX/s</span>
+                <div className="flex flex-col items-center justify-center ml-2">
+                    <span className="text-4xl font-black text-white drop-shadow-[0_0_8px_rgba(217,70,239,0.5)]"><AnimCounter value={tps} /></span>
+                    <span className="text-[10px] text-fuchsia-400 font-bold tracking-widest mt-1 uppercase">TX / Sec</span>
                 </div>
             </div>
             {/* Keeping the historical sparkline below EQ */}
-            <div className="mt-4 w-full h-8 opacity-50 z-10"><Sparkline data={history} color="#22d3ee" h={30} /></div>
+            <div className="mt-4 w-full h-8 opacity-50 z-10"><Sparkline data={history} color="#d946ef" h={30} /></div>
         </div>
     );
 };

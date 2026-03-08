@@ -337,7 +337,7 @@ const SERVERS = [
     }))
 ];
 
-const NeuralNetwork = ({ tps }: { tps: number }) => {
+const NeuralNetwork = ({ tps, activeServer, setActiveServer }: { tps: number, activeServer: number | null, setActiveServer: (i: number | null) => void }) => {
     const groupRef = useRef<THREE.Group>(null);
     const materialRef = useRef<THREE.LineBasicMaterial>(null);
     const sparksRef = useRef<THREE.InstancedMesh>(null);
@@ -480,18 +480,27 @@ const NeuralNetwork = ({ tps }: { tps: number }) => {
             </lineSegments>
 
             {/* The 7 EXPLICIT SERVERS ONLY (No tiny noise dots) */}
-            {SERVERS.map((server, i) => (
-                <mesh key={`server-${i}`} position={server.center}>
-                    {/* Outer Glowing Shell */}
-                    <sphereGeometry args={[server.size, 24, 24]} />
-                    <meshBasicMaterial color={server.color} transparent opacity={0.6} blending={THREE.AdditiveBlending} depthWrite={false} />
-                    {/* Inner Solid Core */}
-                    <mesh position={[0, 0, 0]}>
-                        <sphereGeometry args={[server.size * 0.4, 12, 12]} />
-                        <meshBasicMaterial color="#ffffff" opacity={0.9} transparent />
+            {SERVERS.map((server, i) => {
+                const isActive = activeServer === i;
+                return (
+                    <mesh
+                        key={`server-${i}`}
+                        position={server.center}
+                        onClick={(e) => { e.stopPropagation(); setActiveServer(isActive ? null : i); }}
+                        onPointerOver={(e) => { document.body.style.cursor = 'pointer'; }}
+                        onPointerOut={(e) => { document.body.style.cursor = 'auto'; }}
+                    >
+                        {/* Outer Glowing Shell */}
+                        <sphereGeometry args={[isActive ? server.size * 1.5 : server.size, 24, 24]} />
+                        <meshBasicMaterial color={server.color} transparent opacity={isActive ? 0.9 : 0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
+                        {/* Inner Solid Core */}
+                        <mesh position={[0, 0, 0]}>
+                            <sphereGeometry args={[server.size * 0.4, 12, 12]} />
+                            <meshBasicMaterial color="#ffffff" opacity={isActive ? 1.0 : 0.7} transparent />
+                        </mesh>
                     </mesh>
-                </mesh>
-            ))}
+                )
+            })}
 
             {/* Transaction Sparks (InstancedMesh for performance) */}
             <instancedMesh ref={sparksRef} args={[undefined as any, undefined as any, NUM_SPARKS]}>
@@ -504,16 +513,11 @@ const NeuralNetwork = ({ tps }: { tps: number }) => {
 
 
 // ═════════════════════════════════════════════════════════════════════
-// OMNI-DIRECTIONAL PANEL HELPER
+// OMNI-DIRECTIONAL PANEL HELPER (BILLBOARD SPRITES)
 // ═════════════════════════════════════════════════════════════════════
-const polarToCartesian = (radius: number, theta: number, y: number) => [Math.sin(theta) * radius, y, Math.cos(theta) * radius] as [number, number, number];
-const getRotation = (x: number, y: number, z: number) => [Math.atan2(-y, Math.sqrt(x * x + z * z)), Math.atan2(x, z) + Math.PI, 0] as [number, number, number];
-
-const OmniPanel = ({ radius, theta, y, width, scale = 0.55, title, children }: any) => {
-    const pos = polarToCartesian(radius, theta, y);
-    const rot = getRotation(pos[0], pos[1], pos[2]);
+const OmniPanel = ({ position, width, scale = 0.55, title, children }: any) => {
     return (
-        <Html transform position={pos} rotation={rot} scale={scale} zIndexRange={[100, 0]}>
+        <Html transform sprite position={position} scale={scale} zIndexRange={[100, 0]}>
             <div style={{ width }} className="bg-[#050505]/95 border border-white/10 rounded-xl overflow-hidden flex flex-col hover:border-cyan-500/30 transition-colors duration-500">
                 {title && (
                     <div className="bg-white/[0.02] border-b border-white/[0.05] p-3 text-xs tracking-[0.2em] font-bold text-white/50 uppercase">
@@ -530,74 +534,124 @@ const OmniPanel = ({ radius, theta, y, width, scale = 0.55, title, children }: a
 // MATRIX LEVEL 3D SCENE (React Three Fiber)
 // ═════════════════════════════════════════════════════════════════════
 const MatrixScene = ({ d, tpsHistory, tick }: any) => {
+    const [activeServer, setActiveServer] = useState<number | null>(0); // Default to Master Core
+
     return (
         <>
             <ambientLight intensity={0.4} />
             <pointLight position={[0, 0, 0]} intensity={2} color="#06b6d4" />
 
             {/* Continental Neural Swarm */}
-            <NeuralNetwork tps={d.tps} />
+            <NeuralNetwork tps={d.tps} activeServer={activeServer} setActiveServer={setActiveServer} />
 
             <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
 
-            {/* ---> FRONT ROW (Theta = Math.PI = 180 deg) <--- */}
-            <OmniPanel radius={22} theta={Math.PI} y={8} width={800} scale={0.6}>
-                <MassiveChart title="RAW THROUGHPUT [GLOBAL]" data={tpsHistory} color="#22d3ee" spike={`PEAK: ${Math.round(Math.max(...tpsHistory)).toLocaleString()} TPS`} />
-            </OmniPanel>
+            {/* ---> INTERACTIVE DATA POP-UPS (Only shown when server is selected) <--- */}
+            {activeServer !== null && (
+                <group position={SERVERS[activeServer].center}>
+                    {/* SERVER 0: MASTER CORE */}
+                    {activeServer === 0 && (
+                        <>
+                            <OmniPanel position={[0, 8, 0]} width={800} scale={0.6}>
+                                <MassiveChart title="RAW THROUGHPUT [GLOBAL]" data={tpsHistory} color="#22d3ee" spike={`PEAK: ${Math.round(Math.max(...tpsHistory)).toLocaleString()} TPS`} />
+                            </OmniPanel>
+                            <OmniPanel position={[-8, 0, 0]} width={400} scale={0.5}>
+                                <TPSGauge tps={d.tps} history={tpsHistory} />
+                            </OmniPanel>
+                            <OmniPanel position={[8, 0, 0]} width={600} scale={0.6} title="SHARD ROUTING MATRIX">
+                                <ShardMatrix d={d} />
+                            </OmniPanel>
+                            <OmniPanel position={[0, -8, 0]} width={450} scale={0.5}>
+                                <PropagationBars tick={tick} />
+                            </OmniPanel>
+                        </>
+                    )}
 
-            <OmniPanel radius={22} theta={Math.PI} y={-8} width={800} scale={0.6}>
-                <MassiveChart title="MEMPOOL SATURATION LEVEL" data={tpsHistory.map((v: number) => Math.max(0, v * 1.5 - 20000 + Math.random() * 5000))} color="#f43f5e" spike="SEVERE SATURATION" />
-            </OmniPanel>
+                    {/* SERVER 1: NA CLUSTER 1 */}
+                    {activeServer === 1 && (
+                        <>
+                            <OmniPanel position={[0, 8, 0]} width={800} scale={0.6}>
+                                <MassiveChart title="MEMPOOL SATURATION LEVEL" data={tpsHistory.map((v: number) => Math.max(0, v * 1.5 - 20000 + Math.random() * 5000))} color="#f43f5e" spike="SEVERE SATURATION" />
+                            </OmniPanel>
+                            <OmniPanel position={[-8, 0, 0]} width={450} scale={0.5}>
+                                <CPUHeatmap cores={d.cpuCores} />
+                            </OmniPanel>
+                            <OmniPanel position={[8, 0, 0]} width={450} scale={0.5}>
+                                <TxFeed txSigned={d.tps * 2} />
+                            </OmniPanel>
+                        </>
+                    )}
 
-            {/* ---> FRONT-LEFT (Theta = Math.PI - 0.55) <--- */}
-            <OmniPanel radius={20} theta={Math.PI - 0.55} y={5} width={450} scale={0.5}>
-                <TPSGauge tps={d.tps} history={tpsHistory} />
-            </OmniPanel>
+                    {/* SERVER 2: NA CLUSTER 2 */}
+                    {activeServer === 2 && (
+                        <>
+                            <OmniPanel position={[0, 5, 0]} width={400} scale={0.6} title="Gas Infrastructure">
+                                <GasRing gasUsed={d.gasUsed} gasLimit={d.gasLimit} />
+                            </OmniPanel>
+                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Protocol Vitals">
+                                <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">{d.ramUsed.toFixed(1)} GB</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">{d.networkBw.toFixed(1)} Gbps</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">{d.diskIO.toFixed(1)} MB/s</span></div>
+                                    <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">100%</span></div>
+                                </div>
+                            </OmniPanel>
+                        </>
+                    )}
 
-            <OmniPanel radius={20} theta={Math.PI - 0.55} y={-7} width={450} scale={0.5}>
-                <TxFeed txSigned={d.tps * 2} />
-            </OmniPanel>
+                    {/* SERVER 3: EU CLUSTER 1 */}
+                    {activeServer === 3 && (
+                        <>
+                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="LIVE FINALITY" value={d.finality.toFixed(1)} unit="ms" color="#22d3ee" /></OmniPanel>
+                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="NETWORK SUCCESS" value={d.successRate.toFixed(2)} unit="%" color="#34d399" /></OmniPanel>
+                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="TX SIGNED" value={d.txSigned.toLocaleString()} color="#34d399" /></OmniPanel>
+                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="ACTIVE NODES" value={d.activeNodes} unit="/150" color="#f8fafc" /></OmniPanel>
+                        </>
+                    )}
 
-            {/* ---> FRONT-RIGHT (Theta = Math.PI + 0.55) <--- */}
-            <OmniPanel radius={20} theta={Math.PI + 0.55} y={5} width={450} scale={0.5}>
-                <CPUHeatmap cores={d.cpuCores} />
-            </OmniPanel>
+                    {/* SERVER 4: EU CLUSTER 2 */}
+                    {activeServer === 4 && (
+                        <>
+                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="AVERAGE GAS" value={d.avgGasPrice.toFixed(4)} unit="Ξ" color="#e879f9" /></OmniPanel>
+                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#c084fc" /></OmniPanel>
+                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#fbbf24" /></OmniPanel>
+                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="PENDING POOL" value={d.pendingPool.toLocaleString()} color="#f43f5e" /></OmniPanel>
+                        </>
+                    )}
 
-            <OmniPanel radius={20} theta={Math.PI + 0.55} y={-7} width={450} scale={0.5}>
-                <PropagationBars tick={tick} />
-            </OmniPanel>
+                    {/* SERVER 5: ASIA CLUSTER 1 */}
+                    {activeServer === 5 && (
+                        <>
+                            <OmniPanel position={[0, 6, 0]} width={600} scale={0.6}>
+                                <MassiveChart title="SHARD 1 THROUGHPUT" data={tpsHistory.map((v: number) => Math.max(0, v * 0.3 + Math.random() * 2000))} color="#10b981" spike="STABLE" />
+                            </OmniPanel>
+                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Shard 1 Vitals">
+                                <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-emerald-400">11.1 GB</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">0.9 Gbps</span></div>
+                                    <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">100%</span></div>
+                                </div>
+                            </OmniPanel>
+                        </>
+                    )}
 
-            {/* ---> FAR-LEFT (Theta = Math.PI - 1.2) <--- */}
-            <OmniPanel radius={25} theta={Math.PI - 1.2} y={0} width={400} scale={0.6} title="Gas Infrastructure">
-                <GasRing gasUsed={d.gasUsed} gasLimit={d.gasLimit} />
-            </OmniPanel>
-
-            {/* ---> FAR-RIGHT (Theta = Math.PI + 1.2) <--- */}
-            <OmniPanel radius={25} theta={Math.PI + 1.2} y={0} width={400} scale={0.6} title="Protocol Vitals">
-                <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
-                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">{d.ramUsed.toFixed(1)} GB</span></div>
-                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">{d.networkBw.toFixed(1)} Gbps</span></div>
-                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">{d.diskIO.toFixed(1)} MB/s</span></div>
-                    <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">99.98%</span></div>
-                </div>
-            </OmniPanel>
-
-            {/* ---> STAT CARDS SPREAD IN A RING HIGH ABOVE (y=15, radius=30) <--- */}
-            {/* Notice how large they become, hovering over the observer like giant billboards. */}
-            <OmniPanel radius={28} theta={0} y={15} width={350} scale={0.9}><StatCard label="LIVE FINALITY" value={d.finality.toFixed(1)} unit="ms" color="#22d3ee" /></OmniPanel>
-            <OmniPanel radius={28} theta={Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="NETWORK SUCCESS" value={d.successRate.toFixed(2)} unit="%" color="#34d399" /></OmniPanel>
-            <OmniPanel radius={28} theta={Math.PI / 2} y={15} width={350} scale={0.9}><StatCard label="TX SIGNED" value={d.txSigned.toLocaleString()} color="#34d399" /></OmniPanel>
-            <OmniPanel radius={28} theta={3 * Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="ACTIVE NODES" value={d.activeNodes} unit="/150" color="#f8fafc" /></OmniPanel>
-
-            <OmniPanel radius={28} theta={Math.PI} y={20} width={350} scale={0.9}><StatCard label="AVERAGE GAS" value={d.avgGasPrice.toFixed(4)} unit="Ξ" color="#e879f9" /></OmniPanel>
-            <OmniPanel radius={28} theta={5 * Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#c084fc" /></OmniPanel>
-            <OmniPanel radius={28} theta={3 * Math.PI / 2} y={15} width={350} scale={0.9}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#fbbf24" /></OmniPanel>
-            <OmniPanel radius={28} theta={7 * Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="PENDING POOL" value={d.pendingPool.toLocaleString()} color="#f43f5e" /></OmniPanel>
-
-            {/* ---> BACK ROW (Theta = 0 -> Directly behind observer) <--- */}
-            <OmniPanel radius={25} theta={0} y={0} width={600} scale={0.8} title="SHARD ROUTING MATRIX">
-                <ShardMatrix d={d} />
-            </OmniPanel>
+                    {/* SERVER 6: ASIA CLUSTER 2 */}
+                    {activeServer === 6 && (
+                        <>
+                            <OmniPanel position={[0, 6, 0]} width={600} scale={0.6}>
+                                <MassiveChart title="SHARD 2 THROUGHPUT" data={tpsHistory.map((v: number) => Math.max(0, v * 0.3 + Math.random() * 2000))} color="#8b5cf6" spike="STABLE" />
+                            </OmniPanel>
+                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Shard 2 Vitals">
+                                <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-purple-400">14.1 GB</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">1.2 Gbps</span></div>
+                                    <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">99.9%</span></div>
+                                </div>
+                            </OmniPanel>
+                        </>
+                    )}
+                </group>
+            )}
         </>
     );
 };

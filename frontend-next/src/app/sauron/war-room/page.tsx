@@ -96,7 +96,7 @@ const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
     const numBlocks = 40; // Muchas mas barras
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
+        <div className="w-full h-full flex flex-col items-center justify-center p-4 relative bg-[#050505]/95 rounded-lg border border-white/10">
             <div className="text-sm font-bold text-white tracking-widest mb-4 z-10 w-full text-center">TPS INJECTION PIPELINE</div>
             <div className="flex gap-4 items-center z-10 w-full justify-center">
 
@@ -155,7 +155,7 @@ const Pipeline = ({ tick }: { tick: number }) => {
     const stages = ['MEMPOOL', 'CONSENSUS', 'EXECUTION', 'FINALITY'];
     const activeIdx = tick % 4;
     return (
-        <div className="w-full h-full p-4 flex flex-col justify-center">
+        <div className="w-full h-full p-4 flex flex-col justify-center bg-[#050505]/95 rounded-lg border border-white/10">
             <div className="text-[11px] font-bold text-white tracking-widest mb-4">TX PIPELINE INJECTION</div>
             <div className="flex justify-between items-center w-full relative">
                 <div className="absolute left-0 right-0 h-[1px] bg-white/10 top-1/2 -translate-y-1/2 z-0" />
@@ -172,7 +172,7 @@ const Pipeline = ({ tick }: { tick: number }) => {
 
 const CPUHeatmap = ({ cores }: { cores: number[] }) => {
     return (
-        <div className="w-full h-full p-6 flex flex-col">
+        <div className="w-full h-full p-6 flex flex-col bg-[#050505]/95 rounded-lg border border-white/10">
             <div className="text-sm font-bold text-white tracking-widest mb-4 flex justify-between">
                 <span>RUST ENGINE CORES</span>
                 <span className="text-xs text-rose-400 font-bold opacity-80 animate-pulse">OVERLOAD</span>
@@ -189,7 +189,7 @@ const CPUHeatmap = ({ cores }: { cores: number[] }) => {
 const PropagationBars = ({ tick }: { tick: number }) => {
     const nodes = ['CTB-GER-01', 'DO-LON-01', 'DO-AMS-01', 'VUL-NY-01'];
     return (
-        <div className="w-full h-full p-6 flex flex-col justify-center">
+        <div className="w-full h-full p-6 flex flex-col justify-center bg-[#050505]/95 rounded-lg border border-white/10">
             <div className="text-sm font-bold text-white tracking-widest mb-4">SWARM LATENCY</div>
             <div className="flex flex-col gap-4 flex-1 justify-center">
                 {nodes.map((node, i) => {
@@ -211,7 +211,7 @@ const PropagationBars = ({ tick }: { tick: number }) => {
 const GasRing = ({ gasUsed, gasLimit }: { gasUsed: number, gasLimit: number }) => {
     const fill = (gasUsed / gasLimit) * 100;
     return (
-        <div className="w-full h-full p-6 flex flex-col items-center justify-center">
+        <div className="w-full h-full p-6 flex flex-col items-center justify-center bg-[#050505]/95 rounded-lg border border-white/10">
             <div className="text-sm font-bold text-white tracking-widest mb-4">BLOCK GAS UTILIZATION</div>
             <div className="relative w-32 h-32">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
@@ -228,7 +228,7 @@ const GasRing = ({ gasUsed, gasLimit }: { gasUsed: number, gasLimit: number }) =
 
 const TxFeed = ({ txSigned }: { txSigned: number }) => {
     return (
-        <div className="w-full h-full p-6 flex flex-col">
+        <div className="w-full h-full p-6 flex flex-col bg-[#050505]/95 rounded-lg border border-white/10">
             <div className="text-sm font-bold text-white tracking-widest mb-4 flex justify-between">
                 <span>LIVE TX FEED</span>
                 <span className="text-emerald-400 font-bold  animate-pulse">● REC</span>
@@ -262,7 +262,7 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
     const blockH = h / numBlocksY;
 
     return (
-        <div className="w-full h-full flex flex-col p-6 rounded-xl overflow-hidden relative">
+        <div className="w-full h-full flex flex-col p-6 rounded-xl overflow-hidden relative bg-[#050505]/95 border border-white/10">
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <div className="text-sm font-bold text-white tracking-wider mb-1 flex items-center gap-3">
@@ -343,7 +343,7 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
                 style={{
                     width: `${width}px`,
                     color: '#ffffff',
-                    WebkitTextStroke: '0.5px black', textShadow: 'none'
+                    
                 }}
                 className="flex flex-col"
             >
@@ -369,7 +369,7 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
 // ═════════════════════════════════════════════════════════════════════
 const ShardMatrix = ({ d }: { d: any }) => {
     return (
-        <div className="w-full p-4 rounded-xl">
+        <div className="w-full p-4 rounded-xl bg-[#050505]/95 border border-white/10">
             <div className="text-[13px] font-bold text-white mb-4">Shard Matrix</div>
             <div className="w-full text-left text-[11px] font-mono">
                 <div className="grid grid-cols-8 gap-4 text-white mb-3 border-b border-white/[0.05] pb-2">
@@ -419,7 +419,7 @@ const ShardMatrix = ({ d }: { d: any }) => {
 // ═════════════════════════════════════════════════════════════════════
 const StatCard = ({ label, value, unit, color, sub }: { label: string; value: React.ReactNode; unit?: string; color: string; sub?: string }) => (
     <motion.div
-        className="p-3 relative cursor-pointer min-w-0"
+        className="p-4 relative cursor-pointer min-w-0 bg-[#050505]/95 rounded-lg border border-white/10"
         whileHover={{ scale: 1.05 }}
         transition={{ duration: 0.2 }}
     >
@@ -724,7 +724,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
 
                                 <PanelConnectionLine toX={-14.4} toY={0.0} toZ={0} color={SERVERS[1].hex} />
                                 <OmniPanel color={SERVERS[1].hex} position={[-14.4, 0.0, 0]} width={450} scale={0.9} title="NY-01 THREAT VECTOR">
-                                    <div className="flex flex-col gap-4 font-mono text-xs">
+                                    <div className="flex flex-col gap-4 font-mono text-xs bg-[#050505]/95 p-4 rounded-lg border border-white/10">
                                         <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white">MODE</span><span className="text-cyan-400">SNIPER BATCHING</span></div>
                                         <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white">GOSSIP INJECTION</span><span className="text-white">DIRECT (PORT 37330)</span></div>
                                         <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white">RUST WORKERS</span><span className="text-emerald-400">200 / 200</span></div>
@@ -752,7 +752,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
 
                                 <PanelConnectionLine toX={0.0} toY={9.0} toZ={0} color={SERVERS[2].hex} />
                                 <OmniPanel color={SERVERS[2].hex} position={[0.0, 9.0, 0]} width={400} scale={1.1} title="SA-01 STATE BLOAT GENERATOR">
-                                    <div className="p-4 text-center">
+                                    <div className="p-4 text-center bg-[#050505]/95 rounded-lg border border-white/10">
                                         <div className="text-rose-500 font-bold text-2xl mb-2 animate-pulse">DEPLOYED</div>
                                         <div className="text-xs text-white tracking-widest">PAYLOAD COMPRESSION: OFF</div>
                                     </div>
@@ -760,7 +760,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
 
                                 <PanelConnectionLine toX={0.0} toY={-10.8} toZ={0} color={SERVERS[2].hex} />
                                 <OmniPanel color={SERVERS[2].hex} position={[0.0, -10.8, 0]} width={400} scale={1.1} title="Protocol Vitals (SA-01)">
-                                    <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
+                                    <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4 bg-[#050505]/95 p-4 rounded-lg border border-white/10">
                                         <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">MEMORY</span><span className="text-white">58.4 GB / 64 GB</span></div>
                                         <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">NETWORK TX</span><span className="text-emerald-400">2.8 Gbps</span></div>
                                         <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">DISK I/O</span><span className="text-white">850.2 MB/s</span></div>
@@ -770,7 +770,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
 
                                 <PanelConnectionLine toX={10.8} toY={0.0} toZ={0} color={SERVERS[2].hex} />
                                 <OmniPanel color={SERVERS[2].hex} position={[10.8, 0.0, 0]} width={400} scale={0.9}>
-                                    <div className="flex flex-col gap-2 font-mono text-xs w-full h-full p-2">
+                                    <div className="flex flex-col gap-2 font-mono text-xs w-full h-full p-4 bg-[#050505]/95 rounded-lg border border-white/10">
                                         <div className="text-white font-bold mb-2">THERMAL MATRIX</div>
                                         <CPUHeatmap cores={d.cpuCores} />
                                     </div>
@@ -845,7 +845,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
 
                                 <PanelConnectionLine toX={0.0} toY={-10.8} toZ={0} color={SERVERS[5].hex} />
                                 <OmniPanel color={SERVERS[5].hex} position={[0.0, -10.8, 0]} width={400} scale={1.1} title="AS-01 Analytics">
-                                    <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
+                                    <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4 bg-[#050505]/95 p-4 rounded-lg border border-white/10">
                                         <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">CPU UTILIZATION</span><span className="text-fuchsia-400">92%</span></div>
                                         <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">NETWORK DROPS</span><span className="text-emerald-400">0.00%</span></div>
                                         <div className="flex justify-between pt-3"><span className="text-white">UPTIME</span><span className="text-cyan-400">100%</span></div>
@@ -871,7 +871,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
 
                                 <PanelConnectionLine toX={0.0} toY={-10.8} toZ={0} color={SERVERS[6].hex} />
                                 <OmniPanel color={SERVERS[6].hex} position={[0.0, -10.8, 0]} width={400} scale={1.1} title="AS-02 Vitals">
-                                    <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
+                                    <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4 bg-[#050505]/95 p-4 rounded-lg border border-white/10">
                                         <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">ACTIVE CONNECTIONS</span><span className="text-purple-400">14,102</span></div>
                                         <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">BLOCKED IPS</span><span className="text-white">0</span></div>
                                         <div className="flex justify-between pt-3"><span className="text-white">PROXY ROTATION</span><span className="text-emerald-400">ACTIVE</span></div>
@@ -914,7 +914,7 @@ export default function WarRoom() {
     }, [d.tps]);
 
     return (
-        <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans" style={{ WebkitTextStroke: "0.5px black", textShadow: "none" }}>
+        <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans text-white">
             {/* 2D HEADER (Overlays WebGL) */}
             <div className="absolute top-0 left-0 w-full z-[200] px-12 pb-2 flex justify-between items-end pointer-events-none">
                 {/* Neon Sign Structure */}
@@ -930,11 +930,11 @@ export default function WarRoom() {
                             className="text-base font-black tracking-widest text-center flex flex-col items-center whitespace-nowrap"
                             style={{
                                 color: '#00f0ff', // Crisp Vivid Cyan
-                                WebkitTextStroke: '0.5px black', textShadow: 'none' // Tight, sharp glow
+                                 // Tight, sharp glow
                             }}
                         >
                             <span>XCRON PROTOCOL BATTLE OF NODES</span>
-                            <span style={{ color: '#ccff00', WebkitTextStroke: '0.5px black', textShadow: 'none' }} className="mt-1">SUPERNOVA &apos;26</span>
+                            <span style={{ color: '#ccff00',  }} className="mt-1">SUPERNOVA &apos;26</span>
                         </h1>
                         <div className="text-[8px] font-mono tracking-[0.4em] font-bold text-white uppercase opacity-90">
                             Global Command WebGL Matrix

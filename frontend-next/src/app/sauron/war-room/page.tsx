@@ -248,6 +248,34 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
 };
 
 // ═════════════════════════════════════════════════════════════════════
+// COMPONENT: OMNI PANEL (3D HTML Overlay)
+// ═════════════════════════════════════════════════════════════════════
+const OmniPanel = ({ title, children, position, scale = 1, width = 400 }: any) => {
+    return (
+        <Html position={position} scale={scale} transform sprite className="select-none pointer-events-auto">
+            <div
+                style={{ width: `${width}px` }}
+                className="bg-[#0f172a]/80 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-[0_0_30px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden text-white"
+            >
+                {title && (
+                    <div className="bg-gradient-to-r from-cyan-900/50 to-transparent p-3 border-b border-cyan-500/30 flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold tracking-[0.2em] text-cyan-50">{title}</span>
+                        <div className="flex gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500/80 animate-pulse" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/80" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
+                        </div>
+                    </div>
+                )}
+                <div className="p-4 flex-1">
+                    {children}
+                </div>
+            </div>
+        </Html>
+    );
+};
+
+// ═════════════════════════════════════════════════════════════════════
 // COMPONENT: SHARD MATRIX
 // ═════════════════════════════════════════════════════════════════════
 const ShardMatrix = ({ d }: { d: any }) => {
@@ -432,11 +460,6 @@ const NeuralNetwork = ({ tps, activeServer, setActiveServer }: { tps: number, ac
     const dummy = useMemo(() => new THREE.Object3D(), []);
 
     useFrame((state, delta) => {
-        // Rotate the entire group slowly
-        if (groupRef.current) {
-            groupRef.current.rotation.y += delta * 0.05;
-        }
-
         // Pulse the network based on TPS
         if (materialRef.current) {
             const intensity = Math.min(1, tps / 10000); // 10k TPS = max intensity
@@ -515,24 +538,6 @@ const NeuralNetwork = ({ tps, activeServer, setActiveServer }: { tps: number, ac
     );
 };
 
-
-// ═════════════════════════════════════════════════════════════════════
-// OMNI-DIRECTIONAL PANEL HELPER (BILLBOARD SPRITES)
-// ═════════════════════════════════════════════════════════════════════
-const OmniPanel = ({ position, width, scale = 0.55, title, children }: any) => {
-    return (
-        <Html transform sprite position={position} scale={scale} zIndexRange={[100, 0]}>
-            <div style={{ width }} className="bg-[#050505]/95 border border-white/10 rounded-xl overflow-hidden flex flex-col hover:border-cyan-500/30 transition-colors duration-500">
-                {title && (
-                    <div className="bg-white/[0.02] border-b border-white/[0.05] p-3 text-xs tracking-[0.2em] font-bold text-white/50 uppercase">
-                        {title}
-                    </div>
-                )}
-                <div className="p-6">{children}</div>
-            </div>
-        </Html>
-    );
-};
 
 // ═════════════════════════════════════════════════════════════════════
 // MATRIX LEVEL 3D SCENE (React Three Fiber)

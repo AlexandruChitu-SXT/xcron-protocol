@@ -770,17 +770,17 @@ export default function WarRoom() {
                         <div className="w-[2px] h-16 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
                     </div>
                     {/* Sign Box */}
-                    <div className="relative border border-cyan-900/40 bg-black/80 px-8 py-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 flex flex-col items-center">
+                    <div className="relative border-b-2 border-t-2 border-[#00f0ff] bg-[#020202]/95 px-10 py-4 shadow-[0_0_20px_-5px_#00f0ff,inset_0_0_10px_-5px_#00f0ff] z-10 flex flex-col items-center backdrop-blur-lg">
                         <h1
-                            className="text-3xl font-black tracking-tight"
+                            className="text-3xl font-black tracking-widest"
                             style={{
-                                color: '#ffffff', // pure white text
-                                textShadow: '0 0 2px #fff, 0 0 8px #06b6d4, 0 0 15px #06b6d4, 0 0 30px #a855f7, 0 0 60px #a855f7' // Ultra bright clean neon glow
+                                color: '#00f0ff', // Crisp Vivid Cyan
+                                textShadow: '0 0 3px #00f0ff, 0 0 8px #00f0ff' // Tight, sharp glow
                             }}
                         >
-                            XCRON BATTLE OF NODES <span style={{ color: '#ffffff', textShadow: '0 0 2px #fff, 0 0 8px #f43f5e, 0 0 15px #f43f5e, 0 0 30px #9333ea, 0 0 60px #9333ea' }}>SUPERNOVA &apos;26</span>
+                            XCRON BATTLE OF NODES <span style={{ color: '#ccff00', textShadow: '0 0 3px #ccff00, 0 0 8px #ccff00' }}>SUPERNOVA &apos;26</span>
                         </h1>
-                        <div className="text-[10px] font-mono tracking-[0.4em] font-bold text-cyan-500/80 uppercase mt-1">
+                        <div className="text-[12px] font-mono tracking-[0.5em] font-bold text-white uppercase mt-2 opacity-90">
                             Global Command WebGL Matrix
                         </div>
                     </div>

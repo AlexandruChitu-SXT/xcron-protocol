@@ -343,17 +343,16 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
                 style={{
                     width: `${width}px`,
                     color: '#ffffff',
-                    
                 }}
-                className="flex flex-col"
+                className="flex flex-col bg-[#050505]/95 rounded-lg border border-white/10 p-4 shadow-xl"
             >
                 {title && (
-                    <div className="pb-4 flex items-center justify-between mb-5 border-b-2"
+                    <div className="pb-4 flex items-center justify-between mb-4 border-b-2"
                         style={{ borderColor: color, boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }}>
-                        <span className="font-mono text-3xl font-black tracking-[0.2em] uppercase">
+                        <span className="font-mono text-2xl font-black tracking-[0.2em] uppercase">
                             {title}
                         </span>
-                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: '#fff', boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }} />
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#fff', boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }} />
                     </div>
                 )}
                 <div className="flex-1 font-bold text-[16px] leading-relaxed tracking-wide">
@@ -930,11 +929,11 @@ export default function WarRoom() {
                             className="text-base font-black tracking-widest text-center flex flex-col items-center whitespace-nowrap"
                             style={{
                                 color: '#00f0ff', // Crisp Vivid Cyan
-                                 // Tight, sharp glow
+                                // Tight, sharp glow
                             }}
                         >
                             <span>XCRON PROTOCOL BATTLE OF NODES</span>
-                            <span style={{ color: '#ccff00',  }} className="mt-1">SUPERNOVA &apos;26</span>
+                            <span style={{ color: '#ccff00', }} className="mt-1">SUPERNOVA &apos;26</span>
                         </h1>
                         <div className="text-[8px] font-mono tracking-[0.4em] font-bold text-white uppercase opacity-90">
                             Global Command WebGL Matrix

@@ -323,7 +323,7 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // ═════════════════════════════════════════════════════════════════════
 const SERVERS = [
     // 0: Master Protocol Core
-    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), count: 40, size: 2.5 },
+    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), count: 40, size: 0.8 },
     // 1-6: Satellite Region Clusters (Hexagon at Radius 25)
     ...Array(6).fill(0).map((_, i) => ({
         center: new THREE.Vector3(
@@ -333,7 +333,7 @@ const SERVERS = [
         ),
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
         count: 20,
-        size: 1.5
+        size: 0.4
     }))
 ];
 
@@ -495,7 +495,7 @@ const NeuralNetwork = ({ tps }: { tps: number }) => {
 
             {/* Transaction Sparks (InstancedMesh for performance) */}
             <instancedMesh ref={sparksRef} args={[undefined as any, undefined as any, NUM_SPARKS]}>
-                <sphereGeometry args={[0.15, 8, 8]} />
+                <sphereGeometry args={[0.035, 8, 8]} />
                 <meshBasicMaterial color="#ffffff" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} />
             </instancedMesh>
         </group>

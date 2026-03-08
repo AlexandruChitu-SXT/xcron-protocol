@@ -768,22 +768,22 @@ export default function WarRoom() {
                 {/* Neon Sign Structure */}
                 <div className="relative flex flex-col items-center">
                     {/* Hanging wires */}
-                    <div className="flex w-full justify-between px-8 mb-[-2px] z-0 opacity-40">
-                        <div className="w-[2px] h-16 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
-                        <div className="w-[2px] h-16 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
+                    <div className="flex w-full justify-between px-6 mb-[-2px] z-0 opacity-40">
+                        <div className="w-[2px] h-8 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
+                        <div className="w-[2px] h-8 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
                     </div>
                     {/* Sign Box */}
-                    <div className="relative border-b-2 border-t-2 border-[#00f0ff] bg-[#020202]/95 px-10 py-4 shadow-[0_0_20px_-5px_#00f0ff,inset_0_0_10px_-5px_#00f0ff] z-10 flex flex-col items-center ">
+                    <div className="relative border-b-2 border-t-2 border-[#00f0ff] bg-[#020202]/95 px-6 py-2 shadow-[0_0_15px_-5px_#00f0ff,inset_0_0_8px_-5px_#00f0ff] z-10 flex flex-col items-center ">
                         <h1
-                            className="text-3xl font-black tracking-widest"
+                            className="text-xl font-black tracking-widest"
                             style={{
                                 color: '#00f0ff', // Crisp Vivid Cyan
-                                textShadow: '0 0 3px #00f0ff, 0 0 8px #00f0ff' // Tight, sharp glow
+                                textShadow: '0 0 2px #00f0ff, 0 0 6px #00f0ff' // Tight, sharp glow
                             }}
                         >
-                            XCRON BATTLE OF NODES <span style={{ color: '#ccff00', textShadow: '0 0 3px #ccff00, 0 0 8px #ccff00' }}>SUPERNOVA &apos;26</span>
+                            XCRON BATTLE OF NODES <span style={{ color: '#ccff00', textShadow: '0 0 2px #ccff00, 0 0 6px #ccff00' }}>SUPERNOVA &apos;26</span>
                         </h1>
-                        <div className="text-[12px] font-mono tracking-[0.5em] font-bold text-white uppercase mt-2 opacity-90">
+                        <div className="text-[9px] font-mono tracking-[0.5em] font-bold text-white uppercase mt-1 opacity-90">
                             Global Command WebGL Matrix
                         </div>
                     </div>

@@ -94,7 +94,7 @@ const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
     const fillValue = Math.min(100, (tps / 60000) * 100);
     return (
         <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
-            <div className="text-sm font-bold text-white/70 tracking-widest mb-4 z-10 w-full text-center">LIVE TPS</div>
+            <div className="text-sm font-bold text-white tracking-widest mb-4 z-10 w-full text-center">LIVE TPS</div>
             <div className="relative w-40 h-40 flex items-center justify-center z-10">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                     <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
@@ -115,13 +115,13 @@ const Pipeline = ({ tick }: { tick: number }) => {
     const activeIdx = tick % 4;
     return (
         <div className="w-full h-full p-4 flex flex-col justify-center">
-            <div className="text-[11px] font-bold text-white/70 tracking-widest mb-4">TX PIPELINE INJECTION</div>
+            <div className="text-[11px] font-bold text-white tracking-widest mb-4">TX PIPELINE INJECTION</div>
             <div className="flex justify-between items-center w-full relative">
                 <div className="absolute left-0 right-0 h-[1px] bg-white/10 top-1/2 -translate-y-1/2 z-0" />
                 {stages.map((stage, i) => (
                     <div key={stage} className="relative z-10 flex flex-col items-center gap-2">
                         <div className={`w-3 h-3 rounded-full transition-all duration-300 ${i === activeIdx ? 'bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,1)] transform scale-125' : i < activeIdx ? 'bg-white/40' : 'bg-black border border-white/20'}`} />
-                        <span className={`text-[9px] font-mono ${i === activeIdx ? 'text-cyan-400 font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : 'text-white/40'}`}>{stage}</span>
+                        <span className={`text-[9px] font-mono ${i === activeIdx ? 'text-cyan-400 font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : 'text-white'}`}>{stage}</span>
                     </div>
                 ))}
             </div>
@@ -132,7 +132,7 @@ const Pipeline = ({ tick }: { tick: number }) => {
 const CPUHeatmap = ({ cores }: { cores: number[] }) => {
     return (
         <div className="w-full h-full p-6 flex flex-col">
-            <div className="text-sm font-bold text-white/70 tracking-widest mb-4 flex justify-between">
+            <div className="text-sm font-bold text-white tracking-widest mb-4 flex justify-between">
                 <span>RUST ENGINE CORES</span>
                 <span className="text-xs text-rose-400 font-bold opacity-80 animate-pulse">OVERLOAD</span>
             </div>
@@ -149,13 +149,13 @@ const PropagationBars = ({ tick }: { tick: number }) => {
     const nodes = ['CTB-GER-01', 'DO-LON-01', 'DO-AMS-01', 'VUL-NY-01'];
     return (
         <div className="w-full h-full p-6 flex flex-col justify-center">
-            <div className="text-sm font-bold text-white/70 tracking-widest mb-4">SWARM LATENCY</div>
+            <div className="text-sm font-bold text-white tracking-widest mb-4">SWARM LATENCY</div>
             <div className="flex flex-col gap-4 flex-1 justify-center">
                 {nodes.map((node, i) => {
                     const ping = 10 + Math.sin(tick + i) * 5 + Math.random() * 4;
                     return (
                         <div key={node} className="flex flex-col gap-2">
-                            <div className="flex justify-between text-xs font-mono font-bold text-white/60"><span>{node}</span><span>{ping.toFixed(1)}ms</span></div>
+                            <div className="flex justify-between text-xs font-mono font-bold text-white"><span>{node}</span><span>{ping.toFixed(1)}ms</span></div>
                             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                 <motion.div className="h-full bg-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]" animate={{ width: `${Math.min(100, (ping / 30) * 100)}%` }} />
                             </div>
@@ -171,7 +171,7 @@ const GasRing = ({ gasUsed, gasLimit }: { gasUsed: number, gasLimit: number }) =
     const fill = (gasUsed / gasLimit) * 100;
     return (
         <div className="w-full h-full p-6 flex flex-col items-center justify-center">
-            <div className="text-sm font-bold text-white/70 tracking-widest mb-4">BLOCK GAS UTILIZATION</div>
+            <div className="text-sm font-bold text-white tracking-widest mb-4">BLOCK GAS UTILIZATION</div>
             <div className="relative w-32 h-32">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                     <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
@@ -188,14 +188,14 @@ const GasRing = ({ gasUsed, gasLimit }: { gasUsed: number, gasLimit: number }) =
 const TxFeed = ({ txSigned }: { txSigned: number }) => {
     return (
         <div className="w-full h-full p-6 flex flex-col">
-            <div className="text-sm font-bold text-white/70 tracking-widest mb-4 flex justify-between">
+            <div className="text-sm font-bold text-white tracking-widest mb-4 flex justify-between">
                 <span>LIVE TX FEED</span>
                 <span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse">● REC</span>
             </div>
             <div className="flex-1 overflow-hidden flex flex-col gap-2 text-xs font-mono font-bold opacity-80 mt-1">
                 {Array.from({ length: 9 }).map((_, i) => (
                     <div key={i} className="flex justify-between border-b border-white/[0.05] pb-2">
-                        <span className="text-white/30">[{txSigned - i}]</span>
+                        <span className="text-white">[{txSigned - i}]</span>
                         <span className="text-cyan-400/90">erd1...{Math.random().toString(36).substring(7, 11)}</span>
                         <span className="text-amber-400/90">{Array.from({ length: 4 }).map(() => (Math.random() * 10 | 0)).join('')}</span>
                     </div>
@@ -222,7 +222,7 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
         <div className="w-full h-full flex flex-col p-6 rounded-xl overflow-hidden relative">
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <div className="text-sm font-bold text-white/60 tracking-wider mb-1 flex items-center gap-3">
+                    <div className="text-sm font-bold text-white tracking-wider mb-1 flex items-center gap-3">
                         {title}
                         {spike && <span className="text-xs px-2 py-1 rounded-sm bg-rose-500/20 text-rose-400 font-bold">{spike}</span>}
                     </div>
@@ -232,15 +232,15 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
             {/* Chart Area */}
             <div className="relative w-full flex-1">
                 {/* Y-Axis scale */}
-                <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[11px] font-mono font-bold text-white/30">
+                <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[11px] font-mono font-bold text-white">
                     <span>{Math.round(max).toLocaleString()}</span>
                     <span>{Math.round(min + range / 2).toLocaleString()}</span>
                     <span>{Math.round(min).toLocaleString()}</span>
                 </div>
 
-                <div className="absolute inset-y-0 left-12 right-0 border-l border-b border-white/[0.1]">
-                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full">
-                        <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="miter" />
+                <div className="absolute inset-y-0 left-12 right-0 border-l-2 border-b-2" style={{ borderColor: color, boxShadow: `-5px 5px 15px -10px ${color}` }}>
+                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full" style={{ filter: `drop-shadow(0 0 8px ${color})` }}>
+                        <polyline points={points} fill="none" stroke={color} strokeWidth="4" strokeLinejoin="miter" />
                     </svg>
                 </div>
             </div>
@@ -255,21 +255,23 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
     return (
         <Html position={position} scale={scale} transform sprite className="select-none pointer-events-auto">
             <div
-                style={{ width: `${width}px`, backgroundColor: `${color}15` }}
-                className="backdrop-blur-xl rounded-lg flex flex-col overflow-hidden text-white"
+                style={{
+                    width: `${width}px`,
+                    color: '#ffffff',
+                    textShadow: `0 0 5px #ffffff, 0 0 15px ${color}, 0 0 30px ${color}`
+                }}
+                className="flex flex-col"
             >
                 {title && (
-                    <div className="p-3 border-b border-white/10 flex items-center justify-between"
-                        style={{ backgroundColor: `${color}33` }}>
-                        <span className="font-mono text-xs font-bold tracking-[0.2em]" style={{ color }}>{title}</span>
-                        <div className="flex gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color, opacity: 0.8 }} />
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color, opacity: 0.5 }} />
-                        </div>
+                    <div className="pb-4 flex items-center justify-between mb-5 border-b-2"
+                        style={{ borderColor: color, boxShadow: `0 15px 20px -15px ${color}` }}>
+                        <span className="font-mono text-3xl font-black tracking-[0.2em] uppercase">
+                            {title}
+                        </span>
+                        <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: '#fff', boxShadow: `0 0 20px 8px ${color}` }} />
                     </div>
                 )}
-                <div className="p-4 flex-1">
+                <div className="flex-1 font-bold text-[16px] leading-relaxed tracking-wide">
                     {children}
                 </div>
             </div>
@@ -283,9 +285,9 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
 const ShardMatrix = ({ d }: { d: any }) => {
     return (
         <div className="w-full p-4 rounded-xl">
-            <div className="text-[13px] font-bold text-white/90 mb-4">Shard Matrix</div>
+            <div className="text-[13px] font-bold text-white mb-4">Shard Matrix</div>
             <div className="w-full text-left text-[11px] font-mono">
-                <div className="grid grid-cols-8 gap-4 text-white/40 mb-3 border-b border-white/[0.05] pb-2">
+                <div className="grid grid-cols-8 gap-4 text-white mb-3 border-b border-white/[0.05] pb-2">
                     <div className="col-span-1">Shard</div>
                     <div className="col-span-2 text-right">Nonce</div>
                     <div className="col-span-1 text-right">TPS</div>
@@ -295,7 +297,7 @@ const ShardMatrix = ({ d }: { d: any }) => {
                     <div className="col-span-1 text-right">Age</div>
                 </div>
                 {[0, 1, 2, "Metachain"].map((shard, i) => (
-                    <div key={i} className="grid grid-cols-8 gap-4 text-white/80 py-2 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02]">
+                    <div key={i} className="grid grid-cols-8 gap-4 text-white py-2 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02]">
                         <div className="col-span-1 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                             {shard === "Metachain" ? "Metachain" : `Shard ${shard}`}
@@ -306,7 +308,7 @@ const ShardMatrix = ({ d }: { d: any }) => {
                         <div className="col-span-1 text-right font-bold">
                             <AnimCounter value={shard === "Metachain" ? d.tps : d.tps / 3 + Math.random() * 500} decimals={1} />
                         </div>
-                        <div className="col-span-1 text-right text-white/50">
+                        <div className="col-span-1 text-right text-white">
                             {(shard === "Metachain" ? 0 : d.tps / 3 + Math.random() * 500).toFixed(1)}
                         </div>
                         <div className="col-span-1 text-right text-emerald-400">
@@ -315,7 +317,7 @@ const ShardMatrix = ({ d }: { d: any }) => {
                         <div className="col-span-1 text-right">
                             {Math.floor(d.tps * 0.6 + Math.random() * 200).toLocaleString()}
                         </div>
-                        <div className="col-span-1 text-right text-white/50">
+                        <div className="col-span-1 text-right text-white">
                             now
                         </div>
                     </div>
@@ -332,17 +334,17 @@ const ShardMatrix = ({ d }: { d: any }) => {
 // ═════════════════════════════════════════════════════════════════════
 const StatCard = ({ label, value, unit, color, sub }: { label: string; value: React.ReactNode; unit?: string; color: string; sub?: string }) => (
     <motion.div
-        className="p-2 relative cursor-pointer min-w-0"
-        whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.03)' }}
+        className="p-3 relative cursor-pointer min-w-0"
+        whileHover={{ scale: 1.05 }}
         transition={{ duration: 0.2 }}
     >
-        <div className="text-[10px] lg:text-[11px] font-bold tracking-widest font-mono uppercase mb-1 truncate" style={{ color }}>{label}</div>
-        <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0">
-            <span className="text-xl lg:text-2xl font-black text-white truncate">{value}</span>
-            {unit && <span className="text-[10px] lg:text-sm text-white/50 font-mono shrink-0">{unit}</span>}
+        <div className="text-[14px] lg:text-[16px] font-bold tracking-widest font-mono uppercase mb-2 truncate" style={{ color: '#fff' }}>{label}</div>
+        <div className="flex items-baseline gap-2 whitespace-nowrap min-w-0">
+            <span className="text-4xl lg:text-5xl font-black text-white truncate">{value}</span>
+            {unit && <span className="text-[14px] lg:text-lg text-white font-bold font-mono shrink-0">{unit}</span>}
         </div>
-        {sub && <div className="text-[9px] lg:text-[10px] text-white/45 font-mono mt-0.5 truncate">{sub}</div>}
-        <div className="absolute bottom-0 left-0 w-1/3 h-[2px] rounded-full" style={{ backgroundColor: color }} />
+        {sub && <div className="text-[12px] lg:text-[14px] text-white font-mono mt-1 truncate">{sub}</div>}
+        <div className="absolute bottom-0 left-0 w-1/2 h-[4px] rounded-full" style={{ backgroundColor: '#fff', boxShadow: `0 0 15px 5px ${color}` }} />
     </motion.div>
 );
 
@@ -353,7 +355,7 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // ═════════════════════════════════════════════════════════════════════
 const SERVERS = [
     // 0: Master Protocol Core (Eye of Sauron - Massive, Off-center)
-    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), count: 40, size: 0.6 },
+    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 0.6 },
     // 1-6: Satellite Region Clusters (Expanded Hexagon)
     ...Array(6).fill(0).map((_, i) => ({
         center: new THREE.Vector3(
@@ -362,6 +364,7 @@ const SERVERS = [
             -8 + Math.sin(i * Math.PI / 3) * 38
         ),
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
+        hex: ["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i],
         count: 20,
         size: 0.35 // Smaller nodes
     }))
@@ -462,10 +465,10 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     const dummy = useMemo(() => new THREE.Object3D(), []);
 
     useFrame((state, delta) => {
-        // Pulse the network based on TPS
+        // Pulse the network based on TPS - but keep lines highly visible
         if (materialRef.current) {
             const intensity = Math.min(1, tps / 10000); // 10k TPS = max intensity
-            materialRef.current.opacity = 0.2 + (0.5 * intensity) + (Math.sin(state.clock.elapsedTime * 2) * 0.1);
+            materialRef.current.opacity = 0.8 + (0.2 * intensity); // Much higher nitidness
         }
 
         // Move transaction sparks strictly along the segment lines
@@ -503,9 +506,9 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
     return (
         <group ref={groupRef} position={[0, 0, 0]}>
-            {/* The laser pathways/circuitry */}
+            {/* The laser pathways/circuitry - Crisp rendering */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
+                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.8} depthWrite={false} />
             </lineSegments>
 
             {/* Invisible Hitboxes for Conduits so cables are clickable */}
@@ -599,16 +602,16 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 0: MASTER CORE */}
                         {idx === 0 && (
                             <>
-                                <OmniPanel color={SERVERS[0].color} position={[0, 8, 0]} width={800} scale={0.6}>
+                                <OmniPanel color={SERVERS[0].hex} position={[0, 8, 0]} width={800} scale={1.1}>
                                     <MassiveChart title="RAW THROUGHPUT [GLOBAL]" data={tpsHistory} color="#22d3ee" spike={`PEAK: ${Math.round(Math.max(...tpsHistory)).toLocaleString()} TPS`} />
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[0].color} position={[-8, 0, 0]} width={400} scale={0.5}>
+                                <OmniPanel color={SERVERS[0].hex} position={[-8, 0, 0]} width={400} scale={0.9}>
                                     <TPSGauge tps={d.tps} history={tpsHistory} />
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[0].color} position={[8, 0, 0]} width={600} scale={0.6} title="SHARD ROUTING MATRIX">
+                                <OmniPanel color={SERVERS[0].hex} position={[8, 0, 0]} width={600} scale={1.1} title="SHARD ROUTING MATRIX">
                                     <ShardMatrix d={d} />
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[0].color} position={[0, -8, 0]} width={450} scale={0.5}>
+                                <OmniPanel color={SERVERS[0].hex} position={[0, -8, 0]} width={450} scale={0.9}>
                                     <PropagationBars tick={tick} />
                                 </OmniPanel>
                             </>
@@ -617,62 +620,62 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 1: NORTH AMERICA - VIP KEEPER */}
                         {idx === 1 && (
                             <>
-                                <OmniPanel color={SERVERS[1].color} position={[0, 8, 0]} width={800} scale={0.6}>
+                                <OmniPanel color={SERVERS[1].hex} position={[0, 8, 0]} width={800} scale={1.1}>
                                     <MassiveChart title="NY-01 TX INJECTION RATE (KEEPER VIP)" data={tpsHistory.map((v: number) => Math.max(0, v * 0.8 + Math.random() * 5000))} color="#06b6d4" spike="BURST FIRE ENGAGED" />
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[1].color} position={[-8, 0, 0]} width={450} scale={0.5} title="NY-01 THREAT VECTOR">
+                                <OmniPanel color={SERVERS[1].hex} position={[-8, 0, 0]} width={450} scale={0.9} title="NY-01 THREAT VECTOR">
                                     <div className="flex flex-col gap-4 font-mono text-xs">
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">MODE</span><span className="text-cyan-400">SNIPER BATCHING</span></div>
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">GOSSIP INJECTION</span><span className="text-white">DIRECT (PORT 37330)</span></div>
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">RUST WORKERS</span><span className="text-emerald-400">200 / 200</span></div>
-                                        <div className="flex justify-between"><span className="text-white/40">CROSS-SHARD TARGET</span><span className="text-rose-400">SHARD 2 OVERLOAD</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white">MODE</span><span className="text-cyan-400">SNIPER BATCHING</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white">GOSSIP INJECTION</span><span className="text-white">DIRECT (PORT 37330)</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white">RUST WORKERS</span><span className="text-emerald-400">200 / 200</span></div>
+                                        <div className="flex justify-between"><span className="text-white">CROSS-SHARD TARGET</span><span className="text-rose-400">SHARD 2 OVERLOAD</span></div>
                                     </div>
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[1].color} position={[8, 0, 0]} width={450} scale={0.5}>
+                                <OmniPanel color={SERVERS[1].hex} position={[8, 0, 0]} width={450} scale={0.9}>
                                     <TxFeed txSigned={d.tps * 1.5} />
                                 </OmniPanel>
                                 {/* New Sensors */}
-                                <OmniPanel color={SERVERS[1].color} position={[0, -6, 0]} width={350} scale={0.5}><StatCard label="MEM POOL PIPELINE" value={(d.pendingPool * 0.4).toLocaleString()} color="#fcd34d" /></OmniPanel>
-                                <OmniPanel color={SERVERS[1].color} position={[-6, 6, 0]} width={300} scale={0.4}><StatCard label="TCP CONNECTIONS" value="12,482" unit="ESTABLISHED" color="#22d3ee" /></OmniPanel>
+                                <OmniPanel color={SERVERS[1].hex} position={[0, -6, 0]} width={350} scale={0.9}><StatCard label="MEM POOL PIPELINE" value={(d.pendingPool * 0.4).toLocaleString()} color="#fcd34d" /></OmniPanel>
+                                <OmniPanel color={SERVERS[1].hex} position={[-6, 6, 0]} width={300} scale={0.8}><StatCard label="TCP CONNECTIONS" value="12,482" unit="ESTABLISHED" color="#22d3ee" /></OmniPanel>
                             </>
                         )}
 
                         {/* SERVER 2: SOUTH AMERICA - FALLBACK */}
                         {idx === 2 && (
                             <>
-                                <OmniPanel color={SERVERS[2].color} position={[0, 5, 0]} width={400} scale={0.6} title="SA-01 STATE BLOAT GENERATOR">
+                                <OmniPanel color={SERVERS[2].hex} position={[0, 5, 0]} width={400} scale={1.1} title="SA-01 STATE BLOAT GENERATOR">
                                     <div className="p-4 text-center">
                                         <div className="text-rose-500 font-bold text-2xl mb-2 animate-pulse">DEPLOYED</div>
-                                        <div className="text-xs text-white/50 tracking-widest">PAYLOAD COMPRESSION: OFF</div>
+                                        <div className="text-xs text-white tracking-widest">PAYLOAD COMPRESSION: OFF</div>
                                     </div>
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[2].color} position={[0, -6, 0]} width={400} scale={0.6} title="Protocol Vitals (SA-01)">
+                                <OmniPanel color={SERVERS[2].hex} position={[0, -6, 0]} width={400} scale={1.1} title="Protocol Vitals (SA-01)">
                                     <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">58.4 GB / 64 GB</span></div>
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK TX</span><span className="text-emerald-400">2.8 Gbps</span></div>
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">850.2 MB/s</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">MEMORY</span><span className="text-white">58.4 GB / 64 GB</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">NETWORK TX</span><span className="text-emerald-400">2.8 Gbps</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">DISK I/O</span><span className="text-white">850.2 MB/s</span></div>
                                     </div>
                                 </OmniPanel>
                                 {/* New Sensors */}
-                                <OmniPanel color={SERVERS[2].color} position={[6, 0, 0]} width={400} scale={0.5}>
+                                <OmniPanel color={SERVERS[2].hex} position={[6, 0, 0]} width={400} scale={0.9}>
                                     <div className="flex flex-col gap-2 font-mono text-xs w-full h-full p-2">
-                                        <div className="text-white/40 font-bold mb-2">THERMAL MATRIX</div>
+                                        <div className="text-white font-bold mb-2">THERMAL MATRIX</div>
                                         <CPUHeatmap cores={d.cpuCores} />
                                     </div>
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[2].color} position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="BLOCK PROPAGATION" value="3.1" unit="ms" color="#fbbf24" /></OmniPanel>
+                                <OmniPanel color={SERVERS[2].hex} position={[-6, 0, 0]} width={300} scale={0.9}><StatCard label="BLOCK PROPAGATION" value="3.1" unit="ms" color="#fbbf24" /></OmniPanel>
                             </>
                         )}
 
                         {/* SERVER 3: EU - THE BEAST (FRANKFURT) */}
                         {idx === 3 && (
                             <>
-                                <OmniPanel color={SERVERS[3].color} position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="P2P PEERS" value="482" unit="NODES" color="#eab308" /></OmniPanel>
-                                <OmniPanel color={SERVERS[3].color} position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="MEMPOOL REJECTS" value="0.01" unit="%" color="#34d399" /></OmniPanel>
-                                <OmniPanel color={SERVERS[3].color} position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="LATENCY RTT" value="5.2" unit="ms" color="#34d399" /></OmniPanel>
-                                <OmniPanel color={SERVERS[3].color} position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="SIGNATURES/SEC" value={(d.tps * 0.4).toLocaleString()} color="#f8fafc" /></OmniPanel>
-                                <OmniPanel color={SERVERS[3].color} position={[0, -8, 0]} width={400} scale={0.5} title="EU-01 CORE PIPELINE"><PropagationBars tick={tick} /></OmniPanel>
-                                <OmniPanel color={SERVERS[3].color} position={[0, 8, 0]} width={600} scale={0.5}>
+                                <OmniPanel color={SERVERS[3].hex} position={[-5, 5, 0]} width={350} scale={1.2}><StatCard label="P2P PEERS" value="482" unit="NODES" color="#eab308" /></OmniPanel>
+                                <OmniPanel color={SERVERS[3].hex} position={[5, 5, 0]} width={350} scale={1.2}><StatCard label="MEMPOOL REJECTS" value="0.01" unit="%" color="#34d399" /></OmniPanel>
+                                <OmniPanel color={SERVERS[3].hex} position={[-5, -5, 0]} width={350} scale={1.2}><StatCard label="LATENCY RTT" value="5.2" unit="ms" color="#34d399" /></OmniPanel>
+                                <OmniPanel color={SERVERS[3].hex} position={[5, -5, 0]} width={350} scale={1.2}><StatCard label="SIGNATURES/SEC" value={(d.tps * 0.4).toLocaleString()} color="#f8fafc" /></OmniPanel>
+                                <OmniPanel color={SERVERS[3].hex} position={[0, -8, 0]} width={400} scale={0.9} title="EU-01 CORE PIPELINE"><PropagationBars tick={tick} /></OmniPanel>
+                                <OmniPanel color={SERVERS[3].hex} position={[0, 8, 0]} width={600} scale={0.9}>
                                     <MassiveChart title="EU-01 OUTBOUND BURST" data={tpsHistory.map((v: number) => Math.max(0, v * 1.1))} color="#fcd34d" spike="BEAST UNLEASHED" />
                                 </OmniPanel>
                             </>
@@ -681,15 +684,15 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 4: EU - SAURON RING GUARDIAN (LONDON) */}
                         {idx === 4 && (
                             <>
-                                <OmniPanel color={SERVERS[4].color} position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="GUARDIAN STATUS" value={"SYNCED"} color="#10b981" /></OmniPanel>
-                                <OmniPanel color={SERVERS[4].color} position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
-                                <OmniPanel color={SERVERS[4].color} position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
-                                <OmniPanel color={SERVERS[4].color} position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="THREAT DETECTED" value={"NONE"} color="#10b981" /></OmniPanel>
-                                <OmniPanel color={SERVERS[4].color} position={[0, 7, 0]} width={400} scale={0.6} title="GUARDIAN SENSORS">
+                                <OmniPanel color={SERVERS[4].hex} position={[-5, 5, 0]} width={350} scale={1.2}><StatCard label="GUARDIAN STATUS" value={"SYNCED"} color="#10b981" /></OmniPanel>
+                                <OmniPanel color={SERVERS[4].hex} position={[5, 5, 0]} width={350} scale={1.2}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
+                                <OmniPanel color={SERVERS[4].hex} position={[-5, -5, 0]} width={350} scale={1.2}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
+                                <OmniPanel color={SERVERS[4].hex} position={[5, -5, 0]} width={350} scale={1.2}><StatCard label="THREAT DETECTED" value={"NONE"} color="#10b981" /></OmniPanel>
+                                <OmniPanel color={SERVERS[4].hex} position={[0, 7, 0]} width={400} scale={1.1} title="GUARDIAN SENSORS">
                                     <div className="flex flex-col gap-2 text-xs font-mono p-2">
-                                        <div className="flex justify-between text-white/60"><span>PORT 443 TCP</span><span className="text-emerald-400">SECURE DUPLEX</span></div>
-                                        <div className="flex justify-between text-white/60"><span>DDoS PROTECTION</span><span className="text-cyan-400">CLOUDFLARE X</span></div>
-                                        <div className="flex justify-between text-white/60"><span>DATA INTEGRITY</span><span className="text-emerald-400">VERIFIED SHA-256</span></div>
+                                        <div className="flex justify-between text-white"><span>PORT 443 TCP</span><span className="text-emerald-400">SECURE DUPLEX</span></div>
+                                        <div className="flex justify-between text-white"><span>DDoS PROTECTION</span><span className="text-cyan-400">CLOUDFLARE X</span></div>
+                                        <div className="flex justify-between text-white"><span>DATA INTEGRITY</span><span className="text-emerald-400">VERIFIED SHA-256</span></div>
                                     </div>
                                 </OmniPanel>
                             </>
@@ -698,36 +701,36 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 5: ASIA - SINGAPORE ROUTER */}
                         {idx === 5 && (
                             <>
-                                <OmniPanel color={SERVERS[5].color} position={[0, 6, 0]} width={600} scale={0.6}>
+                                <OmniPanel color={SERVERS[5].hex} position={[0, 6, 0]} width={600} scale={1.1}>
                                     <MassiveChart title="AS-01 BATCH PROPAGATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.4 + Math.random() * 2000))} color="#d946ef" spike="STABLE ASSAULT" />
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[5].color} position={[0, -6, 0]} width={400} scale={0.6} title="AS-01 Analytics">
+                                <OmniPanel color={SERVERS[5].hex} position={[0, -6, 0]} width={400} scale={1.1} title="AS-01 Analytics">
                                     <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">CPU UTILIZATION</span><span className="text-fuchsia-400">92%</span></div>
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK DROPS</span><span className="text-emerald-400">0.00%</span></div>
-                                        <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">100%</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">CPU UTILIZATION</span><span className="text-fuchsia-400">92%</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">NETWORK DROPS</span><span className="text-emerald-400">0.00%</span></div>
+                                        <div className="flex justify-between pt-3"><span className="text-white">UPTIME</span><span className="text-cyan-400">100%</span></div>
                                     </div>
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[5].color} position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="ROUTING CACHE" value="4.2" unit="GB / 8GB" color="#d946ef" /></OmniPanel>
-                                <OmniPanel color={SERVERS[5].color} position={[6, 0, 0]} width={300} scale={0.5}><StatCard label="PACKET LOSS" value="0.0001" unit="%" color="#10b981" /></OmniPanel>
+                                <OmniPanel color={SERVERS[5].hex} position={[-6, 0, 0]} width={300} scale={0.9}><StatCard label="ROUTING CACHE" value="4.2" unit="GB / 8GB" color="#d946ef" /></OmniPanel>
+                                <OmniPanel color={SERVERS[5].hex} position={[6, 0, 0]} width={300} scale={0.9}><StatCard label="PACKET LOSS" value="0.0001" unit="%" color="#10b981" /></OmniPanel>
                             </>
                         )}
 
                         {/* SERVER 6: ASIA - TOKYO OBSERVER */}
                         {idx === 6 && (
                             <>
-                                <OmniPanel color={SERVERS[6].color} position={[0, 6, 0]} width={600} scale={0.6}>
+                                <OmniPanel color={SERVERS[6].hex} position={[0, 6, 0]} width={600} scale={1.1}>
                                     <MassiveChart title="AS-02 SHARD 0 INFILTRATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.5 + Math.random() * 2000))} color="#8b5cf6" spike="MAINTAINING PRESENCE" />
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[6].color} position={[0, -6, 0]} width={400} scale={0.6} title="AS-02 Vitals">
+                                <OmniPanel color={SERVERS[6].hex} position={[0, -6, 0]} width={400} scale={1.1} title="AS-02 Vitals">
                                     <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">ACTIVE CONNECTIONS</span><span className="text-purple-400">14,102</span></div>
-                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">BLOCKED IPS</span><span className="text-white">0</span></div>
-                                        <div className="flex justify-between pt-3"><span className="text-white/40">PROXY ROTATION</span><span className="text-emerald-400">ACTIVE</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">ACTIVE CONNECTIONS</span><span className="text-purple-400">14,102</span></div>
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white">BLOCKED IPS</span><span className="text-white">0</span></div>
+                                        <div className="flex justify-between pt-3"><span className="text-white">PROXY ROTATION</span><span className="text-emerald-400">ACTIVE</span></div>
                                     </div>
                                 </OmniPanel>
-                                <OmniPanel color={SERVERS[6].color} position={[-7, 0, 0]} width={400} scale={0.5}><TxFeed txSigned={d.tps * 0.5} /></OmniPanel>
-                                <OmniPanel color={SERVERS[6].color} position={[7, 0, 0]} width={350} scale={0.5}><TPSGauge tps={d.tps * 0.5} history={tpsHistory} /></OmniPanel>
+                                <OmniPanel color={SERVERS[6].hex} position={[-7, 0, 0]} width={400} scale={0.9}><TxFeed txSigned={d.tps * 0.5} /></OmniPanel>
+                                <OmniPanel color={SERVERS[6].hex} position={[7, 0, 0]} width={350} scale={0.9}><TPSGauge tps={d.tps * 0.5} history={tpsHistory} /></OmniPanel>
                             </>
                         )}
                     </group>
@@ -782,11 +785,11 @@ export default function WarRoom() {
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-8 text-[11px] font-mono text-white/50">
-                    <div className="flex flex-col"><span className="text-white/30">STATUS</span><span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]">● MATRIX LIVE</span></div>
-                    <div className="flex flex-col"><span className="text-white/30">EPOCH // ROUND</span><span className="text-white">{d.epoch} // {d.round}</span></div>
-                    <div className="flex flex-col"><span className="text-white/30">TOTAL WALLETS</span><span className="text-white">{d.totalKeys.toLocaleString()}</span></div>
-                    <div className="flex flex-col"><span className="text-white/30">MASTER BALANCE</span><span className="text-fuchsia-400">{d.walletBalance.toFixed(2)} EGLD</span></div>
+                <div className="flex gap-8 text-[11px] font-mono text-white">
+                    <div className="flex flex-col"><span className="text-white">STATUS</span><span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]">● MATRIX LIVE</span></div>
+                    <div className="flex flex-col"><span className="text-white">EPOCH // ROUND</span><span className="text-white">{d.epoch} // {d.round}</span></div>
+                    <div className="flex flex-col"><span className="text-white">TOTAL WALLETS</span><span className="text-white">{d.totalKeys.toLocaleString()}</span></div>
+                    <div className="flex flex-col"><span className="text-white">MASTER BALANCE</span><span className="text-fuchsia-400">{d.walletBalance.toFixed(2)} EGLD</span></div>
                 </div>
             </div>
 
@@ -797,10 +800,8 @@ export default function WarRoom() {
                         enableZoom={true}
                         enablePan={true}
                         enableRotate={true}
-                        maxDistance={50}
+                        maxDistance={1000}
                         minDistance={2}
-                        maxPolarAngle={Math.PI / 1.5}
-                        minPolarAngle={Math.PI / 4}
                         makeDefault
                     />
                     <MatrixScene d={d} tpsHistory={tpsHistory} tick={tick} />

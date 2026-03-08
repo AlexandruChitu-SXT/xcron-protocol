@@ -462,13 +462,6 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     const dummy = useMemo(() => new THREE.Object3D(), []);
 
     useFrame((state, delta) => {
-        // Slow rotation to make the matrix feel organic and not "fixed in the center"
-        if (groupRef.current) {
-            groupRef.current.rotation.y += delta * 0.05;
-            groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.2) * 0.05;
-            groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 1.5;
-        }
-
         // Pulse the network based on TPS
         if (materialRef.current) {
             const intensity = Math.min(1, tps / 10000); // 10k TPS = max intensity

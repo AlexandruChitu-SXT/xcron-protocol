@@ -319,12 +319,22 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 
 
 // ═════════════════════════════════════════════════════════════════════
-// COMPONENT: 3D CONTINENTAL NEURAL NETWORK (Swarm Activity)
+// COMPONENT: 3D CENTRAL & 6 SATELLITE NEURAL SWARM (Clean Circuitry)
 // ═════════════════════════════════════════════════════════════════════
-const REGIONS = [
-    { center: new THREE.Vector3(-20, 10, -10), color: new THREE.Color("#06b6d4"), count: 60 }, // NA - Cyan
-    { center: new THREE.Vector3(20, 15, -15), color: new THREE.Color("#f43f5e"), count: 60 }, // EU - Rose
-    { center: new THREE.Vector3(10, -20, 10), color: new THREE.Color("#eab308"), count: 60 }  // ASIA - Amber
+const SERVERS = [
+    // 0: Master Protocol Core
+    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), count: 40, size: 2.5 },
+    // 1-6: Satellite Region Clusters (Hexagon at Radius 25)
+    ...Array(6).fill(0).map((_, i) => ({
+        center: new THREE.Vector3(
+            Math.cos(i * Math.PI / 3) * 25,
+            (Math.random() - 0.5) * 10,
+            Math.sin(i * Math.PI / 3) * 25
+        ),
+        color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
+        count: 20,
+        size: 1.5
+    }))
 ];
 
 const NeuralNetwork = ({ tps }: { tps: number }) => {
@@ -333,39 +343,58 @@ const NeuralNetwork = ({ tps }: { tps: number }) => {
     const sparksRef = useRef<THREE.InstancedMesh>(null);
 
     // Calculate node points, lines and colors once
-    const { points, pointColors, lines, lineColors } = useMemo(() => {
+    const { points, lines, lineColors } = useMemo(() => {
         const pts: THREE.Vector3[] = [];
         const ptColors: THREE.Color[] = [];
         const lns: THREE.Vector3[] = [];
         const lnCols: number[] = [];
 
-        // Generate nodes per region
-        REGIONS.forEach(region => {
-            for (let i = 0; i < region.count; i++) {
-                // Scatter points around the center using spherical offsets
-                const radius = 5 + Math.random() * 12;
+        // Generate routing points per server
+        SERVERS.forEach(server => {
+            pts.push(server.center);
+            ptColors.push(server.color);
+
+            for (let i = 1; i < server.count; i++) {
+                // Scatter invisible routing nodes around the server
+                const radius = server.size + 2 + Math.random() * (server.size === 2.5 ? 12 : 7);
                 const theta = Math.random() * Math.PI * 2;
                 const phi = Math.acos(2 * Math.random() - 1);
 
-                const x = region.center.x + radius * Math.sin(phi) * Math.cos(theta);
-                const y = region.center.y + radius * Math.sin(phi) * Math.sin(theta);
-                const z = region.center.z + radius * Math.cos(phi);
+                const x = server.center.x + radius * Math.sin(phi) * Math.cos(theta);
+                const y = server.center.y + radius * Math.sin(phi) * Math.sin(theta);
+                const z = server.center.z + radius * Math.cos(phi);
 
                 pts.push(new THREE.Vector3(x, y, z));
-                ptColors.push(region.color);
+                ptColors.push(server.color);
             }
         });
 
-        // Connect nodes (Dense within regions, sparse between regions)
+        // Add explicit "bridge" nodes to form thick laser circuits between Master and Satellites
+        for (let i = 1; i <= 6; i++) {
+            const masterCenter = SERVERS[0].center;
+            const satCenter = SERVERS[i].center;
+            for (let j = 1; j <= 5; j++) {
+                const fraction = j / 6.0;
+                const bridgePt = new THREE.Vector3().lerpVectors(masterCenter, satCenter, fraction);
+                bridgePt.x += (Math.random() - 0.5) * 8;
+                bridgePt.y += (Math.random() - 0.5) * 8;
+                bridgePt.z += (Math.random() - 0.5) * 8;
+
+                pts.push(bridgePt);
+                const bridgeColor = new THREE.Color().lerpColors(SERVERS[0].color, SERVERS[i].color, fraction);
+                ptColors.push(bridgeColor);
+            }
+        }
+
+        // Connect nodes to form the visual circuitry
         for (let i = 0; i < pts.length; i++) {
             for (let j = i + 1; j < pts.length; j++) {
                 const dist = pts[i].distanceTo(pts[j]);
-                const isSameRegion = Math.floor(i / 60) === Math.floor(j / 60);
-                const threshold = isSameRegion ? 8 : 25;
+                const threshold = 14;
 
                 if (dist < threshold) {
-                    // Only keep a random subset of connections to avoid crowding
-                    if (Math.random() > (isSameRegion ? 0.7 : 0.95)) {
+                    // Cull connections randomly to leave a web instead of a solid block
+                    if (Math.random() > 0.8) {
                         lns.push(pts[i], pts[j]);
                         lnCols.push(ptColors[i].r, ptColors[i].g, ptColors[i].b);
                         lnCols.push(ptColors[j].r, ptColors[j].g, ptColors[j].b);
@@ -373,7 +402,7 @@ const NeuralNetwork = ({ tps }: { tps: number }) => {
                 }
             }
         }
-        return { points: pts, pointColors: ptColors, lines: lns, lineColors: new Float32Array(lnCols) };
+        return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };
     }, []);
 
     const lineGeo = useMemo(() => {
@@ -445,16 +474,22 @@ const NeuralNetwork = ({ tps }: { tps: number }) => {
 
     return (
         <group ref={groupRef} position={[0, 0, 0]}>
-            {/* The laser connections between nodes (Colored by Region) */}
+            {/* The laser pathways/circuitry */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.3} blending={THREE.AdditiveBlending} depthWrite={false} />
+                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
             </lineSegments>
 
-            {/* The nodes themselves */}
-            {points.map((p, i) => (
-                <mesh key={i} position={p}>
-                    <sphereGeometry args={[0.2, 8, 8]} />
-                    <meshBasicMaterial color={pointColors[i]} transparent opacity={0.8} />
+            {/* The 7 EXPLICIT SERVERS ONLY (No tiny noise dots) */}
+            {SERVERS.map((server, i) => (
+                <mesh key={`server-${i}`} position={server.center}>
+                    {/* Outer Glowing Shell */}
+                    <sphereGeometry args={[server.size, 24, 24]} />
+                    <meshBasicMaterial color={server.color} transparent opacity={0.6} blending={THREE.AdditiveBlending} depthWrite={false} />
+                    {/* Inner Solid Core */}
+                    <mesh position={[0, 0, 0]}>
+                        <sphereGeometry args={[server.size * 0.4, 12, 12]} />
+                        <meshBasicMaterial color="#ffffff" opacity={0.9} transparent />
+                    </mesh>
                 </mesh>
             ))}
 

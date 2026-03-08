@@ -70,7 +70,8 @@ function useSimulatedData(tick: number) {
         // Reflejando las 100,000 Wallets Hydra 
         const totalKeys = 100000;
         const activeWallets = Math.floor(65000 + Math.sin(t * 0.4) * 5000);
-        const walletBalance = 380.5 + Math.sin(t * 0.2) * 0.3; // Aproximación realista del Master
+        // Balance estático para no alarmar al usuario con la onda senoidal cayendo
+        const walletBalance = 380.69;
         const keeperPing = 2 + Math.sin(t * 2) * 1;
         const gasUsed = Math.floor(12000000 + Math.sin(t * 1.3) * 3000000); // Required for bottom widget still
         const gasLimit = 15000000;
@@ -254,12 +255,12 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
     return (
         <Html position={position} scale={scale} transform sprite className="select-none pointer-events-auto">
             <div
-                style={{ width: `${width}px`, borderColor: color, boxShadow: `0 0 30px ${color}33` }}
-                className="bg-[#0f172a]/80 backdrop-blur-md border rounded-lg flex flex-col overflow-hidden text-white"
+                style={{ width: `${width}px`, borderColor: `${color}66`, backgroundColor: `${color}15` }}
+                className="backdrop-blur-xl border-[1.5px] rounded-lg flex flex-col overflow-hidden text-white"
             >
                 {title && (
                     <div className="p-3 border-b border-white/10 flex items-center justify-between"
-                        style={{ background: `linear-gradient(to right, ${color}33, transparent)` }}>
+                        style={{ backgroundColor: `${color}33` }}>
                         <span className="font-mono text-xs font-bold tracking-[0.2em]" style={{ color }}>{title}</span>
                         <div className="flex gap-1">
                             <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
@@ -351,18 +352,18 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // COMPONENT: 3D CENTRAL & 6 SATELLITE NEURAL SWARM (Clean Circuitry)
 // ═════════════════════════════════════════════════════════════════════
 const SERVERS = [
-    // 0: Master Protocol Core
-    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), count: 40, size: 0.8 },
-    // 1-6: Satellite Region Clusters (Hexagon at Radius 25)
+    // 0: Master Protocol Core (Eye of Sauron - Massive, Off-center)
+    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), count: 40, size: 2.2 },
+    // 1-6: Satellite Region Clusters (Expanded Hexagon)
     ...Array(6).fill(0).map((_, i) => ({
         center: new THREE.Vector3(
-            Math.cos(i * Math.PI / 3) * 25,
-            (Math.random() - 0.5) * 10,
-            Math.sin(i * Math.PI / 3) * 25
+            -12 + Math.cos(i * Math.PI / 3) * 38,
+            -2 + (Math.random() - 0.5) * 20,
+            -8 + Math.sin(i * Math.PI / 3) * 38
         ),
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
         count: 20,
-        size: 0.4
+        size: 0.35 // Smaller nodes
     }))
 ];
 
@@ -380,7 +381,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
         // 1. Generate strictly defined, dense conduits from each Satellite to the Master Core
         const masterCenter = SERVERS[0].center;
-        const conduitLinesPerSatellite = 25; // Thicker bundles
+        const conduitLinesPerSatellite = 75; // Much Thicker bundles
 
         for (let i = 1; i <= 6; i++) {
             const satCenter = SERVERS[i].center;
@@ -440,7 +441,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     }, [lines, lineColors]);
 
     // Sparks (Live Transactions) logic - Flying ALONG the strict conduits
-    const NUM_SPARKS = 250;
+    const NUM_SPARKS = 800; // Increased sparks
     const sparkData = useMemo(() => {
         return Array(NUM_SPARKS).fill(0).map(() => {
             // Pick a random line segment to start
@@ -449,8 +450,8 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                 start: lines[lineIndex] || new THREE.Vector3(),
                 end: lines[lineIndex + 1] || new THREE.Vector3(),
                 progress: Math.random(),
-                // Much faster speed for the demo burst effect
-                speed: 0.8 + Math.random() * 2.0,
+                // Much faster speed for the demo burst effect as requested
+                speed: 2.5 + Math.random() * 5.0,
                 // Assign to a random line chunk to follow
                 lineIdx: lineIndex
             };
@@ -461,6 +462,13 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     const dummy = useMemo(() => new THREE.Object3D(), []);
 
     useFrame((state, delta) => {
+        // Slow rotation to make the matrix feel organic and not "fixed in the center"
+        if (groupRef.current) {
+            groupRef.current.rotation.y += delta * 0.05;
+            groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.2) * 0.05;
+            groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 1.5;
+        }
+
         // Pulse the network based on TPS
         if (materialRef.current) {
             const intensity = Math.min(1, tps / 10000); // 10k TPS = max intensity
@@ -506,6 +514,36 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             <lineSegments geometry={lineGeo}>
                 <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
             </lineSegments>
+
+            {/* Invisible Hitboxes for Conduits so cables are clickable */}
+            {SERVERS.slice(1).map((server, idx) => {
+                const i = idx + 1; // True index 1 to 6
+                const start = SERVERS[0].center;
+                const end = server.center;
+                const direction = new THREE.Vector3().subVectors(end, start);
+                const length = direction.length();
+                const position = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+
+                return (
+                    <mesh
+                        key={`hitbox-${i}`}
+                        position={position}
+                        quaternion={quaternion}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveServers((prev: number[]) =>
+                                prev.includes(i) ? prev.filter(s => s !== i) : [...prev, i]
+                            );
+                        }}
+                        onPointerOver={(e) => { document.body.style.cursor = 'pointer'; }}
+                        onPointerOut={(e) => { document.body.style.cursor = 'auto'; }}
+                    >
+                        <cylinderGeometry args={[4, 4, length, 8]} />
+                        <meshBasicMaterial visible={false} />
+                    </mesh>
+                );
+            })}
 
             {/* The 7 EXPLICIT SERVERS ONLY (No tiny noise dots) */}
             {SERVERS.map((server, i) => {

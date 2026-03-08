@@ -384,7 +384,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
         // 1. Generate strictly defined, dense conduits from each Satellite to the Master Core
         const masterCenter = SERVERS[0].center;
-        const conduitLinesPerSatellite = 75; // Much Thicker bundles
+        const conduitLinesPerSatellite = 45; // Much Thicker bundles
 
         for (let i = 1; i <= 6; i++) {
             const satCenter = SERVERS[i].center;
@@ -444,7 +444,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     }, [lines, lineColors]);
 
     // Sparks (Live Transactions) logic - Flying ALONG the strict conduits
-    const NUM_SPARKS = 800; // Increased sparks
+    const NUM_SPARKS = 400; // Increased sparks
     const sparkData = useMemo(() => {
         return Array(NUM_SPARKS).fill(0).map(() => {
             // Pick a random line segment to start
@@ -481,7 +481,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                     // Move to the next connected segment, or restart if at the end of the conduit
                     let nextIdx = spark.lineIdx + 2;
                     // Simple heuristic: if the next segment starts where we ended, follow it
-                    if (lines[nextIdx] && lines[nextIdx].distanceToSquared(spark.end) < 0.1) {
+                    if (lines[nextIdx] && Math.abs(lines[nextIdx].x - spark.end.x) < 0.1) {
                         spark.lineIdx = nextIdx;
                     } else {
                         // Reset to a random new starting segment
@@ -748,7 +748,10 @@ export default function WarRoom() {
     const [tpsHistory, setTpsHistory] = useState<number[]>(Array(60).fill(4000));
 
     useEffect(() => {
-        const iv = setInterval(() => setTick(t => t + 1), 150);
+        // Reduced frequency from 150ms to 800ms. 
+        // This prevents the React Reconciler from choking the React-Three-Fiber WebGL 60fps render loop
+        // by attempting to run massive 3D scene DOM diffs 7 times a second.
+        const iv = setInterval(() => setTick(t => t + 1), 800);
         return () => clearInterval(iv);
     }, []);
 
@@ -770,7 +773,7 @@ export default function WarRoom() {
                         <div className="w-[2px] h-16 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
                     </div>
                     {/* Sign Box */}
-                    <div className="relative border-b-2 border-t-2 border-[#00f0ff] bg-[#020202]/95 px-10 py-4 shadow-[0_0_20px_-5px_#00f0ff,inset_0_0_10px_-5px_#00f0ff] z-10 flex flex-col items-center backdrop-blur-lg">
+                    <div className="relative border-b-2 border-t-2 border-[#00f0ff] bg-[#020202]/95 px-10 py-4 shadow-[0_0_20px_-5px_#00f0ff,inset_0_0_10px_-5px_#00f0ff] z-10 flex flex-col items-center ">
                         <h1
                             className="text-3xl font-black tracking-widest"
                             style={{

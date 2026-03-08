@@ -537,19 +537,28 @@ export default function WarRoom() {
     return (
         <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans">
             {/* 2D HEADER (Overlays WebGL) */}
-            <div className="absolute top-0 left-0 w-full z-[200] px-12 pt-6 pb-2 border-b border-white/[0.05] flex justify-between items-end bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-                <div className="flex flex-col gap-1 items-start">
-                    <h1
-                        className="text-4xl font-black tracking-tight"
-                        style={{
-                            color: '#fff',
-                            textShadow: '0 0 5px #fff, 0 0 10px #fff, 0 0 20px #06b6d4, 0 0 40px #06b6d4, 0 0 80px #a855f7, 0 0 90px #a855f7, 0 0 100px #a855f7'
-                        }}
-                    >
-                        XCRON BATTLE OF NODES <span style={{ color: '#fff', textShadow: '0 0 5px #fff, 0 0 10px #fff, 0 0 20px #a855f7, 0 0 40px #a855f7, 0 0 80px #f43f5e, 0 0 90px #f43f5e' }}>SUPERNOVA &apos;26</span>
-                    </h1>
-                    <div className="text-[12px] font-mono tracking-[0.3em] font-bold text-cyan-400 uppercase drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]">
-                        Global Command WebGL Matrix
+            <div className="absolute top-0 left-0 w-full z-[200] px-12 pb-2 flex justify-between items-end pointer-events-none">
+                {/* Neon Sign Structure */}
+                <div className="relative flex flex-col items-center">
+                    {/* Hanging wires */}
+                    <div className="flex w-full justify-between px-8 mb-[-2px] z-0 opacity-40">
+                        <div className="w-[2px] h-16 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
+                        <div className="w-[2px] h-16 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
+                    </div>
+                    {/* Sign Box */}
+                    <div className="relative border-y-2 border-zinc-800 bg-black/60 backdrop-blur-md px-8 py-3 rounded-sm shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 flex flex-col items-center border-x border-x-zinc-900/50">
+                        <h1
+                            className="text-3xl font-black tracking-tight"
+                            style={{
+                                color: '#e0f2fe', // slightly tinted white
+                                textShadow: '0 0 2px #fff, 0 0 4px #fff, 0 0 10px #06b6d4, 0 0 20px #06b6d4, 0 0 40px #a855f7' // Reduced intensity
+                            }}
+                        >
+                            XCRON BATTLE OF NODES <span style={{ color: '#ffe4e6', textShadow: '0 0 2px #fff, 0 0 4px #fff, 0 0 10px #a855f7, 0 0 20px #f43f5e, 0 0 40px #f43f5e' }}>SUPERNOVA &apos;26</span>
+                        </h1>
+                        <div className="text-[10px] font-mono tracking-[0.4em] font-bold text-cyan-500/80 uppercase mt-1">
+                            Global Command WebGL Matrix
+                        </div>
                     </div>
                 </div>
                 <div className="flex gap-8 text-[11px] font-mono text-white/50">

@@ -92,7 +92,7 @@ function useSimulatedData(tick: number) {
 const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
     const fillValue = Math.min(100, (tps / 60000) * 100);
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-black/20 backdrop-blur-md relative">
+        <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
             <div className="text-sm font-bold text-white/70 tracking-widest mb-4 z-10 w-full text-center">LIVE TPS</div>
             <div className="relative w-40 h-40 flex items-center justify-center z-10">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
@@ -113,7 +113,7 @@ const Pipeline = ({ tick }: { tick: number }) => {
     const stages = ['MEMPOOL', 'CONSENSUS', 'EXECUTION', 'FINALITY'];
     const activeIdx = tick % 4;
     return (
-        <div className="w-full h-full p-4 flex flex-col justify-center bg-black/20 backdrop-blur-md">
+        <div className="w-full h-full p-4 flex flex-col justify-center">
             <div className="text-[11px] font-bold text-white/70 tracking-widest mb-4">TX PIPELINE INJECTION</div>
             <div className="flex justify-between items-center w-full relative">
                 <div className="absolute left-0 right-0 h-[1px] bg-white/10 top-1/2 -translate-y-1/2 z-0" />
@@ -130,7 +130,7 @@ const Pipeline = ({ tick }: { tick: number }) => {
 
 const CPUHeatmap = ({ cores }: { cores: number[] }) => {
     return (
-        <div className="w-full h-full p-6 flex flex-col bg-black/20 backdrop-blur-md">
+        <div className="w-full h-full p-6 flex flex-col">
             <div className="text-sm font-bold text-white/70 tracking-widest mb-4 flex justify-between">
                 <span>RUST ENGINE CORES</span>
                 <span className="text-xs text-rose-400 font-bold opacity-80 animate-pulse">OVERLOAD</span>
@@ -147,7 +147,7 @@ const CPUHeatmap = ({ cores }: { cores: number[] }) => {
 const PropagationBars = ({ tick }: { tick: number }) => {
     const nodes = ['CTB-GER-01', 'DO-LON-01', 'DO-AMS-01', 'VUL-NY-01'];
     return (
-        <div className="w-full h-full p-6 flex flex-col justify-center bg-black/20 backdrop-blur-md">
+        <div className="w-full h-full p-6 flex flex-col justify-center">
             <div className="text-sm font-bold text-white/70 tracking-widest mb-4">SWARM LATENCY</div>
             <div className="flex flex-col gap-4 flex-1 justify-center">
                 {nodes.map((node, i) => {
@@ -169,7 +169,7 @@ const PropagationBars = ({ tick }: { tick: number }) => {
 const GasRing = ({ gasUsed, gasLimit }: { gasUsed: number, gasLimit: number }) => {
     const fill = (gasUsed / gasLimit) * 100;
     return (
-        <div className="w-full h-full p-6 flex flex-col items-center justify-center bg-black/20 backdrop-blur-md">
+        <div className="w-full h-full p-6 flex flex-col items-center justify-center">
             <div className="text-sm font-bold text-white/70 tracking-widest mb-4">BLOCK GAS UTILIZATION</div>
             <div className="relative w-32 h-32">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
@@ -186,7 +186,7 @@ const GasRing = ({ gasUsed, gasLimit }: { gasUsed: number, gasLimit: number }) =
 
 const TxFeed = ({ txSigned }: { txSigned: number }) => {
     return (
-        <div className="w-full h-full p-6 flex flex-col bg-black/20 backdrop-blur-md">
+        <div className="w-full h-full p-6 flex flex-col">
             <div className="text-sm font-bold text-white/70 tracking-widest mb-4 flex justify-between">
                 <span>LIVE TX FEED</span>
                 <span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse">● REC</span>
@@ -383,7 +383,7 @@ const NeuralNetwork = ({ tps }: { tps: number }) => {
     }, [lines, lineColors]);
 
     // Sparks (Live Transactions) logic
-    const NUM_SPARKS = 300;
+    const NUM_SPARKS = 150;
     const sparkData = useMemo(() => {
         return Array(NUM_SPARKS).fill(0).map(() => {
             // lineIndex must be even
@@ -479,7 +479,7 @@ const OmniPanel = ({ radius, theta, y, width, scale = 0.55, title, children }: a
     const rot = getRotation(pos[0], pos[1], pos[2]);
     return (
         <Html transform position={pos} rotation={rot} scale={scale} zIndexRange={[100, 0]}>
-            <div style={{ width }} className="bg-black/70 backdrop-blur-xl border border-white/[0.08] shadow-[0_0_80px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden flex flex-col hover:border-cyan-500/30 transition-colors duration-500">
+            <div style={{ width }} className="bg-[#050505]/95 border border-white/10 rounded-xl overflow-hidden flex flex-col hover:border-cyan-500/30 transition-colors duration-500">
                 {title && (
                     <div className="bg-white/[0.02] border-b border-white/[0.05] p-3 text-xs tracking-[0.2em] font-bold text-white/50 uppercase">
                         {title}

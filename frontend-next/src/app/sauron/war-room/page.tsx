@@ -538,10 +538,18 @@ export default function WarRoom() {
         <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans">
             {/* 2D HEADER (Overlays WebGL) */}
             <div className="absolute top-0 left-0 w-full z-[200] px-12 pt-6 pb-2 border-b border-white/[0.05] flex justify-between items-end bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-                <div className="flex items-center gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black tracking-tight text-white mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"><span className="text-cyan-500">XCron</span> SUPERNOVA</h1>
-                        <div className="text-[10px] font-mono tracking-[0.2em] text-cyan-400 uppercase">Global Command WebGL Matrix</div>
+                <div className="flex flex-col gap-1 items-start">
+                    <h1
+                        className="text-4xl font-black tracking-tight"
+                        style={{
+                            color: '#fff',
+                            textShadow: '0 0 5px #fff, 0 0 10px #fff, 0 0 20px #06b6d4, 0 0 40px #06b6d4, 0 0 80px #a855f7, 0 0 90px #a855f7, 0 0 100px #a855f7'
+                        }}
+                    >
+                        XCRON BATTLE OF NODES <span style={{ color: '#fff', textShadow: '0 0 5px #fff, 0 0 10px #fff, 0 0 20px #a855f7, 0 0 40px #a855f7, 0 0 80px #f43f5e, 0 0 90px #f43f5e' }}>SUPERNOVA &apos;26</span>
+                    </h1>
+                    <div className="text-[12px] font-mono tracking-[0.3em] font-bold text-cyan-400 uppercase drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]">
+                        Global Command WebGL Matrix
                     </div>
                 </div>
                 <div className="flex gap-8 text-[11px] font-mono text-white/50">

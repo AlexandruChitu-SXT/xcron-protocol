@@ -287,9 +287,7 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
     const h = 100;
 
     const numColumns = data.length;
-    const numBlocksY = 10;
     const colW = w / numColumns;
-    const blockH = h / numBlocksY;
 
     return (
         <div className="w-full h-full flex flex-col p-6 rounded-xl overflow-hidden relative bg-[#050505]/95 border border-white/10">
@@ -297,48 +295,41 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
                 <div>
                     <div className="text-sm font-bold text-white tracking-wider mb-1 flex items-center gap-3">
                         {title}
-                        {spike && <span className="text-xs px-2 py-1 rounded-sm bg-rose-500/20 text-rose-400 font-bold">{spike}</span>}
+                        {spike && <span className="text-[10px] px-2 py-1 rounded-sm bg-rose-500/20 text-rose-400 font-bold">{spike}</span>}
                     </div>
                 </div>
             </div>
 
             {/* Chart Area */}
-            <div className="relative w-full flex-1">
+            <div className="relative w-full flex-1 mt-2">
                 {/* Y-Axis scale */}
-                <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[11px] font-mono font-bold text-white">
+                <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[11px] font-mono font-bold text-white/50 z-10">
                     <span>{Math.round(max).toLocaleString()}</span>
                     <span>{Math.round(min + range / 2).toLocaleString()}</span>
                     <span>{Math.round(min).toLocaleString()}</span>
                 </div>
 
-                <div className="absolute inset-y-0 left-12 right-0 border-l-2 border-b-2" style={{ borderColor: color, boxShadow: '0 0 1px 1px rgba(0,0,0,0.5)' }}>
-                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full" style={{ filter: `drop-shadow(0 1px 1px rgba(0,0,0,1))` }}>
+                <div className="absolute inset-y-0 left-12 right-0 border-l border-b border-white/10 relative">
+                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full absolute inset-0">
                         {data.map((v, i) => {
                             const ratio = (v - min) / range;
-                            // Inject jitter matching typical audio EQs dynamically jumping
-                            const jitter = (Math.random() - 0.5) * 0.15;
-                            const finalRatio = Math.max(0, Math.min(1, ratio + jitter));
-                            const activeBlocks = Math.ceil(finalRatio * numBlocksY);
 
-                            return Array.from({ length: numBlocksY }).map((_, b) => {
-                                // y runs 0 to numBlocksY-1 (top to bottom), so bottom blocks have higher b
-                                const blockIndexFromBottom = numBlocksY - 1 - b;
-                                const isActive = blockIndexFromBottom <= activeBlocks;
-                                if (!isActive) return null;
+                            // High density bar chart (Spotify/X style analytics)
+                            const barHeight = Math.max(1, ratio * h);
+                            const yPos = h - barHeight;
 
-                                return (
-                                    <rect
-                                        key={`eq-${i}-${b}`}
-                                        x={i * colW + (colW * 0.2)}
-                                        y={b * blockH + (blockH * 0.2)}
-                                        width={Math.max(1, colW * 0.6)}
-                                        height={Math.max(1, blockH * 0.6)}
-                                        fill={color}
-                                        opacity={0.6 + (Math.random() * 0.4)}
-                                        rx={1} // Slight rounded corners for the "cuadraditos"
-                                    />
-                                );
-                            });
+                            return (
+                                <rect
+                                    key={`bar-${i}`}
+                                    x={i * colW + (colW * 0.1)}
+                                    y={yPos}
+                                    width={Math.max(1, colW * 0.8)}
+                                    height={barHeight}
+                                    fill={color}
+                                    opacity={0.8 + (ratio * 0.2)} // Taller bars are slightly more opaque
+                                    rx={0.5} // Slight rounding at the top
+                                />
+                            );
                         })}
                     </svg>
                 </div>
@@ -972,7 +963,7 @@ export default function WarRoom() {
                 </div>
                 <div className="flex gap-8 text-[11px] font-mono text-white">
                     <div className="flex flex-col"><span className="text-white">STATUS</span><span className="text-emerald-400 font-bold ">● MATRIX LIVE</span></div>
-                    <div className="flex flex-col"><span className="text-white">EPOCH // ROUND</span><span className="text-white">{d.epoch} // {d.round}</span></div>
+                    <div className="flex flex-col"><span className="text-white">{"EPOCH // ROUND"}</span><span className="text-white">{d.epoch} {"//"} {d.round}</span></div>
                     <div className="flex flex-col"><span className="text-white">TOTAL WALLETS</span><span className="text-white">{d.totalKeys.toLocaleString()}</span></div>
                     <div className="flex flex-col"><span className="text-white">MASTER BALANCE</span><span className="text-fuchsia-400">{d.walletBalance.toFixed(2)} EGLD</span></div>
                 </div>

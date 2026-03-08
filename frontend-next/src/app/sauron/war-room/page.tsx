@@ -319,199 +319,250 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 
 
 // ═════════════════════════════════════════════════════════════════════
-// COMPONENT: 3D NEURAL NETWORK (Protocol Swarm Activity)
+// COMPONENT: 3D CONTINENTAL NEURAL NETWORK (Swarm Activity)
 // ═════════════════════════════════════════════════════════════════════
+const REGIONS = [
+    { center: new THREE.Vector3(-20, 10, -10), color: new THREE.Color("#06b6d4"), count: 60 }, // NA - Cyan
+    { center: new THREE.Vector3(20, 15, -15), color: new THREE.Color("#f43f5e"), count: 60 }, // EU - Rose
+    { center: new THREE.Vector3(10, -20, 10), color: new THREE.Color("#eab308"), count: 60 }  // ASIA - Amber
+];
+
 const NeuralNetwork = ({ tps }: { tps: number }) => {
     const groupRef = useRef<THREE.Group>(null);
     const materialRef = useRef<THREE.LineBasicMaterial>(null);
+    const sparksRef = useRef<THREE.InstancedMesh>(null);
 
-    // Calculate node points once
-    const { points, lines } = useMemo(() => {
+    // Calculate node points, lines and colors once
+    const { points, pointColors, lines, lineColors } = useMemo(() => {
         const pts: THREE.Vector3[] = [];
+        const ptColors: THREE.Color[] = [];
         const lns: THREE.Vector3[] = [];
+        const lnCols: number[] = [];
 
-        // Generate 150 points (representing our Swarm nodes) in a cylinder shape
-        for (let i = 0; i < 150; i++) {
-            const theta = Math.random() * Math.PI * 2;
-            const y = (Math.random() - 0.5) * 40;
-            const r = 10 + Math.random() * 5;
-            pts.push(new THREE.Vector3(Math.cos(theta) * r, y, Math.sin(theta) * r));
-        }
+        // Generate nodes per region
+        REGIONS.forEach(region => {
+            for (let i = 0; i < region.count; i++) {
+                // Scatter points around the center using spherical offsets
+                const radius = 5 + Math.random() * 12;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
 
-        // Connect nearby nodes
+                const x = region.center.x + radius * Math.sin(phi) * Math.cos(theta);
+                const y = region.center.y + radius * Math.sin(phi) * Math.sin(theta);
+                const z = region.center.z + radius * Math.cos(phi);
+
+                pts.push(new THREE.Vector3(x, y, z));
+                ptColors.push(region.color);
+            }
+        });
+
+        // Connect nodes (Dense within regions, sparse between regions)
         for (let i = 0; i < pts.length; i++) {
             for (let j = i + 1; j < pts.length; j++) {
-                if (pts[i].distanceTo(pts[j]) < 8) {
-                    lns.push(pts[i], pts[j]);
+                const dist = pts[i].distanceTo(pts[j]);
+                const isSameRegion = Math.floor(i / 60) === Math.floor(j / 60);
+                const threshold = isSameRegion ? 8 : 25;
+
+                if (dist < threshold) {
+                    // Only keep a random subset of connections to avoid crowding
+                    if (Math.random() > (isSameRegion ? 0.7 : 0.95)) {
+                        lns.push(pts[i], pts[j]);
+                        lnCols.push(ptColors[i].r, ptColors[i].g, ptColors[i].b);
+                        lnCols.push(ptColors[j].r, ptColors[j].g, ptColors[j].b);
+                    }
                 }
             }
         }
-        return { points: pts, lines: lns };
+        return { points: pts, pointColors: ptColors, lines: lns, lineColors: new Float32Array(lnCols) };
     }, []);
 
-    // Create a geometry for the lines
     const lineGeo = useMemo(() => {
         const geo = new THREE.BufferGeometry().setFromPoints(lines);
+        geo.setAttribute('color', new THREE.BufferAttribute(lineColors, 3));
         return geo;
+    }, [lines, lineColors]);
+
+    // Sparks (Live Transactions) logic
+    const NUM_SPARKS = 300;
+    const sparkData = useMemo(() => {
+        return Array(NUM_SPARKS).fill(0).map(() => {
+            // lineIndex must be even
+            const lineIndex = Math.floor(Math.random() * (lines.length / 2)) * 2;
+            return {
+                start: lines[lineIndex] || new THREE.Vector3(),
+                end: lines[lineIndex + 1] || new THREE.Vector3(),
+                progress: Math.random(),
+                speed: 0.1 + Math.random() * 0.5
+            };
+        });
     }, [lines]);
+
+    // Dummy Matrix for instanced mesh updates
+    const dummy = useMemo(() => new THREE.Object3D(), []);
 
     useFrame((state, delta) => {
         if (groupRef.current) {
-            // Slow rotation of the entire network
-            groupRef.current.rotation.y += delta * 0.05;
+            groupRef.current.rotation.y += delta * 0.02;
         }
+
+        // Base network pulse
         if (materialRef.current) {
-            // The intensity of the neural laser depends on the TPS
-            // Base intensity + TPS spikes
-            const baseOpacity = 0.15;
-            const tpsSpike = Math.min(1.0, (tps - 40000) / 20000); // Normalizes TPS to a 0-1 spike
+            const tpsSpike = Math.min(1.0, (tps - 40000) / 20000);
+            const pulse = (Math.sin(state.clock.elapsedTime * 3) + 1) / 2;
+            materialRef.current.opacity = 0.15 + (tpsSpike * 0.4) + (pulse * 0.1);
+        }
 
-            // Pulse effect using sine wave + TPS intensity
-            const pulse = (Math.sin(state.clock.elapsedTime * 2) + 1) / 2;
-            materialRef.current.opacity = baseOpacity + (tpsSpike * 0.5) + (pulse * 0.2);
+        // Animate Sparks
+        if (sparksRef.current && lines.length > 0) {
+            const speedMultiplier = 1 + (tps - 40000) / 10000; // Sparks move faster on high TPS
 
-            // Color shifts towards white/magenta under heavy load
-            const baseColor = new THREE.Color("#06b6d4"); // Cyan
-            const hotColor = new THREE.Color("#f43f5e"); // Rose/Magenta
-            materialRef.current.color.lerpColors(baseColor, hotColor, tpsSpike * 0.8);
+            for (let i = 0; i < NUM_SPARKS; i++) {
+                const data = sparkData[i];
+                data.progress += delta * data.speed * speedMultiplier;
+
+                // Reset spark when it reaches end
+                if (data.progress >= 1) {
+                    data.progress = 0;
+                    const lineIndex = Math.floor(Math.random() * (lines.length / 2)) * 2;
+                    data.start = lines[lineIndex];
+                    data.end = lines[lineIndex + 1];
+                    data.speed = 0.1 + Math.random() * 0.5;
+                }
+
+                // Interpolate position
+                dummy.position.copy(data.start).lerp(data.end, data.progress);
+
+                // Scale spark based on progress (fade in/out effect)
+                const scale = Math.sin(data.progress * Math.PI) * 1.5;
+                dummy.scale.set(scale, scale, scale);
+
+                dummy.updateMatrix();
+                sparksRef.current.setMatrixAt(i, dummy.matrix);
+            }
+            sparksRef.current.instanceMatrix.needsUpdate = true;
         }
     });
 
     return (
-        <group ref={groupRef} position={[0, 0, -20]}>
-            {/* The laser connections between nodes */}
+        <group ref={groupRef} position={[0, 0, 0]}>
+            {/* The laser connections between nodes (Colored by Region) */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} color="#06b6d4" transparent opacity={0.2} linewidth={1} blending={THREE.AdditiveBlending} />
+                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.3} blending={THREE.AdditiveBlending} depthWrite={false} />
             </lineSegments>
 
-            {/* The nodes themselves (glowing points) */}
+            {/* The nodes themselves */}
             {points.map((p, i) => (
                 <mesh key={i} position={p}>
-                    <sphereGeometry args={[0.15, 8, 8]} />
-                    <meshBasicMaterial color="#ffffff" transparent opacity={0.6} />
+                    <sphereGeometry args={[0.2, 8, 8]} />
+                    <meshBasicMaterial color={pointColors[i]} transparent opacity={0.8} />
                 </mesh>
             ))}
+
+            {/* Transaction Sparks (InstancedMesh for performance) */}
+            <instancedMesh ref={sparksRef} args={[undefined as any, undefined as any, NUM_SPARKS]}>
+                <sphereGeometry args={[0.15, 8, 8]} />
+                <meshBasicMaterial color="#ffffff" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} />
+            </instancedMesh>
         </group>
     );
 };
 
 
 // ═════════════════════════════════════════════════════════════════════
+// OMNI-DIRECTIONAL PANEL HELPER
+// ═════════════════════════════════════════════════════════════════════
+const polarToCartesian = (radius: number, theta: number, y: number) => [Math.sin(theta) * radius, y, Math.cos(theta) * radius] as [number, number, number];
+const getRotation = (x: number, y: number, z: number) => [Math.atan2(-y, Math.sqrt(x * x + z * z)), Math.atan2(x, z) + Math.PI, 0] as [number, number, number];
+
+const OmniPanel = ({ radius, theta, y, width, scale = 0.55, title, children }: any) => {
+    const pos = polarToCartesian(radius, theta, y);
+    const rot = getRotation(pos[0], pos[1], pos[2]);
+    return (
+        <Html transform position={pos} rotation={rot} scale={scale} zIndexRange={[100, 0]}>
+            <div style={{ width }} className="bg-black/70 backdrop-blur-xl border border-white/[0.08] shadow-[0_0_80px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden flex flex-col hover:border-cyan-500/30 transition-colors duration-500">
+                {title && (
+                    <div className="bg-white/[0.02] border-b border-white/[0.05] p-3 text-xs tracking-[0.2em] font-bold text-white/50 uppercase">
+                        {title}
+                    </div>
+                )}
+                <div className="p-6">{children}</div>
+            </div>
+        </Html>
+    );
+};
+
+// ═════════════════════════════════════════════════════════════════════
 // MATRIX LEVEL 3D SCENE (React Three Fiber)
 // ═════════════════════════════════════════════════════════════════════
 const MatrixScene = ({ d, tpsHistory, tick }: any) => {
-
     return (
         <>
             <ambientLight intensity={0.4} />
             <pointLight position={[0, 0, 0]} intensity={2} color="#06b6d4" />
 
-            {/* Neural Network Swarm Core that reacts to TPS */}
+            {/* Continental Neural Swarm */}
             <NeuralNetwork tps={d.tps} />
 
             <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
 
-            {/* --- TRIPLE MONITOR SETUP IN 3D SPACE --- */}
-            {/* LEFT PANEL */}
-            <Html transform position={[-11, 0, -3]} rotation={[0, 0.6, 0]} scale={0.55} zIndexRange={[100, 0]}>
-                <div className="w-[450px] h-[750px] flex flex-col gap-4 py-4 drop-shadow-[0_0_80px_rgba(6,-182,212,0.1)]">
-                    <div className="flex-1 bg-black/70 backdrop-blur-xl border border-white/[0.08] rounded-tl-2xl rounded-bl-2xl rounded-r-md overflow-hidden flex flex-col">
-                        <TPSGauge tps={d.tps} history={tpsHistory} />
-                    </div>
-                    <div className="flex-[1.5] bg-black/70 backdrop-blur-xl border border-white/[0.08] rounded-tl-md rounded-bl-2xl rounded-r-md overflow-hidden flex flex-col">
-                        <TxFeed txSigned={d.tps * 2} />
-                    </div>
-                    <div className="flex-1 bg-black/70 backdrop-blur-xl border border-white/[0.08] rounded-tl-md rounded-bl-2xl rounded-r-md overflow-hidden flex flex-col">
-                        <GasRing gasUsed={d.gasUsed} gasLimit={d.gasLimit} />
-                    </div>
+            {/* ---> FRONT ROW (Theta = Math.PI = 180 deg) <--- */}
+            <OmniPanel radius={22} theta={Math.PI} y={8} width={800} scale={0.6}>
+                <MassiveChart title="RAW THROUGHPUT [GLOBAL]" data={tpsHistory} color="#22d3ee" spike={`PEAK: ${Math.round(Math.max(...tpsHistory)).toLocaleString()} TPS`} />
+            </OmniPanel>
+
+            <OmniPanel radius={22} theta={Math.PI} y={-8} width={800} scale={0.6}>
+                <MassiveChart title="MEMPOOL SATURATION LEVEL" data={tpsHistory.map((v: number) => Math.max(0, v * 1.5 - 20000 + Math.random() * 5000))} color="#f43f5e" spike="SEVERE SATURATION" />
+            </OmniPanel>
+
+            {/* ---> FRONT-LEFT (Theta = Math.PI - 0.55) <--- */}
+            <OmniPanel radius={20} theta={Math.PI - 0.55} y={5} width={450} scale={0.5}>
+                <TPSGauge tps={d.tps} history={tpsHistory} />
+            </OmniPanel>
+
+            <OmniPanel radius={20} theta={Math.PI - 0.55} y={-7} width={450} scale={0.5}>
+                <TxFeed txSigned={d.tps * 2} />
+            </OmniPanel>
+
+            {/* ---> FRONT-RIGHT (Theta = Math.PI + 0.55) <--- */}
+            <OmniPanel radius={20} theta={Math.PI + 0.55} y={5} width={450} scale={0.5}>
+                <CPUHeatmap cores={d.cpuCores} />
+            </OmniPanel>
+
+            <OmniPanel radius={20} theta={Math.PI + 0.55} y={-7} width={450} scale={0.5}>
+                <PropagationBars tick={tick} />
+            </OmniPanel>
+
+            {/* ---> FAR-LEFT (Theta = Math.PI - 1.2) <--- */}
+            <OmniPanel radius={25} theta={Math.PI - 1.2} y={0} width={400} scale={0.6} title="Gas Infrastructure">
+                <GasRing gasUsed={d.gasUsed} gasLimit={d.gasLimit} />
+            </OmniPanel>
+
+            {/* ---> FAR-RIGHT (Theta = Math.PI + 1.2) <--- */}
+            <OmniPanel radius={25} theta={Math.PI + 1.2} y={0} width={400} scale={0.6} title="Protocol Vitals">
+                <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
+                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">{d.ramUsed.toFixed(1)} GB</span></div>
+                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">{d.networkBw.toFixed(1)} Gbps</span></div>
+                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">{d.diskIO.toFixed(1)} MB/s</span></div>
+                    <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">99.98%</span></div>
                 </div>
-            </Html>
+            </OmniPanel>
 
-            {/* CENTER PANEL */}
-            <Html transform position={[0, 0, -1]} rotation={[0, 0, 0]} scale={0.55} zIndexRange={[100, 0]}>
-                <div className="w-[1150px] h-[750px] flex flex-col gap-6 drop-shadow-[0_0_120px_rgba(0,0,0,0.8)]">
-                    {/* Top Stats - Larger Text */}
-                    <div className="grid grid-cols-4 gap-4 shrink-0">
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">LIVE FINALITY</div>
-                            <div className="text-6xl font-black text-cyan-400 tracking-tighter">{d.finality.toFixed(1)}<span className="text-xl text-white/30 ml-2">ms</span></div>
-                        </div>
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">TX SIGNED</div>
-                            <div className="text-6xl font-black text-emerald-400 tracking-tighter line-clamp-1">{d.txSigned.toLocaleString()}</div>
-                        </div>
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">PENDING POOL</div>
-                            <div className="text-6xl font-black text-rose-400 tracking-tighter">{d.pendingPool.toLocaleString()}</div>
-                        </div>
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">KEEPER PING</div>
-                            <div className="text-6xl font-black text-amber-400 tracking-tighter">{d.keeperPing.toFixed(1)}<span className="text-xl text-white/30 ml-2">ms</span></div>
-                        </div>
-                    </div>
+            {/* ---> STAT CARDS SPREAD IN A RING HIGH ABOVE (y=15, radius=30) <--- */}
+            {/* Notice how large they become, hovering over the observer like giant billboards. */}
+            <OmniPanel radius={28} theta={0} y={15} width={350} scale={0.9}><StatCard label="LIVE FINALITY" value={d.finality.toFixed(1)} unit="ms" color="#22d3ee" /></OmniPanel>
+            <OmniPanel radius={28} theta={Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="NETWORK SUCCESS" value={d.successRate.toFixed(2)} unit="%" color="#34d399" /></OmniPanel>
+            <OmniPanel radius={28} theta={Math.PI / 2} y={15} width={350} scale={0.9}><StatCard label="TX SIGNED" value={d.txSigned.toLocaleString()} color="#34d399" /></OmniPanel>
+            <OmniPanel radius={28} theta={3 * Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="ACTIVE NODES" value={d.activeNodes} unit="/150" color="#f8fafc" /></OmniPanel>
 
-                    {/* Middle Stats - High Density Addition */}
-                    <div className="grid grid-cols-4 gap-4 shrink-0">
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6 text-center">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">NETWORK SUCCESS</div>
-                            <div className="text-5xl font-black text-emerald-400/90">{d.successRate.toFixed(2)}<span className="text-xl">%</span></div>
-                        </div>
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6 text-center">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">AVERAGE GAS PRICE</div>
-                            <div className="text-5xl font-black text-fuchsia-400">{d.avgGasPrice.toFixed(4)}<span className="text-xl ml-1">Ξ</span></div>
-                        </div>
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6 text-center">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">DB LATENCY</div>
-                            <div className="text-5xl font-black text-purple-400">{d.dbLatency.toFixed(1)}<span className="text-xl ml-1">ms</span></div>
-                        </div>
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/[0.08] rounded-md p-6 text-center">
-                            <div className="text-sm text-white/50 font-bold tracking-widest mb-2 font-mono">ACTIVE NODES</div>
-                            <div className="text-5xl font-black text-white">{d.activeNodes}<span className="text-xl ml-1 text-white/30">/150</span></div>
-                        </div>
-                    </div>
+            <OmniPanel radius={28} theta={Math.PI} y={20} width={350} scale={0.9}><StatCard label="AVERAGE GAS" value={d.avgGasPrice.toFixed(4)} unit="Ξ" color="#e879f9" /></OmniPanel>
+            <OmniPanel radius={28} theta={5 * Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#c084fc" /></OmniPanel>
+            <OmniPanel radius={28} theta={3 * Math.PI / 2} y={15} width={350} scale={0.9}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#fbbf24" /></OmniPanel>
+            <OmniPanel radius={28} theta={7 * Math.PI / 4} y={15} width={350} scale={0.9}><StatCard label="PENDING POOL" value={d.pendingPool.toLocaleString()} color="#f43f5e" /></OmniPanel>
 
-                    {/* Smaller Charts at bottom */}
-                    <div className="flex-1 min-h-0 grid grid-cols-2 gap-4">
-                        <div className="h-full bg-black/80 backdrop-blur-xl rounded-xl border border-white/[0.08] overflow-hidden">
-                            <MassiveChart
-                                title="RAW THROUGHPUT"
-                                data={tpsHistory}
-                                color="#22d3ee"
-                                spike={`PEAK: ${Math.round(Math.max(...tpsHistory)).toLocaleString()} TPS`}
-                            />
-                        </div>
-                        <div className="h-full bg-black/80 backdrop-blur-xl rounded-xl border border-white/[0.08] overflow-hidden">
-                            <MassiveChart
-                                title="MEMPOOL SATURATION LEVEL"
-                                data={tpsHistory.map((v: number) => Math.max(0, v * 1.5 - 20000 + Math.random() * 5000))}
-                                color="#f43f5e"
-                                spike="SEVERE SATURATION"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </Html>
-
-            {/* RIGHT PANEL */}
-            <Html transform position={[11, 0, -3]} rotation={[0, -0.6, 0]} scale={0.55} zIndexRange={[100, 0]}>
-                <div className="w-[450px] h-[750px] flex flex-col gap-4 py-4 drop-shadow-[0_0_80px_rgba(6,-182,212,0.1)]">
-                    <div className="flex-1 bg-black/70 backdrop-blur-xl border border-white/[0.08] rounded-tr-2xl rounded-br-2xl rounded-l-md overflow-hidden flex flex-col">
-                        <CPUHeatmap cores={d.cpuCores} />
-                    </div>
-                    <div className="flex-[1.5] bg-black/70 backdrop-blur-xl border border-white/[0.08] rounded-tr-md rounded-br-2xl rounded-l-md overflow-hidden flex flex-col">
-                        <PropagationBars tick={tick} />
-                    </div>
-                    <div className="flex-1 bg-black/70 backdrop-blur-xl border border-white/[0.08] rounded-tr-md rounded-br-2xl rounded-l-md overflow-hidden flex flex-col p-8">
-                        <div className="text-sm font-bold text-white/80 tracking-widest mb-6">SYSTEM VITALS</div>
-                        <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold">
-                            <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">{d.ramUsed.toFixed(1)} GB</span></div>
-                            <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">{d.networkBw.toFixed(1)} Gbps</span></div>
-                            <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">{d.diskIO.toFixed(1)} MB/s</span></div>
-                            <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">99.98%</span></div>
-                        </div>
-                    </div>
-                </div>
-            </Html>
+            {/* ---> BACK ROW (Theta = 0 -> Directly behind observer) <--- */}
+            <OmniPanel radius={25} theta={0} y={0} width={600} scale={0.8} title="SHARD ROUTING MATRIX">
+                <ShardMatrix d={d} />
+            </OmniPanel>
         </>
     );
 };

@@ -91,21 +91,44 @@ function useSimulatedData(tick: number) {
 // ═════════════════════════════════════════════════════════════════════
 
 const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
+    // Treat TPS as a volume level
     const fillValue = Math.min(100, (tps / 60000) * 100);
+    const numBlocks = 15;
+    const activeBlocks = Math.ceil((fillValue / 100) * numBlocks);
+
     return (
         <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
-            <div className="text-sm font-bold text-white tracking-widest mb-4 z-10 w-full text-center">LIVE TPS</div>
-            <div className="relative w-40 h-40 flex items-center justify-center z-10">
-                <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#22d3ee" strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - (283 * fillValue) / 100} className="transition-all duration-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-sm font-bold text-white tracking-widest mb-4 z-10 w-full text-center">TPS INJECTION RATE</div>
+            <div className="flex gap-6 items-center z-10 w-full justify-center">
+
+                {/* Visual EQ Audio Mixer Stack */}
+                <div className="flex flex-col gap-[3px] rotate-180">
+                    {Array.from({ length: numBlocks }).map((_, i) => {
+                        const isActive = i < activeBlocks;
+                        // Color code: Bottom is green, middle yellow, top red (Warning)
+                        const blockColor = i > 12 ? '#f43f5e' : i > 8 ? '#eab308' : '#22d3ee';
+                        return (
+                            <div
+                                key={`tps-eq-${i}`}
+                                className="w-8 h-2.5 rounded-[1px] transition-all duration-300"
+                                style={{
+                                    backgroundColor: isActive ? blockColor : 'rgba(255,255,255,0.05)',
+                                    boxShadow: isActive ? `0 0 10px ${blockColor}` : 'none',
+                                    opacity: isActive ? 1 : 0.3
+                                }}
+                            />
+                        )
+                    })}
+                </div>
+
+                {/* Digital Readout */}
+                <div className="flex flex-col items-center justify-center">
                     <span className="text-5xl font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"><AnimCounter value={tps} /></span>
                     <span className="text-xs text-cyan-400 font-bold tracking-widest mt-1">TX/s</span>
                 </div>
             </div>
-            <div className="mt-4 w-full h-12 opacity-50 z-10"><Sparkline data={history} color="#22d3ee" h={40} /></div>
+            {/* Keeping the historical sparkline below EQ */}
+            <div className="mt-4 w-full h-8 opacity-50 z-10"><Sparkline data={history} color="#22d3ee" h={30} /></div>
         </div>
     );
 };
@@ -206,7 +229,7 @@ const TxFeed = ({ txSigned }: { txSigned: number }) => {
 };
 
 // ═════════════════════════════════════════════════════════════════════
-// COMPONENT: MASSIVE CHART (XOXNO Style)
+// COMPONENT: EQ MIXER CHART (Telemetry Style)
 // ═════════════════════════════════════════════════════════════════════
 const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; data: number[]; color: string; subtitle?: string; spike?: string }) => {
     const max = Math.max(...data, 1);
@@ -215,8 +238,10 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
     const w = 400;
     const h = 100;
 
-    // Add jitter to lines like XOXNO
-    const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * (h - 10) + Math.random() * 5}`).join(' ');
+    const numColumns = data.length;
+    const numBlocksY = 10;
+    const colW = w / numColumns;
+    const blockH = h / numBlocksY;
 
     return (
         <div className="w-full h-full flex flex-col p-6 rounded-xl overflow-hidden relative">
@@ -239,8 +264,34 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
                 </div>
 
                 <div className="absolute inset-y-0 left-12 right-0 border-l-2 border-b-2" style={{ borderColor: color, boxShadow: `-5px 5px 15px -10px ${color}` }}>
-                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full" style={{ filter: `drop-shadow(0 0 8px ${color})` }}>
-                        <polyline points={points} fill="none" stroke={color} strokeWidth="4" strokeLinejoin="miter" />
+                    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full" style={{ filter: `drop-shadow(0 0 6px ${color})` }}>
+                        {data.map((v, i) => {
+                            const ratio = (v - min) / range;
+                            // Inject jitter matching typical audio EQs dynamically jumping
+                            const jitter = (Math.random() - 0.5) * 0.15;
+                            const finalRatio = Math.max(0, Math.min(1, ratio + jitter));
+                            const activeBlocks = Math.ceil(finalRatio * numBlocksY);
+
+                            return Array.from({ length: numBlocksY }).map((_, b) => {
+                                // y runs 0 to numBlocksY-1 (top to bottom), so bottom blocks have higher b
+                                const blockIndexFromBottom = numBlocksY - 1 - b;
+                                const isActive = blockIndexFromBottom <= activeBlocks;
+                                if (!isActive) return null;
+
+                                return (
+                                    <rect
+                                        key={`eq-${i}-${b}`}
+                                        x={i * colW + (colW * 0.2)}
+                                        y={b * blockH + (blockH * 0.2)}
+                                        width={Math.max(1, colW * 0.6)}
+                                        height={Math.max(1, blockH * 0.6)}
+                                        fill={color}
+                                        opacity={0.6 + (Math.random() * 0.4)}
+                                        rx={1} // Slight rounded corners for the "cuadraditos"
+                                    />
+                                );
+                            });
+                        })}
                     </svg>
                 </div>
             </div>
@@ -602,33 +653,33 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 0: MASTER CORE */}
                         {idx === 0 && (
                             <>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, 14.4, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, 14.4, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[0].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[0].hex} position={[0.0, 14.4, 0]} width={800} scale={1.1}>
                                     <MassiveChart title="RAW THROUGHPUT [GLOBAL]" data={tpsHistory} color="#22d3ee" spike={`PEAK: ${Math.round(Math.max(...tpsHistory)).toLocaleString()} TPS`} />
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-14.4, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-14.4, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[0].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[0].hex} position={[-14.4, 0.0, 0]} width={400} scale={0.9}>
                                     <TPSGauge tps={d.tps} history={tpsHistory} />
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(14.4, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(14.4, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[0].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[0].hex} position={[14.4, 0.0, 0]} width={600} scale={1.1} title="SHARD ROUTING MATRIX">
                                     <ShardMatrix d={d} />
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, -14.4, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, -14.4, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[0].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[0].hex} position={[0.0, -14.4, 0]} width={450} scale={0.9}>
@@ -640,17 +691,17 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 1: NORTH AMERICA - VIP KEEPER */}
                         {idx === 1 && (
                             <>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, 14.4, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, 14.4, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[1].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[1].hex} position={[0.0, 14.4, 0]} width={800} scale={1.1}>
                                     <MassiveChart title="NY-01 TX INJECTION RATE (KEEPER VIP)" data={tpsHistory.map((v: number) => Math.max(0, v * 0.8 + Math.random() * 5000))} color="#06b6d4" spike="BURST FIRE ENGAGED" />
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-14.4, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-14.4, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[1].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[1].hex} position={[-14.4, 0.0, 0]} width={450} scale={0.9} title="NY-01 THREAT VECTOR">
@@ -661,24 +712,24 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                         <div className="flex justify-between"><span className="text-white">CROSS-SHARD TARGET</span><span className="text-rose-400">SHARD 2 OVERLOAD</span></div>
                                     </div>
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(14.4, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(14.4, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[1].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[1].hex} position={[14.4, 0.0, 0]} width={450} scale={0.9}>
                                     <TxFeed txSigned={d.tps * 1.5} />
                                 </OmniPanel>
                                 {/* New Sensors */}
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, -10.8, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, -10.8, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[1].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[1].hex} position={[0.0, -10.8, 0]} width={350} scale={0.9}><StatCard label="MEM POOL PIPELINE" value={(d.pendingPool * 0.4).toLocaleString()} color="#fcd34d" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-10.8, 10.8, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-10.8, 10.8, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[1].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[1].hex} position={[-10.8, 10.8, 0]} width={300} scale={0.8}><StatCard label="TCP CONNECTIONS" value="12,482" unit="ESTABLISHED" color="#22d3ee" /></OmniPanel>
@@ -688,9 +739,9 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 2: SOUTH AMERICA - FALLBACK */}
                         {idx === 2 && (
                             <>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, 9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, 9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[2].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[2].hex} position={[0.0, 9.0, 0]} width={400} scale={1.1} title="SA-01 STATE BLOAT GENERATOR">
@@ -699,9 +750,9 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                         <div className="text-xs text-white tracking-widest">PAYLOAD COMPRESSION: OFF</div>
                                     </div>
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, -10.8, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, -10.8, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[2].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[2].hex} position={[0.0, -10.8, 0]} width={400} scale={1.1} title="Protocol Vitals (SA-01)">
@@ -712,9 +763,9 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                     </div>
                                 </OmniPanel>
                                 {/* New Sensors */}
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(10.8, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(10.8, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[2].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[2].hex} position={[10.8, 0.0, 0]} width={400} scale={0.9}>
@@ -723,9 +774,9 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                         <CPUHeatmap cores={d.cpuCores} />
                                     </div>
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-10.8, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-10.8, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[2].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[2].hex} position={[-10.8, 0.0, 0]} width={300} scale={0.9}><StatCard label="BLOCK PROPAGATION" value="3.1" unit="ms" color="#fbbf24" /></OmniPanel>
@@ -735,39 +786,39 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 3: EU - THE BEAST (FRANKFURT) */}
                         {idx === 3 && (
                             <>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-9.0, 9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-9.0, 9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[3].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[3].hex} position={[-9.0, 9.0, 0]} width={350} scale={1.2}><StatCard label="P2P PEERS" value="482" unit="NODES" color="#eab308" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(9.0, 9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(9.0, 9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[3].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[3].hex} position={[9.0, 9.0, 0]} width={350} scale={1.2}><StatCard label="MEMPOOL REJECTS" value="0.01" unit="%" color="#34d399" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-9.0, -9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-9.0, -9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[3].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[3].hex} position={[-9.0, -9.0, 0]} width={350} scale={1.2}><StatCard label="LATENCY RTT" value="5.2" unit="ms" color="#34d399" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(9.0, -9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(9.0, -9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[3].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[3].hex} position={[9.0, -9.0, 0]} width={350} scale={1.2}><StatCard label="SIGNATURES/SEC" value={(d.tps * 0.4).toLocaleString()} color="#f8fafc" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, -14.4, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, -14.4, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[3].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[3].hex} position={[0.0, -14.4, 0]} width={400} scale={0.9} title="EU-01 CORE PIPELINE"><PropagationBars tick={tick} /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, 14.4, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, 14.4, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[3].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[3].hex} position={[0.0, 14.4, 0]} width={600} scale={0.9}>
@@ -779,33 +830,33 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 4: EU - SAURON RING GUARDIAN (LONDON) */}
                         {idx === 4 && (
                             <>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-9.0, 9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-9.0, 9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[4].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[4].hex} position={[-9.0, 9.0, 0]} width={350} scale={1.2}><StatCard label="GUARDIAN STATUS" value={"SYNCED"} color="#10b981" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(9.0, 9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(9.0, 9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[4].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[4].hex} position={[9.0, 9.0, 0]} width={350} scale={1.2}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-9.0, -9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-9.0, -9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[4].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[4].hex} position={[-9.0, -9.0, 0]} width={350} scale={1.2}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(9.0, -9.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(9.0, -9.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[4].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[4].hex} position={[9.0, -9.0, 0]} width={350} scale={1.2}><StatCard label="THREAT DETECTED" value={"NONE"} color="#10b981" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, 12.6, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, 12.6, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[4].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[4].hex} position={[0.0, 12.6, 0]} width={400} scale={1.1} title="GUARDIAN SENSORS">
@@ -821,17 +872,17 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 5: ASIA - SINGAPORE ROUTER */}
                         {idx === 5 && (
                             <>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, 10.8, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, 10.8, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[5].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[5].hex} position={[0.0, 10.8, 0]} width={600} scale={1.1}>
                                     <MassiveChart title="AS-01 BATCH PROPAGATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.4 + Math.random() * 2000))} color="#d946ef" spike="STABLE ASSAULT" />
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, -10.8, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, -10.8, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[5].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[5].hex} position={[0.0, -10.8, 0]} width={400} scale={1.1} title="AS-01 Analytics">
@@ -841,15 +892,15 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                         <div className="flex justify-between pt-3"><span className="text-white">UPTIME</span><span className="text-cyan-400">100%</span></div>
                                     </div>
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-10.8, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-10.8, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[5].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[5].hex} position={[-10.8, 0.0, 0]} width={300} scale={0.9}><StatCard label="ROUTING CACHE" value="4.2" unit="GB / 8GB" color="#d946ef" /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(10.8, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(10.8, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[5].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[5].hex} position={[10.8, 0.0, 0]} width={300} scale={0.9}><StatCard label="PACKET LOSS" value="0.0001" unit="%" color="#10b981" /></OmniPanel>
@@ -859,17 +910,17 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         {/* SERVER 6: ASIA - TOKYO OBSERVER */}
                         {idx === 6 && (
                             <>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, 10.8, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, 10.8, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[6].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[6].hex} position={[0.0, 10.8, 0]} width={600} scale={1.1}>
                                     <MassiveChart title="AS-02 SHARD 0 INFILTRATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.5 + Math.random() * 2000))} color="#8b5cf6" spike="MAINTAINING PRESENCE" />
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0.0, -10.8, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.0, -10.8, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[6].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[6].hex} position={[0.0, -10.8, 0]} width={400} scale={1.1} title="AS-02 Vitals">
@@ -879,15 +930,15 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                         <div className="flex justify-between pt-3"><span className="text-white">PROXY ROTATION</span><span className="text-emerald-400">ACTIVE</span></div>
                                     </div>
                                 </OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(-12.6, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-12.6, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[6].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[6].hex} position={[-12.6, 0.0, 0]} width={400} scale={0.9}><TxFeed txSigned={d.tps * 0.5} /></OmniPanel>
-                                
+
                                 <lineSegments>
-                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(12.6, 0.0, 0)])]} />
+                                    <edgesGeometry args={[new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(12.6, 0.0, 0)])]} />
                                     <lineBasicMaterial color={SERVERS[6].hex} opacity={0.5} transparent depthWrite={false} />
                                 </lineSegments>
                                 <OmniPanel color={SERVERS[6].hex} position={[12.6, 0.0, 0]} width={350} scale={0.9}><TPSGauge tps={d.tps * 0.5} history={tpsHistory} /></OmniPanel>

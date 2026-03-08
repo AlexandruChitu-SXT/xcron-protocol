@@ -91,9 +91,9 @@ function useSimulatedData(tick: number) {
 // ═════════════════════════════════════════════════════════════════════
 
 const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
-    // Treat TPS as a volume level up to 60k
-    const MAX_TPS = 60000;
-    const numBlocks = 16;
+    // Treat TPS as a volume level up to 100k
+    const MAX_TPS = 100000;
+    const numBlocks = 40; // Muchas mas barras
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
@@ -101,13 +101,14 @@ const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
             <div className="flex gap-4 items-center z-10 w-full justify-center">
 
                 {/* Visual EQ Audio Mixer Stack (Purple) */}
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                     {/* Tick Labels (DJ Board Style) */}
                     <div className="flex flex-col justify-between text-[9px] font-mono text-white opacity-50 h-full font-bold pt-1 pb-1">
+                        <span>100k</span>
+                        <span>80k</span>
                         <span>60k</span>
-                        <span>45k</span>
-                        <span>30k</span>
-                        <span>15k</span>
+                        <span>40k</span>
+                        <span>20k</span>
                         <span>0</span>
                     </div>
 
@@ -121,16 +122,16 @@ const TPSGauge = ({ tps, history }: { tps: number, history: number[] }) => {
                             const isActive = (tps + jitter) >= blockThreshold;
 
                             // High intensity purple / fuchsia theme
-                            const blockColor = i > 12 ? '#f0abfc' : i > 8 ? '#d946ef' : '#a21caf';
+                            const blockColor = i > 30 ? '#f0abfc' : i > 20 ? '#d946ef' : i > 10 ? '#c026d3' : '#a21caf';
 
                             return (
                                 <div
                                     key={`tps-eq-${i}`}
-                                    className="w-8 h-[5px] rounded-[1px] transition-all duration-75" // ultra fast transition
+                                    className="w-8 h-[2px] rounded-[1px] transition-all duration-75" // ultra fast transition
                                     style={{
                                         backgroundColor: isActive ? blockColor : 'rgba(255,255,255,0.05)',
-                                        boxShadow: isActive ? `0 0 10px ${blockColor}` : 'none',
                                         opacity: isActive ? 1 : 0.2
+                                        // "eliminar cualkier reflejo posible" per CEO directive
                                     }}
                                 />
                             )

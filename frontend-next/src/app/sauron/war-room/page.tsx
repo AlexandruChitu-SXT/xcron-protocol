@@ -250,20 +250,21 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
 // ═════════════════════════════════════════════════════════════════════
 // COMPONENT: OMNI PANEL (3D HTML Overlay)
 // ═════════════════════════════════════════════════════════════════════
-const OmniPanel = ({ title, children, position, scale = 1, width = 400 }: any) => {
+const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = "#06b6d4" }: any) => {
     return (
         <Html position={position} scale={scale} transform sprite className="select-none pointer-events-auto">
             <div
-                style={{ width: `${width}px` }}
-                className="bg-[#0f172a]/80 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-[0_0_30px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden text-white"
+                style={{ width: `${width}px`, borderColor: color, boxShadow: `0 0 30px ${color}33` }}
+                className="bg-[#0f172a]/80 backdrop-blur-md border rounded-lg flex flex-col overflow-hidden text-white"
             >
                 {title && (
-                    <div className="bg-gradient-to-r from-cyan-900/50 to-transparent p-3 border-b border-cyan-500/30 flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold tracking-[0.2em] text-cyan-50">{title}</span>
+                    <div className="p-3 border-b border-white/10 flex items-center justify-between"
+                        style={{ background: `linear-gradient(to right, ${color}33, transparent)` }}>
+                        <span className="font-mono text-xs font-bold tracking-[0.2em]" style={{ color }}>{title}</span>
                         <div className="flex gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500/80 animate-pulse" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/80" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
+                            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color, opacity: 0.8 }} />
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color, opacity: 0.5 }} />
                         </div>
                     </div>
                 )}
@@ -561,16 +562,16 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                     {/* SERVER 0: MASTER CORE */}
                     {activeServer === 0 && (
                         <>
-                            <OmniPanel position={[0, 8, 0]} width={800} scale={0.6}>
+                            <OmniPanel color={SERVERS[0].color} position={[0, 8, 0]} width={800} scale={0.6}>
                                 <MassiveChart title="RAW THROUGHPUT [GLOBAL]" data={tpsHistory} color="#22d3ee" spike={`PEAK: ${Math.round(Math.max(...tpsHistory)).toLocaleString()} TPS`} />
                             </OmniPanel>
-                            <OmniPanel position={[-8, 0, 0]} width={400} scale={0.5}>
+                            <OmniPanel color={SERVERS[0].color} position={[-8, 0, 0]} width={400} scale={0.5}>
                                 <TPSGauge tps={d.tps} history={tpsHistory} />
                             </OmniPanel>
-                            <OmniPanel position={[8, 0, 0]} width={600} scale={0.6} title="SHARD ROUTING MATRIX">
+                            <OmniPanel color={SERVERS[0].color} position={[8, 0, 0]} width={600} scale={0.6} title="SHARD ROUTING MATRIX">
                                 <ShardMatrix d={d} />
                             </OmniPanel>
-                            <OmniPanel position={[0, -8, 0]} width={450} scale={0.5}>
+                            <OmniPanel color={SERVERS[0].color} position={[0, -8, 0]} width={450} scale={0.5}>
                                 <PropagationBars tick={tick} />
                             </OmniPanel>
                         </>
@@ -579,10 +580,10 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                     {/* SERVER 1: NORTH AMERICA - VIP KEEPER */}
                     {activeServer === 1 && (
                         <>
-                            <OmniPanel position={[0, 8, 0]} width={800} scale={0.6}>
+                            <OmniPanel color={SERVERS[1].color} position={[0, 8, 0]} width={800} scale={0.6}>
                                 <MassiveChart title="NY-01 TX INJECTION RATE (KEEPER VIP)" data={tpsHistory.map((v: number) => Math.max(0, v * 0.8 + Math.random() * 5000))} color="#06b6d4" spike="BURST FIRE ENGAGED" />
                             </OmniPanel>
-                            <OmniPanel position={[-8, 0, 0]} width={450} scale={0.5} title="NY-01 THREAT VECTOR">
+                            <OmniPanel color={SERVERS[1].color} position={[-8, 0, 0]} width={450} scale={0.5} title="NY-01 THREAT VECTOR">
                                 <div className="flex flex-col gap-4 font-mono text-xs">
                                     <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">MODE</span><span className="text-cyan-400">SNIPER BATCHING</span></div>
                                     <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">GOSSIP INJECTION</span><span className="text-white">DIRECT (PORT 37330)</span></div>
@@ -590,25 +591,25 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                     <div className="flex justify-between"><span className="text-white/40">CROSS-SHARD TARGET</span><span className="text-rose-400">SHARD 2 OVERLOAD</span></div>
                                 </div>
                             </OmniPanel>
-                            <OmniPanel position={[8, 0, 0]} width={450} scale={0.5}>
+                            <OmniPanel color={SERVERS[1].color} position={[8, 0, 0]} width={450} scale={0.5}>
                                 <TxFeed txSigned={d.tps * 1.5} />
                             </OmniPanel>
                             {/* New Sensors */}
-                            <OmniPanel position={[0, -6, 0]} width={350} scale={0.5}><StatCard label="MEM POOL PIPELINE" value={(d.pendingPool * 0.4).toLocaleString()} color="#fcd34d" /></OmniPanel>
-                            <OmniPanel position={[-6, 6, 0]} width={300} scale={0.4}><StatCard label="TCP CONNECTIONS" value="12,482" unit="ESTABLISHED" color="#22d3ee" /></OmniPanel>
+                            <OmniPanel color={SERVERS[1].color} position={[0, -6, 0]} width={350} scale={0.5}><StatCard label="MEM POOL PIPELINE" value={(d.pendingPool * 0.4).toLocaleString()} color="#fcd34d" /></OmniPanel>
+                            <OmniPanel color={SERVERS[1].color} position={[-6, 6, 0]} width={300} scale={0.4}><StatCard label="TCP CONNECTIONS" value="12,482" unit="ESTABLISHED" color="#22d3ee" /></OmniPanel>
                         </>
                     )}
 
                     {/* SERVER 2: SOUTH AMERICA - FALLBACK */}
                     {activeServer === 2 && (
                         <>
-                            <OmniPanel position={[0, 5, 0]} width={400} scale={0.6} title="SA-01 STATE BLOAT GENERATOR">
+                            <OmniPanel color={SERVERS[2].color} position={[0, 5, 0]} width={400} scale={0.6} title="SA-01 STATE BLOAT GENERATOR">
                                 <div className="p-4 text-center">
                                     <div className="text-rose-500 font-bold text-2xl mb-2 animate-pulse">DEPLOYED</div>
                                     <div className="text-xs text-white/50 tracking-widest">PAYLOAD COMPRESSION: OFF</div>
                                 </div>
                             </OmniPanel>
-                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Protocol Vitals (SA-01)">
+                            <OmniPanel color={SERVERS[2].color} position={[0, -6, 0]} width={400} scale={0.6} title="Protocol Vitals (SA-01)">
                                 <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
                                     <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">58.4 GB / 64 GB</span></div>
                                     <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK TX</span><span className="text-emerald-400">2.8 Gbps</span></div>
@@ -616,25 +617,25 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                 </div>
                             </OmniPanel>
                             {/* New Sensors */}
-                            <OmniPanel position={[6, 0, 0]} width={400} scale={0.5}>
+                            <OmniPanel color={SERVERS[2].color} position={[6, 0, 0]} width={400} scale={0.5}>
                                 <div className="flex flex-col gap-2 font-mono text-xs w-full h-full p-2">
                                     <div className="text-white/40 font-bold mb-2">THERMAL MATRIX</div>
                                     <CPUHeatmap cores={d.cpuCores} />
                                 </div>
                             </OmniPanel>
-                            <OmniPanel position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="BLOCK PROPAGATION" value="3.1" unit="ms" color="#fbbf24" /></OmniPanel>
+                            <OmniPanel color={SERVERS[2].color} position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="BLOCK PROPAGATION" value="3.1" unit="ms" color="#fbbf24" /></OmniPanel>
                         </>
                     )}
 
                     {/* SERVER 3: EU - THE BEAST (FRANKFURT) */}
                     {activeServer === 3 && (
                         <>
-                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="P2P PEERS" value="482" unit="NODES" color="#eab308" /></OmniPanel>
-                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="MEMPOOL REJECTS" value="0.01" unit="%" color="#34d399" /></OmniPanel>
-                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="LATENCY RTT" value="5.2" unit="ms" color="#34d399" /></OmniPanel>
-                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="SIGNATURES/SEC" value={(d.tps * 0.4).toLocaleString()} color="#f8fafc" /></OmniPanel>
-                            <OmniPanel position={[0, -8, 0]} width={400} scale={0.5} title="EU-01 CORE PIPELINE"><PropagationBars tick={tick} /></OmniPanel>
-                            <OmniPanel position={[0, 8, 0]} width={600} scale={0.5}>
+                            <OmniPanel color={SERVERS[3].color} position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="P2P PEERS" value="482" unit="NODES" color="#eab308" /></OmniPanel>
+                            <OmniPanel color={SERVERS[3].color} position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="MEMPOOL REJECTS" value="0.01" unit="%" color="#34d399" /></OmniPanel>
+                            <OmniPanel color={SERVERS[3].color} position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="LATENCY RTT" value="5.2" unit="ms" color="#34d399" /></OmniPanel>
+                            <OmniPanel color={SERVERS[3].color} position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="SIGNATURES/SEC" value={(d.tps * 0.4).toLocaleString()} color="#f8fafc" /></OmniPanel>
+                            <OmniPanel color={SERVERS[3].color} position={[0, -8, 0]} width={400} scale={0.5} title="EU-01 CORE PIPELINE"><PropagationBars tick={tick} /></OmniPanel>
+                            <OmniPanel color={SERVERS[3].color} position={[0, 8, 0]} width={600} scale={0.5}>
                                 <MassiveChart title="EU-01 OUTBOUND BURST" data={tpsHistory.map((v: number) => Math.max(0, v * 1.1))} color="#fcd34d" spike="BEAST UNLEASHED" />
                             </OmniPanel>
                         </>
@@ -643,11 +644,11 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                     {/* SERVER 4: EU - SAURON RING GUARDIAN (LONDON) */}
                     {activeServer === 4 && (
                         <>
-                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="GUARDIAN STATUS" value={"SYNCED"} color="#10b981" /></OmniPanel>
-                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
-                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
-                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="THREAT DETECTED" value={"NONE"} color="#10b981" /></OmniPanel>
-                            <OmniPanel position={[0, 7, 0]} width={400} scale={0.6} title="GUARDIAN SENSORS">
+                            <OmniPanel color={SERVERS[4].color} position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="GUARDIAN STATUS" value={"SYNCED"} color="#10b981" /></OmniPanel>
+                            <OmniPanel color={SERVERS[4].color} position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
+                            <OmniPanel color={SERVERS[4].color} position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
+                            <OmniPanel color={SERVERS[4].color} position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="THREAT DETECTED" value={"NONE"} color="#10b981" /></OmniPanel>
+                            <OmniPanel color={SERVERS[4].color} position={[0, 7, 0]} width={400} scale={0.6} title="GUARDIAN SENSORS">
                                 <div className="flex flex-col gap-2 text-xs font-mono p-2">
                                     <div className="flex justify-between text-white/60"><span>PORT 443 TCP</span><span className="text-emerald-400">SECURE DUPLEX</span></div>
                                     <div className="flex justify-between text-white/60"><span>DDoS PROTECTION</span><span className="text-cyan-400">CLOUDFLARE X</span></div>
@@ -660,36 +661,36 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                     {/* SERVER 5: ASIA - SINGAPORE ROUTER */}
                     {activeServer === 5 && (
                         <>
-                            <OmniPanel position={[0, 6, 0]} width={600} scale={0.6}>
+                            <OmniPanel color={SERVERS[5].color} position={[0, 6, 0]} width={600} scale={0.6}>
                                 <MassiveChart title="AS-01 BATCH PROPAGATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.4 + Math.random() * 2000))} color="#d946ef" spike="STABLE ASSAULT" />
                             </OmniPanel>
-                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="AS-01 Analytics">
+                            <OmniPanel color={SERVERS[5].color} position={[0, -6, 0]} width={400} scale={0.6} title="AS-01 Analytics">
                                 <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
                                     <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">CPU UTILIZATION</span><span className="text-fuchsia-400">92%</span></div>
                                     <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK DROPS</span><span className="text-emerald-400">0.00%</span></div>
                                     <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">100%</span></div>
                                 </div>
                             </OmniPanel>
-                            <OmniPanel position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="ROUTING CACHE" value="4.2" unit="GB / 8GB" color="#d946ef" /></OmniPanel>
-                            <OmniPanel position={[6, 0, 0]} width={300} scale={0.5}><StatCard label="PACKET LOSS" value="0.0001" unit="%" color="#10b981" /></OmniPanel>
+                            <OmniPanel color={SERVERS[5].color} position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="ROUTING CACHE" value="4.2" unit="GB / 8GB" color="#d946ef" /></OmniPanel>
+                            <OmniPanel color={SERVERS[5].color} position={[6, 0, 0]} width={300} scale={0.5}><StatCard label="PACKET LOSS" value="0.0001" unit="%" color="#10b981" /></OmniPanel>
                         </>
                     )}
 
                     {/* SERVER 6: ASIA - TOKYO OBSERVER */}
                     {activeServer === 6 && (
                         <>
-                            <OmniPanel position={[0, 6, 0]} width={600} scale={0.6}>
+                            <OmniPanel color={SERVERS[6].color} position={[0, 6, 0]} width={600} scale={0.6}>
                                 <MassiveChart title="AS-02 SHARD 0 INFILTRATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.5 + Math.random() * 2000))} color="#8b5cf6" spike="MAINTAINING PRESENCE" />
                             </OmniPanel>
-                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="AS-02 Vitals">
+                            <OmniPanel color={SERVERS[6].color} position={[0, -6, 0]} width={400} scale={0.6} title="AS-02 Vitals">
                                 <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
                                     <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">ACTIVE CONNECTIONS</span><span className="text-purple-400">14,102</span></div>
                                     <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">BLOCKED IPS</span><span className="text-white">0</span></div>
                                     <div className="flex justify-between pt-3"><span className="text-white/40">PROXY ROTATION</span><span className="text-emerald-400">ACTIVE</span></div>
                                 </div>
                             </OmniPanel>
-                            <OmniPanel position={[-7, 0, 0]} width={400} scale={0.5}><TxFeed txSigned={d.tps * 0.5} /></OmniPanel>
-                            <OmniPanel position={[7, 0, 0]} width={350} scale={0.5}><TPSGauge tps={d.tps * 0.5} history={tpsHistory} /></OmniPanel>
+                            <OmniPanel color={SERVERS[6].color} position={[-7, 0, 0]} width={400} scale={0.5}><TxFeed txSigned={d.tps * 0.5} /></OmniPanel>
+                            <OmniPanel color={SERVERS[6].color} position={[7, 0, 0]} width={350} scale={0.5}><TPSGauge tps={d.tps * 0.5} history={tpsHistory} /></OmniPanel>
                         </>
                     )}
                 </group>

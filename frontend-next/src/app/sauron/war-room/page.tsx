@@ -219,7 +219,7 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
     const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * (h - 10) + Math.random() * 5}`).join(' ');
 
     return (
-        <div className="w-full h-full flex flex-col p-6 bg-black/40 border border-white/[0.05] rounded-xl overflow-hidden relative">
+        <div className="w-full h-full flex flex-col p-6 rounded-xl overflow-hidden relative">
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <div className="text-sm font-bold text-white/60 tracking-wider mb-1 flex items-center gap-3">
@@ -255,8 +255,8 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
     return (
         <Html position={position} scale={scale} transform sprite className="select-none pointer-events-auto">
             <div
-                style={{ width: `${width}px`, borderColor: `${color}66`, backgroundColor: `${color}15` }}
-                className="backdrop-blur-xl border-[1.5px] rounded-lg flex flex-col overflow-hidden text-white"
+                style={{ width: `${width}px`, backgroundColor: `${color}15` }}
+                className="backdrop-blur-xl rounded-lg flex flex-col overflow-hidden text-white"
             >
                 {title && (
                     <div className="p-3 border-b border-white/10 flex items-center justify-between"
@@ -282,7 +282,7 @@ const OmniPanel = ({ title, children, position, scale = 1, width = 400, color = 
 // ═════════════════════════════════════════════════════════════════════
 const ShardMatrix = ({ d }: { d: any }) => {
     return (
-        <div className="w-full p-4 bg-[#111216] border border-white/[0.05] rounded-xl">
+        <div className="w-full p-4 rounded-xl">
             <div className="text-[13px] font-bold text-white/90 mb-4">Shard Matrix</div>
             <div className="w-full text-left text-[11px] font-mono">
                 <div className="grid grid-cols-8 gap-4 text-white/40 mb-3 border-b border-white/[0.05] pb-2">
@@ -353,7 +353,7 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // ═════════════════════════════════════════════════════════════════════
 const SERVERS = [
     // 0: Master Protocol Core (Eye of Sauron - Massive, Off-center)
-    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), count: 40, size: 2.2 },
+    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), count: 40, size: 0.6 },
     // 1-6: Satellite Region Clusters (Expanded Hexagon)
     ...Array(6).fill(0).map((_, i) => ({
         center: new THREE.Vector3(

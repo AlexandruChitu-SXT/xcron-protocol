@@ -301,7 +301,7 @@ const MassiveChart = ({ title, data, color, subtitle, spike }: { title: string; 
             </div>
 
             {/* Chart Area */}
-            <div className="relative w-full flex-1 mt-2">
+            <div className="relative w-full h-[150px] mt-2">
                 {/* Y-Axis scale */}
                 <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[11px] font-mono font-bold text-white/50 z-10">
                     <span>{Math.round(max).toLocaleString()}</span>

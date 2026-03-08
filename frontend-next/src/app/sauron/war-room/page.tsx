@@ -775,13 +775,14 @@ export default function WarRoom() {
                     {/* Sign Box */}
                     <div className="relative border-b border-t border-[#00f0ff] bg-[#020202]/95 px-4 py-1 shadow-[0_0_10px_-5px_#00f0ff,inset_0_0_5px_-5px_#00f0ff] z-10 flex flex-col items-center ">
                         <h1
-                            className="text-base font-black tracking-widest"
+                            className="text-base font-black tracking-widest text-center flex flex-col items-center"
                             style={{
                                 color: '#00f0ff', // Crisp Vivid Cyan
                                 textShadow: '0 0 1px #00f0ff, 0 0 4px #00f0ff' // Tight, sharp glow
                             }}
                         >
-                            XCRON BATTLE OF NODES <span style={{ color: '#ccff00', textShadow: '0 0 1px #ccff00, 0 0 4px #ccff00' }}>SUPERNOVA &apos;26</span>
+                            <span>XCRON PROTOCOL BATTLE OF NODES</span>
+                            <span style={{ color: '#ccff00', textShadow: '0 0 1px #ccff00, 0 0 4px #ccff00' }} className="mt-1">SUPERNOVA &apos;26</span>
                         </h1>
                         <div className="text-[8px] font-mono tracking-[0.4em] font-bold text-white uppercase opacity-90">
                             Global Command WebGL Matrix

@@ -349,59 +349,58 @@ const NeuralNetwork = ({ tps, activeServer, setActiveServer }: { tps: number, ac
         const lns: THREE.Vector3[] = [];
         const lnCols: number[] = [];
 
-        // Generate routing points per server
-        SERVERS.forEach(server => {
-            pts.push(server.center);
-            ptColors.push(server.color);
+        // 1. Generate strictly defined, dense conduits from each Satellite to the Master Core
+        const masterCenter = SERVERS[0].center;
+        const conduitLinesPerSatellite = 25; // Thicker bundles
 
-            for (let i = 1; i < server.count; i++) {
-                // Scatter invisible routing nodes around the server
-                const radius = server.size + 2 + Math.random() * (server.size === 2.5 ? 12 : 7);
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-
-                const x = server.center.x + radius * Math.sin(phi) * Math.cos(theta);
-                const y = server.center.y + radius * Math.sin(phi) * Math.sin(theta);
-                const z = server.center.z + radius * Math.cos(phi);
-
-                pts.push(new THREE.Vector3(x, y, z));
-                ptColors.push(server.color);
-            }
-        });
-
-        // Add explicit "bridge" nodes to form thick laser circuits between Master and Satellites
         for (let i = 1; i <= 6; i++) {
-            const masterCenter = SERVERS[0].center;
             const satCenter = SERVERS[i].center;
-            for (let j = 1; j <= 5; j++) {
-                const fraction = j / 6.0;
-                const bridgePt = new THREE.Vector3().lerpVectors(masterCenter, satCenter, fraction);
-                bridgePt.x += (Math.random() - 0.5) * 8;
-                bridgePt.y += (Math.random() - 0.5) * 8;
-                bridgePt.z += (Math.random() - 0.5) * 8;
+            const satColor = SERVERS[i].color;
 
-                pts.push(bridgePt);
-                const bridgeColor = new THREE.Color().lerpColors(SERVERS[0].color, SERVERS[i].color, fraction);
-                ptColors.push(bridgeColor);
+            // Add the server points themselves to the strict points list
+            if (i === 1) {
+                pts.push(masterCenter);
+                ptColors.push(SERVERS[0].color);
             }
-        }
+            pts.push(satCenter);
+            ptColors.push(satColor);
 
-        // Connect nodes to form the visual circuitry
-        for (let i = 0; i < pts.length; i++) {
-            for (let j = i + 1; j < pts.length; j++) {
-                const dist = pts[i].distanceTo(pts[j]);
-                const threshold = 14;
+            // Generate bundled, slightly jittered parallel lines making up the conduit
+            for (let c = 0; c < conduitLinesPerSatellite; c++) {
+                // Determine a slight random offset vector perpendicular to the main direction
+                const dir = new THREE.Vector3().subVectors(masterCenter, satCenter).normalize();
+                const randomPerp = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).cross(dir).normalize();
+                // Radius of the conduit tube
+                const spread = (Math.random() * 2.5);
+                const offset = randomPerp.multiplyScalar(spread);
 
-                if (dist < threshold) {
-                    // Cull connections randomly to leave a web instead of a solid block
-                    if (Math.random() > 0.8) {
-                        lns.push(pts[i], pts[j]);
-                        lnCols.push(ptColors[i].r, ptColors[i].g, ptColors[i].b);
-                        lnCols.push(ptColors[j].r, ptColors[j].g, ptColors[j].b);
-                    }
+                // Create a segmented line for this strand
+                const segments = 12;
+                let prevPt = new THREE.Vector3().copy(satCenter).add(offset.clone().multiplyScalar(0.2));
+
+                for (let seg = 1; seg <= segments; seg++) {
+                    const fraction = seg / segments;
+                    // Interpolate position along the main path, adding the offset to create the tube, tapering near the ends
+                    const taper = Math.sin(fraction * Math.PI);
+                    const currentOffset = offset.clone().multiplyScalar(taper);
+
+                    const nextPt = new THREE.Vector3().lerpVectors(satCenter, masterCenter, fraction).add(currentOffset);
+
+                    // Add the line segment
+                    lns.push(prevPt, nextPt);
+
+                    // Color gradient from Satellite to Master
+                    const colorAtPrev = new THREE.Color().lerpColors(satColor, SERVERS[0].color, (seg - 1) / segments);
+                    const colorAtNext = new THREE.Color().lerpColors(satColor, SERVERS[0].color, fraction);
+
+                    lnCols.push(colorAtPrev.r, colorAtPrev.g, colorAtPrev.b);
+                    lnCols.push(colorAtNext.r, colorAtNext.g, colorAtNext.b);
+
+                    prevPt = nextPt;
                 }
             }
         }
+
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };
     }, []);
 
@@ -411,17 +410,20 @@ const NeuralNetwork = ({ tps, activeServer, setActiveServer }: { tps: number, ac
         return geo;
     }, [lines, lineColors]);
 
-    // Sparks (Live Transactions) logic
-    const NUM_SPARKS = 150;
+    // Sparks (Live Transactions) logic - Flying ALONG the strict conduits
+    const NUM_SPARKS = 250;
     const sparkData = useMemo(() => {
         return Array(NUM_SPARKS).fill(0).map(() => {
-            // lineIndex must be even
+            // Pick a random line segment to start
             const lineIndex = Math.floor(Math.random() * (lines.length / 2)) * 2;
             return {
                 start: lines[lineIndex] || new THREE.Vector3(),
                 end: lines[lineIndex + 1] || new THREE.Vector3(),
                 progress: Math.random(),
-                speed: 0.1 + Math.random() * 0.5
+                // Much faster speed for the demo burst effect
+                speed: 0.8 + Math.random() * 2.0,
+                // Assign to a random line chunk to follow
+                lineIdx: lineIndex
             };
         });
     }, [lines]);
@@ -430,44 +432,46 @@ const NeuralNetwork = ({ tps, activeServer, setActiveServer }: { tps: number, ac
     const dummy = useMemo(() => new THREE.Object3D(), []);
 
     useFrame((state, delta) => {
+        // Rotate the entire group slowly
         if (groupRef.current) {
-            groupRef.current.rotation.y += delta * 0.02;
+            groupRef.current.rotation.y += delta * 0.05;
         }
 
-        // Base network pulse
+        // Pulse the network based on TPS
         if (materialRef.current) {
-            const tpsSpike = Math.min(1.0, (tps - 40000) / 20000);
-            const pulse = (Math.sin(state.clock.elapsedTime * 3) + 1) / 2;
-            materialRef.current.opacity = 0.15 + (tpsSpike * 0.4) + (pulse * 0.1);
+            const intensity = Math.min(1, tps / 10000); // 10k TPS = max intensity
+            materialRef.current.opacity = 0.2 + (0.5 * intensity) + (Math.sin(state.clock.elapsedTime * 2) * 0.1);
         }
 
-        // Animate Sparks
+        // Move transaction sparks strictly along the segment lines
         if (sparksRef.current && lines.length > 0) {
-            const speedMultiplier = 1 + (tps - 40000) / 10000; // Sparks move faster on high TPS
+            sparkData.forEach((spark, i) => {
+                spark.progress += spark.speed * delta;
 
-            for (let i = 0; i < NUM_SPARKS; i++) {
-                const data = sparkData[i];
-                data.progress += delta * data.speed * speedMultiplier;
-
-                // Reset spark when it reaches end
-                if (data.progress >= 1) {
-                    data.progress = 0;
-                    const lineIndex = Math.floor(Math.random() * (lines.length / 2)) * 2;
-                    data.start = lines[lineIndex];
-                    data.end = lines[lineIndex + 1];
-                    data.speed = 0.1 + Math.random() * 0.5;
+                if (spark.progress > 1) {
+                    spark.progress = 0;
+                    // Move to the next connected segment, or restart if at the end of the conduit
+                    let nextIdx = spark.lineIdx + 2;
+                    // Simple heuristic: if the next segment starts where we ended, follow it
+                    if (lines[nextIdx] && lines[nextIdx].distanceToSquared(spark.end) < 0.1) {
+                        spark.lineIdx = nextIdx;
+                    } else {
+                        // Reset to a random new starting segment
+                        spark.lineIdx = Math.floor(Math.random() * (lines.length / 2)) * 2;
+                    }
+                    spark.start = lines[spark.lineIdx];
+                    spark.end = lines[spark.lineIdx + 1];
                 }
 
-                // Interpolate position
-                dummy.position.copy(data.start).lerp(data.end, data.progress);
-
+                // Smoothly route between nodes
+                dummy.position.lerpVectors(spark.start, spark.end, spark.progress);
                 // Scale spark based on progress (fade in/out effect)
-                const scale = Math.sin(data.progress * Math.PI) * 1.5;
+                const scale = Math.sin(spark.progress * Math.PI) * 1.5;
                 dummy.scale.set(scale, scale, scale);
 
                 dummy.updateMatrix();
-                sparksRef.current.setMatrixAt(i, dummy.matrix);
-            }
+                sparksRef.current!.setMatrixAt(i, dummy.matrix);
+            });
             sparksRef.current.instanceMatrix.needsUpdate = true;
         }
     });
@@ -567,85 +571,92 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         </>
                     )}
 
-                    {/* SERVER 1: NA CLUSTER 1 */}
+                    {/* SERVER 1: NORTH AMERICA - VIP KEEPER */}
                     {activeServer === 1 && (
                         <>
                             <OmniPanel position={[0, 8, 0]} width={800} scale={0.6}>
-                                <MassiveChart title="MEMPOOL SATURATION LEVEL" data={tpsHistory.map((v: number) => Math.max(0, v * 1.5 - 20000 + Math.random() * 5000))} color="#f43f5e" spike="SEVERE SATURATION" />
+                                <MassiveChart title="NY-01 TX INJECTION RATE (KEEPER VIP)" data={tpsHistory.map((v: number) => Math.max(0, v * 0.8 + Math.random() * 5000))} color="#06b6d4" spike="BURST FIRE ENGAGED" />
                             </OmniPanel>
-                            <OmniPanel position={[-8, 0, 0]} width={450} scale={0.5}>
-                                <CPUHeatmap cores={d.cpuCores} />
+                            <OmniPanel position={[-8, 0, 0]} width={450} scale={0.5} title="NY-01 THREAT VECTOR">
+                                <div className="flex flex-col gap-4 font-mono text-xs">
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">MODE</span><span className="text-cyan-400">SNIPER BATCHING</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">GOSSIP INJECTION</span><span className="text-white">DIRECT (PORT 37330)</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-2"><span className="text-white/40">RUST WORKERS</span><span className="text-emerald-400">200 / 200</span></div>
+                                    <div className="flex justify-between"><span className="text-white/40">CROSS-SHARD TARGET</span><span className="text-rose-400">SHARD 2 OVERLOAD</span></div>
+                                </div>
                             </OmniPanel>
                             <OmniPanel position={[8, 0, 0]} width={450} scale={0.5}>
-                                <TxFeed txSigned={d.tps * 2} />
+                                <TxFeed txSigned={d.tps * 1.5} />
                             </OmniPanel>
                         </>
                     )}
 
-                    {/* SERVER 2: NA CLUSTER 2 */}
+                    {/* SERVER 2: SOUTH AMERICA - FALLBACK */}
                     {activeServer === 2 && (
                         <>
-                            <OmniPanel position={[0, 5, 0]} width={400} scale={0.6} title="Gas Infrastructure">
-                                <GasRing gasUsed={d.gasUsed} gasLimit={d.gasLimit} />
+                            <OmniPanel position={[0, 5, 0]} width={400} scale={0.6} title="SA-01 STATE BLOAT GENERATOR">
+                                <div className="p-4 text-center">
+                                    <div className="text-rose-500 font-bold text-2xl mb-2 animate-pulse">DEPLOYED</div>
+                                    <div className="text-xs text-white/50 tracking-widest">PAYLOAD COMPRESSION: OFF</div>
+                                </div>
                             </OmniPanel>
-                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Protocol Vitals">
+                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Protocol Vitals (SA-01)">
                                 <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
-                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">{d.ramUsed.toFixed(1)} GB</span></div>
-                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">{d.networkBw.toFixed(1)} Gbps</span></div>
-                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">{d.diskIO.toFixed(1)} MB/s</span></div>
-                                    <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">100%</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-white">58.4 GB / 64 GB</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK TX</span><span className="text-emerald-400">2.8 Gbps</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">850.2 MB/s</span></div>
                                 </div>
                             </OmniPanel>
                         </>
                     )}
 
-                    {/* SERVER 3: EU CLUSTER 1 */}
+                    {/* SERVER 3: EU - THE BEAST (FRANKFURT) */}
                     {activeServer === 3 && (
                         <>
-                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="LIVE FINALITY" value={d.finality.toFixed(1)} unit="ms" color="#22d3ee" /></OmniPanel>
-                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="NETWORK SUCCESS" value={d.successRate.toFixed(2)} unit="%" color="#34d399" /></OmniPanel>
-                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="TX SIGNED" value={d.txSigned.toLocaleString()} color="#34d399" /></OmniPanel>
-                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="ACTIVE NODES" value={d.activeNodes} unit="/150" color="#f8fafc" /></OmniPanel>
+                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="P2P PEERS" value="482" unit="NODES" color="#eab308" /></OmniPanel>
+                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="MEMPOOL REJECTS" value="0.01" unit="%" color="#34d399" /></OmniPanel>
+                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="LATENCY RTT" value="5.2" unit="ms" color="#34d399" /></OmniPanel>
+                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="SIGNATURES/SEC" value={(d.tps * 0.4).toLocaleString()} color="#f8fafc" /></OmniPanel>
                         </>
                     )}
 
-                    {/* SERVER 4: EU CLUSTER 2 */}
+                    {/* SERVER 4: EU - SAURON RING GUARDIAN (LONDON) */}
                     {activeServer === 4 && (
                         <>
-                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="AVERAGE GAS" value={d.avgGasPrice.toFixed(4)} unit="Ξ" color="#e879f9" /></OmniPanel>
-                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#c084fc" /></OmniPanel>
-                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#fbbf24" /></OmniPanel>
-                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="PENDING POOL" value={d.pendingPool.toLocaleString()} color="#f43f5e" /></OmniPanel>
+                            <OmniPanel position={[-5, 5, 0]} width={350} scale={0.7}><StatCard label="GUARDIAN STATUS" value={"SYNCED"} color="#10b981" /></OmniPanel>
+                            <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
+                            <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
+                            <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="THREAT DETECTED" value={"NONE"} color="#10b981" /></OmniPanel>
                         </>
                     )}
 
-                    {/* SERVER 5: ASIA CLUSTER 1 */}
+                    {/* SERVER 5: ASIA - SINGAPORE ROUTER */}
                     {activeServer === 5 && (
                         <>
                             <OmniPanel position={[0, 6, 0]} width={600} scale={0.6}>
-                                <MassiveChart title="SHARD 1 THROUGHPUT" data={tpsHistory.map((v: number) => Math.max(0, v * 0.3 + Math.random() * 2000))} color="#10b981" spike="STABLE" />
+                                <MassiveChart title="AS-01 BATCH PROPAGATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.4 + Math.random() * 2000))} color="#d946ef" spike="STABLE ASSAULT" />
                             </OmniPanel>
-                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Shard 1 Vitals">
+                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="AS-01 Analytics">
                                 <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
-                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-emerald-400">11.1 GB</span></div>
-                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">0.9 Gbps</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">CPU UTILIZATION</span><span className="text-fuchsia-400">92%</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK DROPS</span><span className="text-emerald-400">0.00%</span></div>
                                     <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">100%</span></div>
                                 </div>
                             </OmniPanel>
                         </>
                     )}
 
-                    {/* SERVER 6: ASIA CLUSTER 2 */}
+                    {/* SERVER 6: ASIA - TOKYO OBSERVER */}
                     {activeServer === 6 && (
                         <>
                             <OmniPanel position={[0, 6, 0]} width={600} scale={0.6}>
-                                <MassiveChart title="SHARD 2 THROUGHPUT" data={tpsHistory.map((v: number) => Math.max(0, v * 0.3 + Math.random() * 2000))} color="#8b5cf6" spike="STABLE" />
+                                <MassiveChart title="AS-02 SHARD 0 INFILTRATION" data={tpsHistory.map((v: number) => Math.max(0, v * 0.5 + Math.random() * 2000))} color="#8b5cf6" spike="MAINTAINING PRESENCE" />
                             </OmniPanel>
-                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="Shard 2 Vitals">
+                            <OmniPanel position={[0, -6, 0]} width={400} scale={0.6} title="AS-02 Vitals">
                                 <div className="flex flex-col justify-between flex-1 font-mono text-sm font-bold gap-4">
-                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">MEMORY</span><span className="text-purple-400">14.1 GB</span></div>
-                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">NETWORK</span><span className="text-emerald-400">1.2 Gbps</span></div>
-                                    <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">99.9%</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">ACTIVE CONNECTIONS</span><span className="text-purple-400">14,102</span></div>
+                                    <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">BLOCKED IPS</span><span className="text-white">0</span></div>
+                                    <div className="flex justify-between pt-3"><span className="text-white/40">PROXY ROTATION</span><span className="text-emerald-400">ACTIVE</span></div>
                                 </div>
                             </OmniPanel>
                         </>

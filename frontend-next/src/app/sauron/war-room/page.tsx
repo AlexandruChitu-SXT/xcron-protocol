@@ -588,6 +588,9 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                             <OmniPanel position={[8, 0, 0]} width={450} scale={0.5}>
                                 <TxFeed txSigned={d.tps * 1.5} />
                             </OmniPanel>
+                            {/* New Sensors */}
+                            <OmniPanel position={[0, -6, 0]} width={350} scale={0.5}><StatCard label="MEM POOL PIPELINE" value={(d.pendingPool * 0.4).toLocaleString()} color="#fcd34d" /></OmniPanel>
+                            <OmniPanel position={[-6, 6, 0]} width={300} scale={0.4}><StatCard label="TCP CONNECTIONS" value="12,482" unit="ESTABLISHED" color="#22d3ee" /></OmniPanel>
                         </>
                     )}
 
@@ -607,6 +610,14 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                     <div className="flex justify-between border-b border-white/[0.05] pb-3"><span className="text-white/40">DISK I/O</span><span className="text-white">850.2 MB/s</span></div>
                                 </div>
                             </OmniPanel>
+                            {/* New Sensors */}
+                            <OmniPanel position={[6, 0, 0]} width={400} scale={0.5}>
+                                <div className="flex flex-col gap-2 font-mono text-xs w-full h-full p-2">
+                                    <div className="text-white/40 font-bold mb-2">THERMAL MATRIX</div>
+                                    <CPUHeatmap cores={d.cpuCores} />
+                                </div>
+                            </OmniPanel>
+                            <OmniPanel position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="BLOCK PROPAGATION" value="3.1" unit="ms" color="#fbbf24" /></OmniPanel>
                         </>
                     )}
 
@@ -617,6 +628,10 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                             <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="MEMPOOL REJECTS" value="0.01" unit="%" color="#34d399" /></OmniPanel>
                             <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="LATENCY RTT" value="5.2" unit="ms" color="#34d399" /></OmniPanel>
                             <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="SIGNATURES/SEC" value={(d.tps * 0.4).toLocaleString()} color="#f8fafc" /></OmniPanel>
+                            <OmniPanel position={[0, -8, 0]} width={400} scale={0.5} title="EU-01 CORE PIPELINE"><PropagationBars tick={tick} /></OmniPanel>
+                            <OmniPanel position={[0, 8, 0]} width={600} scale={0.5}>
+                                <MassiveChart title="EU-01 OUTBOUND BURST" data={tpsHistory.map((v: number) => Math.max(0, v * 1.1))} color="#fcd34d" spike="BEAST UNLEASHED" />
+                            </OmniPanel>
                         </>
                     )}
 
@@ -627,6 +642,13 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                             <OmniPanel position={[5, 5, 0]} width={350} scale={0.7}><StatCard label="DB LATENCY" value={d.dbLatency.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
                             <OmniPanel position={[-5, -5, 0]} width={350} scale={0.7}><StatCard label="KEEPER PING" value={d.keeperPing.toFixed(1)} unit="ms" color="#10b981" /></OmniPanel>
                             <OmniPanel position={[5, -5, 0]} width={350} scale={0.7}><StatCard label="THREAT DETECTED" value={"NONE"} color="#10b981" /></OmniPanel>
+                            <OmniPanel position={[0, 7, 0]} width={400} scale={0.6} title="GUARDIAN SENSORS">
+                                <div className="flex flex-col gap-2 text-xs font-mono p-2">
+                                    <div className="flex justify-between text-white/60"><span>PORT 443 TCP</span><span className="text-emerald-400">SECURE DUPLEX</span></div>
+                                    <div className="flex justify-between text-white/60"><span>DDoS PROTECTION</span><span className="text-cyan-400">CLOUDFLARE X</span></div>
+                                    <div className="flex justify-between text-white/60"><span>DATA INTEGRITY</span><span className="text-emerald-400">VERIFIED SHA-256</span></div>
+                                </div>
+                            </OmniPanel>
                         </>
                     )}
 
@@ -643,6 +665,8 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                     <div className="flex justify-between pt-3"><span className="text-white/40">UPTIME</span><span className="text-cyan-400">100%</span></div>
                                 </div>
                             </OmniPanel>
+                            <OmniPanel position={[-6, 0, 0]} width={300} scale={0.5}><StatCard label="ROUTING CACHE" value="4.2" unit="GB / 8GB" color="#d946ef" /></OmniPanel>
+                            <OmniPanel position={[6, 0, 0]} width={300} scale={0.5}><StatCard label="PACKET LOSS" value="0.0001" unit="%" color="#10b981" /></OmniPanel>
                         </>
                     )}
 
@@ -659,6 +683,8 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                     <div className="flex justify-between pt-3"><span className="text-white/40">PROXY ROTATION</span><span className="text-emerald-400">ACTIVE</span></div>
                                 </div>
                             </OmniPanel>
+                            <OmniPanel position={[-7, 0, 0]} width={400} scale={0.5}><TxFeed txSigned={d.tps * 0.5} /></OmniPanel>
+                            <OmniPanel position={[7, 0, 0]} width={350} scale={0.5}><TPSGauge tps={d.tps * 0.5} history={tpsHistory} /></OmniPanel>
                         </>
                     )}
                 </group>
@@ -697,15 +723,15 @@ export default function WarRoom() {
                         <div className="w-[2px] h-16 bg-gradient-to-b from-black to-zinc-600 shadow-xl" />
                     </div>
                     {/* Sign Box */}
-                    <div className="relative border-y-2 border-zinc-800 bg-black/60 backdrop-blur-md px-8 py-3 rounded-sm shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 flex flex-col items-center border-x border-x-zinc-900/50">
+                    <div className="relative border border-cyan-900/40 bg-black/80 px-8 py-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 flex flex-col items-center">
                         <h1
                             className="text-3xl font-black tracking-tight"
                             style={{
-                                color: '#e0f2fe', // slightly tinted white
-                                textShadow: '0 0 2px #fff, 0 0 4px #fff, 0 0 10px #06b6d4, 0 0 20px #06b6d4, 0 0 40px #a855f7' // Reduced intensity
+                                color: '#ffffff', // pure white text
+                                textShadow: '0 0 2px #fff, 0 0 8px #06b6d4, 0 0 15px #06b6d4, 0 0 30px #a855f7, 0 0 60px #a855f7' // Ultra bright clean neon glow
                             }}
                         >
-                            XCRON BATTLE OF NODES <span style={{ color: '#ffe4e6', textShadow: '0 0 2px #fff, 0 0 4px #fff, 0 0 10px #a855f7, 0 0 20px #f43f5e, 0 0 40px #f43f5e' }}>SUPERNOVA &apos;26</span>
+                            XCRON BATTLE OF NODES <span style={{ color: '#ffffff', textShadow: '0 0 2px #fff, 0 0 8px #f43f5e, 0 0 15px #f43f5e, 0 0 30px #9333ea, 0 0 60px #9333ea' }}>SUPERNOVA &apos;26</span>
                         </h1>
                         <div className="text-[10px] font-mono tracking-[0.4em] font-bold text-cyan-500/80 uppercase mt-1">
                             Global Command WebGL Matrix

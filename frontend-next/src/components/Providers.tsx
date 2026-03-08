@@ -7,18 +7,23 @@ import { NetworkBadge } from "@/components/NetworkBadge";
 import { Analytics } from '@vercel/analytics/react';
 import { ReactNode } from 'react';
 
+import { usePathname } from 'next/navigation';
+
 function ExecutionNotifier() {
     useExecutionNotifier();
     return null;
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname() || '';
+    const isSauron = pathname.startsWith('/sauron');
+
     return (
         <WalletProvider>
             {children}
             <ExecutionNotifier />
-            <AiChat />
-            <Analytics />
+            {!isSauron && <AiChat />}
+            {!isSauron && <Analytics />}
         </WalletProvider>
     );
 }

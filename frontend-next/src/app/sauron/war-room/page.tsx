@@ -650,6 +650,10 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             {/* The 7 EXPLICIT SERVERS ONLY (No tiny noise dots) */}
             {SERVERS.map((server, i) => {
                 const isActive = activeServers.includes(i);
+                // Rotate cubes to give an isometric diamond/cyberpunk feel
+                const cubeRotation: [number, number, number] = [Math.PI / 4, Math.PI / 4, 0];
+                const boxSize = server.size * 1.5;
+
                 return (
                     <mesh
                         key={`server-${i}`}
@@ -664,13 +668,13 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                         onPointerOut={(e) => { document.body.style.cursor = 'auto'; }}
                     >
                         {/* Outer Glowing Shell */}
-                        <mesh scale={isActive ? 1.5 : 1}>
-                            <sphereGeometry args={[server.size, 24, 24]} />
+                        <mesh scale={isActive ? 1.5 : 1} rotation={cubeRotation}>
+                            <boxGeometry args={[boxSize, boxSize, boxSize]} />
                             <meshBasicMaterial color={server.color} transparent opacity={isActive ? 0.9 : 0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
                         </mesh>
                         {/* Inner Solid Core */}
-                        <mesh position={[0, 0, 0]}>
-                            <sphereGeometry args={[server.size * 0.4, 12, 12]} />
+                        <mesh position={[0, 0, 0]} rotation={cubeRotation}>
+                            <boxGeometry args={[boxSize * 0.4, boxSize * 0.4, boxSize * 0.4]} />
                             <meshBasicMaterial color="#ffffff" opacity={isActive ? 1.0 : 0.7} transparent />
                         </mesh>
                     </mesh>

@@ -516,10 +516,10 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         const lns: THREE.Vector3[] = [];
         const lnCols: number[] = [];
 
-        // 1. Generate strictly defined, dense conduits layers
+        // 1. Generate conduit lines creating the petal-shaped star arms
         const masterCenter = SERVERS[0].center;
-        const conduitLinesPerSatellite = 20; // Reduced for brutal performance optimization
-        const conduitLinesPerOuter = 10;
+        const conduitLinesPerSatellite = 50; // Thick sweeping petals for inner star
+        const conduitLinesPerOuter = 15; // Lighter threads for ecosystem ring
 
         // Helper function to draw a thick, jittered conduit between two exact nodes
         const createConduit = (sourceIdx: number, targetIdx: number, numLines: number, spreadMultiplier: number) => {
@@ -566,7 +566,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                 const spread = (Math.random() * spreadMultiplier);
                 const offset = randomPerp.clone().multiplyScalar(spread);
 
-                const segments = 15;
+                const segments = 8;
                 let prevPt = new THREE.Vector3().copy(startPoint);
 
                 for (let seg = 1; seg <= segments; seg++) {
@@ -591,15 +591,15 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             }
         };
 
-        // LAYER 1: Inner Satellites (1-6) → Master Core (0)
+        // LAYER 1: Inner Satellites (1-6) → Master Core (0) — Thick petal arms
         for (let i = 1; i <= 6; i++) {
-            createConduit(i, 0, conduitLinesPerSatellite, 8.0);
+            createConduit(i, 0, conduitLinesPerSatellite, 20.0);
         }
 
-        // LAYER 2: Ecosystem Nodes (7-14) → Nearest Inner Satellite (1-6)
+        // LAYER 2: Ecosystem Nodes (7-14) → Nearest Inner Satellite (1-6) — Thinner threads
         for (let i = 7; i < SERVERS.length; i++) {
             const nearestSat = ((i - 7) % 6) + 1;
-            createConduit(i, nearestSat, conduitLinesPerOuter, 6.0);
+            createConduit(i, nearestSat, conduitLinesPerOuter, 12.0);
         }
 
 

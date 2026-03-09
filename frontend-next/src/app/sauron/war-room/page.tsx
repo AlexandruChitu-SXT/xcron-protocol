@@ -475,7 +475,7 @@ const ECOSYSTEM_PROJECTS = [
 
 const SERVERS = [
     // 0: Master Core (MultiversX / XCron center)
-    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 0.9 },
+    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 3.0 },
 
     // 1-6: Inner Satellite Ring (flat hexagon on XY plane)
     ...Array(6).fill(0).map((_, i) => ({
@@ -487,7 +487,7 @@ const SERVERS = [
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
         hex: ["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i],
         count: 20,
-        size: 0.5
+        size: 4.0
     })),
 
     // 7-14: Ecosystem Projects (8 Corners of the Outer Cube)
@@ -505,7 +505,7 @@ const SERVERS = [
         color: new THREE.Color(ECOSYSTEM_PROJECTS[item.idx].color),
         hex: ECOSYSTEM_PROJECTS[item.idx].color,
         count: 10,
-        size: 0.45
+        size: 5.0
     }))
 ];
 
@@ -726,7 +726,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                         onPointerOver={(e) => { document.body.style.cursor = 'pointer'; }}
                         onPointerOut={(e) => { document.body.style.cursor = 'auto'; }}
                     >
-                        <cylinderGeometry args={[4, 4, 1, 8]} />
+                        <cylinderGeometry args={[15, 15, 1, 8]} />
                         <meshBasicMaterial visible={false} />
                     </mesh>
                 );
@@ -768,7 +768,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
             {/* Transaction Sparks (InstancedMesh for performance) */}
             <instancedMesh ref={sparksRef} args={useMemo(() => [null as any, null as any, NUM_SPARKS], [NUM_SPARKS])}>
-                <sphereGeometry args={useMemo(() => [0.035, 8, 8], [])} />
+                <sphereGeometry args={useMemo(() => [0.8, 6, 6], [])} />
                 <meshBasicMaterial color="#ffffff" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} />
             </instancedMesh>
         </group>

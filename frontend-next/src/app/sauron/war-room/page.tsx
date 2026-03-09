@@ -460,7 +460,7 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // ═════════════════════════════════════════════════════════════════════
 const SERVERS = [
     // 0: Master Protocol Core (Eye of Sauron - Massive, Off-center)
-    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 0.6 },
+    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 4.0 }, // Master is massive
     // 1-6: Satellite Region Clusters (Expanded Hexagon)
     ...Array(6).fill(0).map((_, i) => ({
         center: new THREE.Vector3(
@@ -471,7 +471,7 @@ const SERVERS = [
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
         hex: ["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i],
         count: 20,
-        size: 0.35 // Smaller nodes
+        size: 2.5 // Significantly larger nodes so cables don't look like they end in nothing
     }))
 ];
 
@@ -988,7 +988,7 @@ export default function WarRoom() {
 
             {/* 3D CANVAS BOARD WITH CAMERA CONTROLS */}
             <div className="absolute inset-0 z-0">
-                <Canvas camera={{ position: [0, 0, 16], fov: 60 }}>
+                <Canvas camera={{ position: [0, 0, 140], fov: 60 }}>
                     <OrbitControls
                         enableZoom={true}
                         enablePan={true}

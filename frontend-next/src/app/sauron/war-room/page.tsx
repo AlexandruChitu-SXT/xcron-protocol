@@ -461,16 +461,16 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 const INNER_R = 120; // Inner satellite hex ring radius (massive distance)
 const OUTER_R = 200; // Outer ecosystem ring radius
 
-// Ecosystem project metadata (name + brand color)
+// Blockchain ecosystem metadata (ordered by market cap)
 const ECOSYSTEM_PROJECTS = [
-    { name: "xExchange", color: "#01f2f0", tvl: "$142M", type: "DEX" },
-    { name: "Hatom", color: "#facc15", tvl: "$98M", type: "LENDING" },
-    { name: "AshSwap", color: "#f472b6", tvl: "$24M", type: "STABLE DEX" },
-    { name: "xMoney", color: "#22c55e", tvl: "—", type: "PAYMENTS" },
-    { name: "OneDex", color: "#c084fc", tvl: "$8M", type: "DEX" },
-    { name: "Itheum", color: "#f43f5e", tvl: "—", type: "DATA NFT" },
-    { name: "ZoidPay", color: "#3b82f6", tvl: "—", type: "CRYPTO CARD" },
-    { name: "BwareLabs", color: "#a3e635", tvl: "—", type: "INFRA / RPC" },
+    { name: "Bitcoin", color: "#f7931a", mcap: "$1.2T", tps: "7", consensus: "PoW" },
+    { name: "Ethereum", color: "#627eea", mcap: "$380B", tps: "15", consensus: "PoS" },
+    { name: "Solana", color: "#9945ff", mcap: "$65B", tps: "65,000", consensus: "PoH" },
+    { name: "BNB Chain", color: "#f0b90b", mcap: "$85B", tps: "2,200", consensus: "PoSA" },
+    { name: "Cardano", color: "#0033ad", mcap: "$24B", tps: "250", consensus: "Ouroboros" },
+    { name: "Avalanche", color: "#e84142", mcap: "$14B", tps: "4,500", consensus: "Snowball" },
+    { name: "Polkadot", color: "#e6007a", mcap: "$10B", tps: "1,000", consensus: "NPoS" },
+    { name: "Polygon", color: "#8247e5", mcap: "$8B", tps: "7,000", consensus: "PoS" },
 ];
 
 const SERVERS = [
@@ -601,7 +601,11 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             createConduit(i, 0, conduitLinesPerSatellite, 8.0);
         }
 
-        // LAYER 2: Ecosystem Corners (7-14) → Nearest Inner Satellite
+        // LAYER 1.5: Inner Hexagon Edges (satellite to adjacent satellite)
+        const hexEdges = [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]];
+        hexEdges.forEach(([a, b]) => createConduit(a, b, 10, 4.0));
+
+        // LAYER 2: Cube Corners (7-14) → Nearest Inner Satellite
         for (let i = 7; i < SERVERS.length; i++) {
             const nearestSat = ((i - 7) % 6) + 1;
             createConduit(i, nearestSat, conduitLinesPerOuter, 5.0);
@@ -1001,16 +1005,16 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                     <OmniPanel color={SERVERS[idx].hex} position={[0.0, 8.0, 0]} width={350} scale={1.0} title={proj.name.toUpperCase()}>
                                         <div className="flex flex-col gap-3 font-mono text-xs bg-[#050505]/95 p-4 rounded-lg border border-white/10">
                                             <div className="flex justify-between border-b border-white/[0.05] pb-2">
-                                                <span className="text-white">TYPE</span>
-                                                <span style={{ color: proj.color }} className="font-bold">{proj.type}</span>
+                                                <span className="text-white">MARKET CAP</span>
+                                                <span style={{ color: proj.color }} className="font-bold">{proj.mcap}</span>
                                             </div>
                                             <div className="flex justify-between border-b border-white/[0.05] pb-2">
-                                                <span className="text-white">TVL</span>
-                                                <span className="text-white font-bold">{proj.tvl}</span>
+                                                <span className="text-white">MAX TPS</span>
+                                                <span className="text-white font-bold">{proj.tps}</span>
                                             </div>
                                             <div className="flex justify-between border-b border-white/[0.05] pb-2">
-                                                <span className="text-white">CHAIN</span>
-                                                <span className="text-cyan-400">MULTIVERSX</span>
+                                                <span className="text-white">CONSENSUS</span>
+                                                <span className="text-cyan-400">{proj.consensus}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-white">STATUS</span>

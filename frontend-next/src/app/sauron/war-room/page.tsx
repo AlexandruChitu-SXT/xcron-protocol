@@ -517,8 +517,8 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
         // 1. Generate strictly defined, dense conduits layers
         const masterCenter = SERVERS[0].center;
-        const conduitLinesPerSatellite = 80; // Massive thick bundles
-        const conduitLinesPerOuter = 40; // Medium bundles for outer ring 
+        const conduitLinesPerSatellite = 20; // Reduced for brutal performance optimization
+        const conduitLinesPerOuter = 10;
 
         // Helper function to draw a thick, jittered conduit between two exact nodes
         const createConduit = (sourceIdx: number, targetIdx: number, numLines: number, spreadMultiplier: number) => {
@@ -603,7 +603,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             [3, 5], [3, 6],
             [4, 5], [4, 6]
         ];
-        innerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 10, 15.0));
+        innerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 5, 10.0)); // Cleaned up density
 
         // LAYER 3: Outer Corners (7-14) to Inner Faces (1-6)
         const faceToCorner = [
@@ -614,7 +614,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             [5, 7], [5, 8], [5, 9], [5, 10],  // +Z Face (5) connects to +Z Corners
             [6, 11], [6, 12], [6, 13], [6, 14] // -Z Face (6) connects to -Z Corners
         ];
-        faceToCorner.forEach(([face, corner]) => createConduit(corner, face, 12, 20.0));
+        faceToCorner.forEach(([face, corner]) => createConduit(corner, face, 5, 14.0)); // Cleaned up density
 
         // LAYER 4: Outer Corners (7-14) to each other (Outer Mega-Cube edges)
         const outerEdges = [
@@ -624,7 +624,8 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             [11, 12], [11, 13],
             [10, 14], [12, 14], [13, 14]
         ];
-        outerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 16, 25.0));
+        outerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 8, 18.0)); // Cleaned up density
+
 
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };
     }, []);
@@ -636,7 +637,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     }, [lines, lineColors]);
 
     // Sparks (Live Transactions) logic - Flying ALONG the strict conduits
-    const NUM_SPARKS = 400; // Increased sparks
+    const NUM_SPARKS = 150; // Optimized spark particles to prevent WebGL GPU stalling
     const sparkData = useMemo(() => {
         return Array(NUM_SPARKS).fill(0).map(() => {
             // Pick a random line segment to start
@@ -672,15 +673,15 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                     spark.progress = 0;
                     // Move to the next connected segment, or restart if at the end of the conduit
                     let nextIdx = spark.lineIdx + 2;
-                    // Simple heuristic: if the next segment starts where we ended, follow it
-                    if (lines[nextIdx] && Math.abs(lines[nextIdx].x - spark.end.x) < 0.1) {
+                    // Strict bounds check to prevent silent unhandled exceptions crashing the React 60fps render loop
+                    if (nextIdx < lines.length - 1 && lines[nextIdx] && Math.abs(lines[nextIdx].x - spark.end.x) < 0.1) {
                         spark.lineIdx = nextIdx;
                     } else {
                         // Reset to a random new starting segment
-                        spark.lineIdx = Math.floor(Math.random() * (lines.length / 2)) * 2;
+                        spark.lineIdx = Math.floor(Math.random() * ((lines.length - 2) / 2)) * 2;
                     }
-                    spark.start = lines[spark.lineIdx];
-                    spark.end = lines[spark.lineIdx + 1];
+                    spark.start = lines[spark.lineIdx] || new THREE.Vector3();
+                    spark.end = lines[spark.lineIdx + 1] || new THREE.Vector3();
                 }
 
                 // Smoothly route between nodes

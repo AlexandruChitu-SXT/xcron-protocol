@@ -507,62 +507,72 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         const lns: THREE.Vector3[] = [];
         const lnCols: number[] = [];
 
-        // 1. Generate strictly defined, dense conduits from each Satellite to the Master Core
+        // 1. Generate strictly defined, dense conduits layers
         const masterCenter = SERVERS[0].center;
-        const conduitLinesPerSatellite = 80; // Massive thick bundles 
+        const conduitLinesPerSatellite = 80; // Massive thick bundles
+        const conduitLinesPerOuter = 40; // Medium bundles for outer ring 
 
-        for (let i = 1; i < SERVERS.length; i++) {
-            const satCenter = SERVERS[i].center;
-            const satColor = SERVERS[i].color;
-            const boxRadiusSat = SERVERS[i].size * 1.5;
-            const boxRadiusMaster = SERVERS[0].size * 1.5;
+        // Helper function to draw a thick, jittered conduit between two exact nodes
+        const createConduit = (sourceIdx: number, targetIdx: number, numLines: number, spreadMultiplier: number) => {
+            const sourceInfo = SERVERS[sourceIdx];
+            const targetInfo = SERVERS[targetIdx];
+            const sourceCenter = sourceInfo.center;
+            const targetCenter = targetInfo.center;
 
-            // Add the server points themselves to the strict points list
-            if (i === 1) {
-                pts.push(masterCenter);
-                ptColors.push(SERVERS[0].color);
+            // To prevent lines from starting inside or far away from the cube, 
+            // we spawn them strictly on the surface sphere of the cube.
+            // Box size is server.size * 1.5. Distance from center to corner is roughly * 1.732 of half-size.
+            // Using a simple radius multiplier to hit the visual surface boundary:
+            const sourceRadius = sourceInfo.size * 1.2;
+            const targetRadius = targetInfo.size * 1.2;
+
+            pts.push(sourceCenter);
+            ptColors.push(sourceInfo.color);
+            if (targetIdx !== 0 && !pts.includes(targetCenter)) {
+                pts.push(targetCenter);
+                ptColors.push(targetInfo.color);
             }
-            pts.push(satCenter);
-            ptColors.push(satColor);
 
-            // Generate bundled, slightly jittered parallel lines making up the conduit
-            for (let c = 0; c < conduitLinesPerSatellite; c++) {
-                // Determine a slight random offset vector perpendicular to the main direction
-                const dir = new THREE.Vector3().subVectors(masterCenter, satCenter).normalize();
+            for (let c = 0; c < numLines; c++) {
+                // Direction of the main tube
+                const dir = new THREE.Vector3().subVectors(targetCenter, sourceCenter).normalize();
 
-                // Pure chaos offset to hit the corners of the isometric cubes
+                // Surface emission points (random point on a sphere slightly larger than the cube)
+                const randomSourceSurface = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2
+                ).normalize().multiplyScalar(sourceRadius);
+
+                const randomTargetSurface = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2
+                ).normalize().multiplyScalar(targetRadius);
+
+                const startPoint = new THREE.Vector3().copy(sourceCenter).add(randomSourceSurface);
+                const endPoint = new THREE.Vector3().copy(targetCenter).add(randomTargetSurface);
+
+                // Conduit tube spread (chaos in the middle)
                 const randomPerp = new THREE.Vector3(
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2
-                ).normalize();
+                    (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2
+                ).cross(dir).normalize();
 
-                // Radius of the huge conduit tube (spread far out like optic fiber cables)
-                const spread = (Math.random() * 30.0);
+                const spread = (Math.random() * spreadMultiplier);
                 const offset = randomPerp.clone().multiplyScalar(spread);
 
-                // Offset the start and end so they don't clip through the center of the solid cube
-                const startPoint = new THREE.Vector3().copy(satCenter).add(randomPerp.clone().multiplyScalar(boxRadiusSat));
-                const endPoint = new THREE.Vector3().copy(masterCenter).add(randomPerp.clone().multiplyScalar(boxRadiusMaster));
-
-                // Create a segmented line for this strand
-                const segments = 12;
-                let prevPt = new THREE.Vector3().copy(startPoint).add(offset.clone().multiplyScalar(0.2));
+                const segments = 15;
+                let prevPt = new THREE.Vector3().copy(startPoint);
 
                 for (let seg = 1; seg <= segments; seg++) {
                     const fraction = seg / segments;
-                    // Interpolate position along the main path, adding the offset to create the tube, tapering near the ends
+                    // Tapering to 0 at the start and end so it connects cleanly to the surface
                     const taper = Math.sin(fraction * Math.PI);
                     const currentOffset = offset.clone().multiplyScalar(taper);
 
                     const nextPt = new THREE.Vector3().lerpVectors(startPoint, endPoint, fraction).add(currentOffset);
 
-                    // Add the line segment
                     lns.push(prevPt, nextPt);
 
-                    // Color gradient from Satellite to Master
-                    const colorAtPrev = new THREE.Color().lerpColors(satColor, SERVERS[0].color, (seg - 1) / segments);
-                    const colorAtNext = new THREE.Color().lerpColors(satColor, SERVERS[0].color, fraction);
+                    // Gradient color mixing
+                    const colorAtPrev = new THREE.Color().lerpColors(sourceInfo.color, targetInfo.color, (seg - 1) / segments);
+                    const colorAtNext = new THREE.Color().lerpColors(sourceInfo.color, targetInfo.color, fraction);
 
                     lnCols.push(colorAtPrev.r, colorAtPrev.g, colorAtPrev.b);
                     lnCols.push(colorAtNext.r, colorAtNext.g, colorAtNext.b);
@@ -570,6 +580,20 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                     prevPt = nextPt;
                 }
             }
+        };
+
+        // LAYER 1: Core Satellites (1-6) mapping to Master (0)
+        for (let i = 1; i <= 6; i++) {
+            createConduit(i, 0, conduitLinesPerSatellite, 40.0);
+        }
+
+        // LAYER 2: Ecosystem Nodes (7-13) mapping to their nearest Sub-Satellite (1-6)
+        // Creating a hierarchical "Neural Arm" structure
+        for (let i = 7; i < SERVERS.length; i++) {
+            // Map roughly to specific satellites to create distinct clustered arms
+            // 7 goes to 1, 8 goes to 2, etc. Wrap around for 13.
+            const targetSatellite = ((i - 7) % 6) + 1;
+            createConduit(i, targetSatellite, conduitLinesPerOuter, 25.0);
         }
 
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };

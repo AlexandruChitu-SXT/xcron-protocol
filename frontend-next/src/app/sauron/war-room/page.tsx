@@ -1222,6 +1222,8 @@ export default function WarRoom() {
                         minDistance={2}
                         autoRotate={true}
                         autoRotateSpeed={0.3}
+                        minPolarAngle={0} // Allow looking from straight up
+                        maxPolarAngle={Math.PI} // Allow looking from straight down
                         makeDefault
                     />
                     <MatrixScene d={d} tpsHistory={tpsHistory} tick={tick} />

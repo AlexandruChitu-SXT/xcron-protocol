@@ -458,36 +458,43 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // ═════════════════════════════════════════════════════════════════════
 // COMPONENT: 3D CENTRAL & 6 SATELLITE NEURAL SWARM (Clean Circuitry)
 // ═════════════════════════════════════════════════════════════════════
+const cx = -12;
+const cy = -2;
+const cz = -8;
+const R = 110; // Inner cube face distance
+const D = 220; // Outer cube corner distance
+
 const SERVERS = [
-    // 0: Master Protocol Core (Eye of Sauron - Massive, Off-center)
-    { center: new THREE.Vector3(-12, -2, -8), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 4.0 }, // Master is massive
-    // 1-6: Satellite Region Clusters (Expanded Hexagon)
-    ...Array(6).fill(0).map((_, i) => ({
-        center: new THREE.Vector3(
-            -12 + Math.cos(i * Math.PI / 3) * 120, // Pushed inner satellites to 120
-            -2 + (Math.random() - 0.5) * 40,
-            -8 + Math.sin(i * Math.PI / 3) * 120
-        ),
+    // 0: Master Protocol Core (Center of the 3D Cube)
+    { center: new THREE.Vector3(cx, cy, cz), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 4.0 },
+
+    // 1-6: Satellite Region Clusters (The 6 Faces of the Inner Cube)
+    ...[
+        new THREE.Vector3(cx + R, cy, cz),
+        new THREE.Vector3(cx - R, cy, cz),
+        new THREE.Vector3(cx, cy + R, cz),
+        new THREE.Vector3(cx, cy - R, cz),
+        new THREE.Vector3(cx, cy, cz + R),
+        new THREE.Vector3(cx, cy, cz - R)
+    ].map((pos, i) => ({
+        center: pos,
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
         hex: ["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i],
         count: 20,
         size: 2.5
     })),
-    // 7-13: MultiversX Ecosystem Projects (Outer Orbital Ring)
+
+    // 7-13: MultiversX Ecosystem Projects (7 of the 8 Corners of the Outer Mega-Cube)
     ...[
-        { name: "xExchange", color: "#01f2f0" }, // Cyan
-        { name: "Hatom", color: "#facc15" },     // Yellow
-        { name: "AshSwap", color: "#f472b6" },   // Pink
-        { name: "xMoney", color: "#22c55e" },    // Green
-        { name: "xSpotlight", color: "#c084fc" },// Purple
-        { name: "Itheum", color: "#f43f5e" },    // Red
-        { name: "ZoidPay", color: "#3b82f6" },   // Blue
+        { name: "xExchange", color: "#01f2f0", pos: new THREE.Vector3(cx + D, cy + D, cz + D) },
+        { name: "Hatom", color: "#facc15", pos: new THREE.Vector3(cx - D, cy + D, cz + D) },
+        { name: "AshSwap", color: "#f472b6", pos: new THREE.Vector3(cx + D, cy - D, cz + D) },
+        { name: "xMoney", color: "#22c55e", pos: new THREE.Vector3(cx - D, cy - D, cz + D) },
+        { name: "xSpotlight", color: "#c084fc", pos: new THREE.Vector3(cx + D, cy + D, cz - D) },
+        { name: "Itheum", color: "#f43f5e", pos: new THREE.Vector3(cx - D, cy + D, cz - D) },
+        { name: "ZoidPay", color: "#3b82f6", pos: new THREE.Vector3(cx + D, cy - D, cz - D) },
     ].map((proj, i) => ({
-        center: new THREE.Vector3(
-            -12 + Math.cos(i * Math.PI / 3.5) * 260, // Massive outermost distance
-            -2 + (Math.random() - 0.5) * 100, // Extreme vertical Z-axis chaos
-            -8 + Math.sin(i * Math.PI / 3.5) * 260
-        ),
+        center: proj.pos,
         color: new THREE.Color(proj.color),
         hex: proj.color,
         count: 15,
@@ -1032,7 +1039,7 @@ export default function WarRoom() {
 
             {/* 3D CANVAS BOARD WITH CAMERA CONTROLS */}
             <div className="absolute inset-0 z-0">
-                <Canvas camera={{ position: [0, 0, 320], fov: 60 }}>
+                <Canvas camera={{ position: [250, 150, 350], fov: 60 }}>
                     <OrbitControls
                         enableZoom={true}
                         enablePan={true}

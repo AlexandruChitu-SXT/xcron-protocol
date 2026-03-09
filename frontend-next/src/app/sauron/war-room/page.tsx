@@ -458,8 +458,8 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // ═════════════════════════════════════════════════════════════════════
 // COMPONENT: 3D NEURAL SWARM — Flat Hexagonal Star + Ecosystem Ring
 // ═════════════════════════════════════════════════════════════════════
-const INNER_R = 75; // Inner satellite hex ring radius (pushed far from center)
-const OUTER_R = 140; // Outer ecosystem ring radius
+const INNER_R = 120; // Inner satellite hex ring radius (massive distance)
+const OUTER_R = 200; // Outer ecosystem ring radius
 
 // Ecosystem project metadata (name + brand color)
 const ECOSYSTEM_PROJECTS = [
@@ -593,13 +593,13 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
         // LAYER 1: Inner Satellites (1-6) → Master Core (0) — Thick petal arms
         for (let i = 1; i <= 6; i++) {
-            createConduit(i, 0, conduitLinesPerSatellite, 20.0);
+            createConduit(i, 0, conduitLinesPerSatellite, 8.0);
         }
 
         // LAYER 2: Ecosystem Nodes (7-14) → Nearest Inner Satellite (1-6) — Thinner threads
         for (let i = 7; i < SERVERS.length; i++) {
             const nearestSat = ((i - 7) % 6) + 1;
-            createConduit(i, nearestSat, conduitLinesPerOuter, 12.0);
+            createConduit(i, nearestSat, conduitLinesPerOuter, 5.0);
         }
 
 

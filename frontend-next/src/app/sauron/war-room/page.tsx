@@ -576,16 +576,19 @@ const SERVERS = [
         size: 4.0
     })),
 
-    // 7-14: Ecosystem Projects (Organic Neural 3D positions)
+    // 7-14: Ecosystem Projects (DNA Double Helix Structure)
+    // We have 8 nodes: 4 for Helix Strand A (7,8,9,10), 4 for Helix Strand B (11,12,13,14)
     ...[
-        { idx: 0, pos: new THREE.Vector3(+160, +120, +80) },   // 7: Bitcoin  (far top-right-front)
-        { idx: 1, pos: new THREE.Vector3(-140, +150, +60) },   // 8: Ethereum (far top-left-front)
-        { idx: 2, pos: new THREE.Vector3(+180, -100, +100) },  // 9: Solana   (far bottom-right-front)
-        { idx: 3, pos: new THREE.Vector3(-170, -130, +40) },   // 10: BNB     (far bottom-left-front)
-        { idx: 4, pos: new THREE.Vector3(+130, +170, -90) },   // 11: Cardano (top-right-back)
-        { idx: 5, pos: new THREE.Vector3(-190, +80, -110) },   // 12: Avalanche (left-back)
-        { idx: 6, pos: new THREE.Vector3(+150, -160, -70) },   // 13: Polkadot (bottom-right-back)
-        { idx: 7, pos: new THREE.Vector3(-120, -170, -130) },  // 14: Polygon  (bottom-left-back)
+        // Helix A (Offset 0)
+        { idx: 0, pos: new THREE.Vector3(180 * Math.cos(0.0 * Math.PI), 180 * Math.sin(0.0 * Math.PI), -150) }, // 7
+        { idx: 1, pos: new THREE.Vector3(180 * Math.cos(0.5 * Math.PI), 180 * Math.sin(0.5 * Math.PI), -50) }, // 8
+        { idx: 2, pos: new THREE.Vector3(180 * Math.cos(1.0 * Math.PI), 180 * Math.sin(1.0 * Math.PI), 50) }, // 9
+        { idx: 3, pos: new THREE.Vector3(180 * Math.cos(1.5 * Math.PI), 180 * Math.sin(1.5 * Math.PI), 150) }, // 10
+        // Helix B (Offset +PI, exact opposite side)
+        { idx: 4, pos: new THREE.Vector3(180 * Math.cos(1.0 * Math.PI), 180 * Math.sin(1.0 * Math.PI), -150) }, // 11
+        { idx: 5, pos: new THREE.Vector3(180 * Math.cos(1.5 * Math.PI), 180 * Math.sin(1.5 * Math.PI), -50) }, // 12
+        { idx: 6, pos: new THREE.Vector3(180 * Math.cos(2.0 * Math.PI), 180 * Math.sin(2.0 * Math.PI), 50) }, // 13
+        { idx: 7, pos: new THREE.Vector3(180 * Math.cos(2.5 * Math.PI), 180 * Math.sin(2.5 * Math.PI), 150) }, // 14
     ].map((item) => ({
         center: item.pos,
         color: new THREE.Color(ECOSYSTEM_PROJECTS[item.idx].color),
@@ -610,7 +613,6 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         // 1. Generate conduit lines creating the petal-shaped star arms
         const masterCenter = SERVERS[0].center;
         const conduitLinesPerSatellite = 50; // Thick sweeping petals for inner star
-        const conduitLinesPerOuter = 15; // Lighter threads for ecosystem ring
 
         // Helper function to draw a thick, jittered conduit between two exact nodes
         const createConduit = (sourceIdx: number, targetIdx: number, numLines: number, spreadMultiplier: number) => {
@@ -693,30 +695,31 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
         // LAYER 2: Every Ecosystem Node (7-14) → Master Core (0)
         for (let i = 7; i < SERVERS.length; i++) {
-            createConduit(i, 0, 6, 5.0);
+            createConduit(i, 0, 4, 3.0);
         }
 
-        // LAYER 2.5: Each Ecosystem Node → Two closest inner satellites
+        // LAYER 2.5: Each Ecosystem Node → Closest inner satellite
         for (let eco = 7; eco < SERVERS.length; eco++) {
-            const dists = Array.from({ length: 6 }, (_, s) => ({
-                sat: s + 1,
-                dist: SERVERS[eco].center.distanceTo(SERVERS[s + 1].center)
-            })).sort((a, b) => a.dist - b.dist);
-            createConduit(eco, dists[0].sat, 8, 4.0);
-            createConduit(eco, dists[1].sat, 5, 3.0);
+            let closestSat = 1;
+            let minDist = Infinity;
+            for (let s = 1; s <= 6; s++) {
+                const dist = SERVERS[eco].center.distanceTo(SERVERS[s].center);
+                if (dist < minDist) { minDist = dist; closestSat = s; }
+            }
+            createConduit(eco, closestSat, 6, 4.0);
         }
 
-        // LAYER 3: Neural Web — Connect each ecosystem node to its 2 nearest ecosystem neighbors
-        for (let i = 7; i < SERVERS.length; i++) {
-            const dists = [];
-            for (let j = 7; j < SERVERS.length; j++) {
-                if (i === j) continue;
-                dists.push({ idx: j, dist: SERVERS[i].center.distanceTo(SERVERS[j].center) });
-            }
-            dists.sort((a, b) => a.dist - b.dist);
-            // Connect to 2 nearest (avoids duplicates since both directions generate)
-            if (dists[0] && dists[0].idx > i) createConduit(i, dists[0].idx, 6, 3.0);
-            if (dists[1] && dists[1].idx > i) createConduit(i, dists[1].idx, 4, 3.0);
+        // LAYER 3: DNA Backbone (Strand A and Strand B vertical links)
+        const helixA = [7, 8, 9, 10];
+        const helixB = [11, 12, 13, 14];
+        for (let i = 0; i < 3; i++) {
+            createConduit(helixA[i], helixA[i + 1], 8, 4.0); // Backbone A
+            createConduit(helixB[i], helixB[i + 1], 8, 4.0); // Backbone B
+        }
+
+        // LAYER 4: DNA Base Pairs (Rungs of the ladder) linking Strand A to Strand B
+        for (let i = 0; i < 4; i++) {
+            createConduit(helixA[i], helixB[i], 12, 6.0); // Horizontal base pair connections
         }
 
 

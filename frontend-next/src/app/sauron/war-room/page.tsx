@@ -490,15 +490,20 @@ const SERVERS = [
         size: 0.5
     })),
 
-    // 7-14: Ecosystem Outer Ring (wider hexagon, same XY plane)
-    ...ECOSYSTEM_PROJECTS.map((proj, i) => ({
-        center: new THREE.Vector3(
-            Math.cos(i * Math.PI / 4) * OUTER_R,
-            Math.sin(i * Math.PI / 4) * OUTER_R,
-            0
-        ),
-        color: new THREE.Color(proj.color),
-        hex: proj.color,
+    // 7-14: Ecosystem Projects (8 Corners of the Outer Cube)
+    ...[
+        { idx: 0, pos: new THREE.Vector3(+OUTER_R, +OUTER_R, +OUTER_R) }, // 7: (+,+,+)
+        { idx: 1, pos: new THREE.Vector3(-OUTER_R, +OUTER_R, +OUTER_R) }, // 8: (-,+,+)
+        { idx: 2, pos: new THREE.Vector3(+OUTER_R, -OUTER_R, +OUTER_R) }, // 9: (+,-,+)
+        { idx: 3, pos: new THREE.Vector3(-OUTER_R, -OUTER_R, +OUTER_R) }, // 10: (-,-,+)
+        { idx: 4, pos: new THREE.Vector3(+OUTER_R, +OUTER_R, -OUTER_R) }, // 11: (+,+,-)
+        { idx: 5, pos: new THREE.Vector3(-OUTER_R, +OUTER_R, -OUTER_R) }, // 12: (-,+,-)
+        { idx: 6, pos: new THREE.Vector3(+OUTER_R, -OUTER_R, -OUTER_R) }, // 13: (+,-,-)
+        { idx: 7, pos: new THREE.Vector3(-OUTER_R, -OUTER_R, -OUTER_R) }, // 14: (-,-,-)
+    ].map((item) => ({
+        center: item.pos,
+        color: new THREE.Color(ECOSYSTEM_PROJECTS[item.idx].color),
+        hex: ECOSYSTEM_PROJECTS[item.idx].color,
         count: 10,
         size: 0.45
     }))
@@ -591,16 +596,28 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             }
         };
 
-        // LAYER 1: Inner Satellites (1-6) → Master Core (0) — Thick petal arms
+        // LAYER 1: Inner Satellites (1-6) → Master Core (0)
         for (let i = 1; i <= 6; i++) {
             createConduit(i, 0, conduitLinesPerSatellite, 8.0);
         }
 
-        // LAYER 2: Ecosystem Nodes (7-14) → Nearest Inner Satellite (1-6) — Thinner threads
+        // LAYER 2: Ecosystem Corners (7-14) → Nearest Inner Satellite
         for (let i = 7; i < SERVERS.length; i++) {
             const nearestSat = ((i - 7) % 6) + 1;
             createConduit(i, nearestSat, conduitLinesPerOuter, 5.0);
         }
+
+        // LAYER 3: Cube Edges — All 12 edges of the outer cube wireframe
+        const cubeEdges = [
+            [7, 8], [7, 9], [7, 11],   // From corner (+,+,+)
+            [8, 10], [8, 12],           // From corner (-,+,+)
+            [9, 10], [9, 13],           // From corner (+,-,+)
+            [10, 14],                   // From corner (-,-,+)
+            [11, 12], [11, 13],         // From corner (+,+,-)
+            [12, 14],                   // From corner (-,+,-)
+            [13, 14]                    // From corner (+,-,-)
+        ];
+        cubeEdges.forEach(([a, b]) => createConduit(a, b, 8, 4.0));
 
 
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };

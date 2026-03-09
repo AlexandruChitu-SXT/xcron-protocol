@@ -542,12 +542,10 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 
 
 // ═════════════════════════════════════════════════════════════════════
-// COMPONENT: 3D NEURAL SWARM — Flat Hexagonal Star + Ecosystem Ring
+// COMPONENT: 3D NEURAL SWARM — PURE MEDICAL DNA DOUBLE HELIX
 // ═════════════════════════════════════════════════════════════════════
-const INNER_R = 120; // Inner satellite hex ring radius (massive distance)
-const OUTER_R = 200; // Outer ecosystem ring radius
 
-// Blockchain ecosystem metadata (ordered by market cap)
+// Blockchain ecosystem metadata
 const ECOSYSTEM_PROJECTS = [
     { name: "Bitcoin", color: "#f7931a", mcap: "$1.2T", tps: "7", consensus: "PoW" },
     { name: "Ethereum", color: "#627eea", mcap: "$380B", tps: "15", consensus: "PoS" },
@@ -559,49 +557,66 @@ const ECOSYSTEM_PROJECTS = [
     { name: "Polygon", color: "#8247e5", mcap: "$8B", tps: "7,000", consensus: "PoS" },
 ];
 
+// Unified 15-node DNA Sequence
+const HELIX_RADIUS = 120;
+const Z_STEP = 50; // Vertical distance between pairs
+const ANGLE_STEP = 0.5 * Math.PI; // Rotation per step
+
 const SERVERS = [
-    // 0: Master Core (MultiversX center)
-    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#23F7DD"), hex: "#23F7DD", count: 40, size: 3.0 },
+    // We have 15 nodes total: 1 Master, 6 Satellites (cyan), 8 Ecosystem projects.
+    // Let's create an sequence of 16 slots (8 base pairs) to form the perfect ladder.
+    // Node 0 is Master Core. Nodes 1-6 are Satellites. Nodes 7-14 are Ecosystem.
+    // We will place them alternating on Strand A and Strand B.
+    ...Array(16).fill(0).map((_, i) => {
+        const isStrandA = i % 2 === 0;
+        const pairIndex = Math.floor(i / 2); // 0 to 7
+        const angle = pairIndex * ANGLE_STEP + (isStrandA ? 0 : Math.PI); // Offset by PI for opposite strand
+        const zPos = -175 + (pairIndex * Z_STEP);
 
-    // 1-6: Inner Satellite Ring (flat hexagon on XY plane)
-    ...Array(6).fill(0).map((_, i) => ({
-        center: new THREE.Vector3(
-            Math.cos(i * Math.PI / 3) * INNER_R,
-            Math.sin(i * Math.PI / 3) * INNER_R,
-            0
-        ),
-        color: new THREE.Color("#23F7DD"),
-        hex: "#23F7DD",
-        count: 20,
-        size: 4.0
-    })),
+        // Determine which actual logical node belongs in this DNA slot
+        let nodeData;
+        if (i === 0) {
+            // Very first node of Strand A: Master Core
+            nodeData = { color: "#23F7DD", name: "Master Core", size: 6.0 };
+        } else if (i >= 1 && i <= 6) {
+            // Next 6 slots: The 6 guardians/satellites
+            nodeData = { color: "#23F7DD", name: `Guardian 0${i}`, size: 4.5 };
+        } else if (i >= 7 && i <= 14) {
+            // Next 8 slots: Ecosystem projects
+            const ecoIdx = i - 7;
+            nodeData = { color: ECOSYSTEM_PROJECTS[ecoIdx].color, name: ECOSYSTEM_PROJECTS[ecoIdx].name, size: 5.0 };
+        } else {
+            // Slot 15 to balance the 8th pair
+            nodeData = { color: "#ffffff", name: "Genesis Node", size: 3.0 };
+        }
 
-    // 7-14: Ecosystem Projects (DNA Double Helix Structure)
-    // We have 8 nodes: 4 for Helix Strand A (7,8,9,10), 4 for Helix Strand B (11,12,13,14)
-    ...[
-        // Helix A (Offset 0)
-        { idx: 0, pos: new THREE.Vector3(180 * Math.cos(0.0 * Math.PI), 180 * Math.sin(0.0 * Math.PI), -150) }, // 7
-        { idx: 1, pos: new THREE.Vector3(180 * Math.cos(0.5 * Math.PI), 180 * Math.sin(0.5 * Math.PI), -50) }, // 8
-        { idx: 2, pos: new THREE.Vector3(180 * Math.cos(1.0 * Math.PI), 180 * Math.sin(1.0 * Math.PI), 50) }, // 9
-        { idx: 3, pos: new THREE.Vector3(180 * Math.cos(1.5 * Math.PI), 180 * Math.sin(1.5 * Math.PI), 150) }, // 10
-        // Helix B (Offset +PI, exact opposite side)
-        { idx: 4, pos: new THREE.Vector3(180 * Math.cos(1.0 * Math.PI), 180 * Math.sin(1.0 * Math.PI), -150) }, // 11
-        { idx: 5, pos: new THREE.Vector3(180 * Math.cos(1.5 * Math.PI), 180 * Math.sin(1.5 * Math.PI), -50) }, // 12
-        { idx: 6, pos: new THREE.Vector3(180 * Math.cos(2.0 * Math.PI), 180 * Math.sin(2.0 * Math.PI), 50) }, // 13
-        { idx: 7, pos: new THREE.Vector3(180 * Math.cos(2.5 * Math.PI), 180 * Math.sin(2.5 * Math.PI), 150) }, // 14
-    ].map((item) => ({
-        center: item.pos,
-        color: new THREE.Color(ECOSYSTEM_PROJECTS[item.idx].color),
-        hex: ECOSYSTEM_PROJECTS[item.idx].color,
-        count: 10,
-        size: 5.0
-    }))
+        return {
+            center: new THREE.Vector3(
+                HELIX_RADIUS * Math.cos(angle),
+                zPos, // Use Y or Z for verticality. Let's use Z so OrbitControls rotates around the cylinder naturally
+                HELIX_RADIUS * Math.sin(angle)
+            ),
+            color: new THREE.Color(nodeData.color),
+            hex: nodeData.color,
+            count: 20,
+            size: nodeData.size,
+            internalIdx: i // To help with base pair mapping
+        };
+    })
 ];
 
 const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; activeServers: number[]; setActiveServers: any }) => {
     const groupRef = useRef<THREE.Group>(null);
     const materialRef = useRef<THREE.LineBasicMaterial>(null);
     const sparksRef = useRef<THREE.InstancedMesh>(null);
+
+    // Continuous slow rotation for the whole DNA strand
+    useFrame((state) => {
+        if (groupRef.current) {
+            groupRef.current.rotation.y = state.clock.elapsedTime * 0.15;
+            groupRef.current.rotation.x = 0.2; // Slight tilt
+        }
+    });
 
     // Calculate node points, lines and colors once
     const { points, lines, lineColors } = useMemo(() => {
@@ -610,10 +625,6 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         const lns: THREE.Vector3[] = [];
         const lnCols: number[] = [];
 
-        // 1. Generate conduit lines creating the petal-shaped star arms
-        const masterCenter = SERVERS[0].center;
-        const conduitLinesPerSatellite = 50; // Thick sweeping petals for inner star
-
         // Helper function to draw a thick, jittered conduit between two exact nodes
         const createConduit = (sourceIdx: number, targetIdx: number, numLines: number, spreadMultiplier: number) => {
             const sourceInfo = SERVERS[sourceIdx];
@@ -621,10 +632,6 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             const sourceCenter = sourceInfo.center;
             const targetCenter = targetInfo.center;
 
-            // To prevent lines from starting inside or far away from the cube, 
-            // we spawn them strictly on the surface sphere of the cube.
-            // Box size is server.size * 1.5. Distance from center to corner is roughly * 1.732 of half-size.
-            // Using a simple radius multiplier to hit the visual surface boundary:
             const sourceRadius = sourceInfo.size * 1.2;
             const targetRadius = targetInfo.size * 1.2;
 
@@ -636,10 +643,8 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             }
 
             for (let c = 0; c < numLines; c++) {
-                // Direction of the main tube
                 const dir = new THREE.Vector3().subVectors(targetCenter, sourceCenter).normalize();
 
-                // Surface emission points (random point on a sphere slightly larger than the cube)
                 const randomSourceSurface = new THREE.Vector3(
                     (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2
                 ).normalize().multiplyScalar(sourceRadius);
@@ -651,7 +656,6 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                 const startPoint = new THREE.Vector3().copy(sourceCenter).add(randomSourceSurface);
                 const endPoint = new THREE.Vector3().copy(targetCenter).add(randomTargetSurface);
 
-                // Conduit tube spread (chaos in the middle)
                 const randomPerp = new THREE.Vector3(
                     (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2
                 ).cross(dir).normalize();
@@ -664,15 +668,12 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
                 for (let seg = 1; seg <= segments; seg++) {
                     const fraction = seg / segments;
-                    // Tapering to 0 at the start and end so it connects cleanly to the surface
                     const taper = Math.sin(fraction * Math.PI);
                     const currentOffset = offset.clone().multiplyScalar(taper);
-
                     const nextPt = new THREE.Vector3().lerpVectors(startPoint, endPoint, fraction).add(currentOffset);
 
                     lns.push(prevPt, nextPt);
 
-                    // Gradient color mixing
                     const colorAtPrev = new THREE.Color().lerpColors(sourceInfo.color, targetInfo.color, (seg - 1) / segments);
                     const colorAtNext = new THREE.Color().lerpColors(sourceInfo.color, targetInfo.color, fraction);
 
@@ -684,42 +685,25 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             }
         };
 
-        // LAYER 1: Inner Satellites (1-6) → Master Core (0)
-        for (let i = 1; i <= 6; i++) {
-            createConduit(i, 0, conduitLinesPerSatellite, 8.0);
-        }
+        // MEDICAL DNA CONNECTIONS
+        // We have 16 nodes arranged in 8 pairs.
+        // Evens (0, 2, 4...) are Strand A. Odds (1, 3, 5...) are Strand B.
 
-        // LAYER 1.5: Inner Hexagon Edges (satellite to adjacent satellite)
-        const hexEdges = [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]];
-        hexEdges.forEach(([a, b]) => createConduit(a, b, 10, 4.0));
-
-        // LAYER 2: Every Ecosystem Node (7-14) → Master Core (0)
-        for (let i = 7; i < SERVERS.length; i++) {
-            createConduit(i, 0, 4, 3.0);
-        }
-
-        // LAYER 2.5: Each Ecosystem Node → Closest inner satellite
-        for (let eco = 7; eco < SERVERS.length; eco++) {
-            let closestSat = 1;
-            let minDist = Infinity;
-            for (let s = 1; s <= 6; s++) {
-                const dist = SERVERS[eco].center.distanceTo(SERVERS[s].center);
-                if (dist < minDist) { minDist = dist; closestSat = s; }
+        for (let i = 0; i < 16; i++) {
+            // 1. Draw the Base Pairs (Horizontal Rungs): Connect 0-1, 2-3, 4-5...
+            if (i % 2 === 0) {
+                createConduit(i, i + 1, 15, 6.0); // Thick pair connections
             }
-            createConduit(eco, closestSat, 6, 4.0);
-        }
 
-        // LAYER 3: DNA Backbone (Strand A and Strand B vertical links)
-        const helixA = [7, 8, 9, 10];
-        const helixB = [11, 12, 13, 14];
-        for (let i = 0; i < 3; i++) {
-            createConduit(helixA[i], helixA[i + 1], 8, 4.0); // Backbone A
-            createConduit(helixB[i], helixB[i + 1], 8, 4.0); // Backbone B
-        }
+            // 2. Draw Backbone A (Vertical links): Connect 0-2, 2-4, 4-6...
+            if (i % 2 === 0 && i < 14) {
+                createConduit(i, i + 2, 10, 4.0);
+            }
 
-        // LAYER 4: DNA Base Pairs (Rungs of the ladder) linking Strand A to Strand B
-        for (let i = 0; i < 4; i++) {
-            createConduit(helixA[i], helixB[i], 12, 6.0); // Horizontal base pair connections
+            // 3. Draw Backbone B (Vertical links): Connect 1-3, 3-5, 5-7...
+            if (i % 2 !== 0 && i < 15) {
+                createConduit(i, i + 2, 10, 4.0);
+            }
         }
 
 
@@ -1114,6 +1098,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                         )}
 
 
+                        {/* NEW UNIFIED DNA LOGIC: ECOSYSTEM & GENESIS NODES */}
                         {idx >= 7 && idx <= 14 && (() => {
                             const proj = ECOSYSTEM_PROJECTS[idx - 7];
                             if (!proj) return null;
@@ -1143,6 +1128,25 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                 </>
                             );
                         })()}
+
+                        {/* SLOT 15: GENESIS NODE (Balance node for DNA) */}
+                        {idx === 15 && (
+                            <>
+                                <PanelConnectionLine toX={0.0} toY={8.0} toZ={0} color={SERVERS[15].hex} />
+                                <OmniPanel color={SERVERS[15].hex} position={[0.0, 8.0, 0]} width={350} scale={1.0} title="GENESIS NODE">
+                                    <div className="flex flex-col gap-3 font-mono text-xs bg-[#050505]/95 p-4 rounded-lg border border-white/10">
+                                        <div className="flex justify-between border-b border-white/[0.05] pb-2">
+                                            <span className="text-white">ORIGIN</span>
+                                            <span className="text-white font-bold">BLOCK 0</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-white">STATUS</span>
+                                            <span className="text-emerald-400 font-bold">● IMMUTABLE</span>
+                                        </div>
+                                    </div>
+                                </OmniPanel>
+                            </>
+                        )}
                     </group>
                 )
             ))}

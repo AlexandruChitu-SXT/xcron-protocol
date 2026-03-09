@@ -484,7 +484,7 @@ const SERVERS = [
         size: 2.5
     })),
 
-    // 7-13: MultiversX Ecosystem Projects (7 of the 8 Corners of the Outer Mega-Cube)
+    // 7-14: MultiversX Ecosystem Projects (All 8 Corners of the Outer Mega-Cube)
     ...[
         { name: "xExchange", color: "#01f2f0", pos: new THREE.Vector3(cx + D, cy + D, cz + D) },
         { name: "Hatom", color: "#facc15", pos: new THREE.Vector3(cx - D, cy + D, cz + D) },
@@ -493,6 +493,7 @@ const SERVERS = [
         { name: "xSpotlight", color: "#c084fc", pos: new THREE.Vector3(cx + D, cy + D, cz - D) },
         { name: "Itheum", color: "#f43f5e", pos: new THREE.Vector3(cx - D, cy + D, cz - D) },
         { name: "ZoidPay", color: "#3b82f6", pos: new THREE.Vector3(cx + D, cy - D, cz - D) },
+        { name: "BwareLabs", color: "#ffffff", pos: new THREE.Vector3(cx - D, cy - D, cz - D) },
     ].map((proj, i) => ({
         center: proj.pos,
         color: new THREE.Color(proj.color),
@@ -589,19 +590,41 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             }
         };
 
-        // LAYER 1: Core Satellites (1-6) mapping to Master (0)
+        // LAYER 1: Master (0) to Inner Faces (1-6)
         for (let i = 1; i <= 6; i++) {
             createConduit(i, 0, conduitLinesPerSatellite, 40.0);
         }
 
-        // LAYER 2: Ecosystem Nodes (7-13) mapping to their nearest Sub-Satellite (1-6)
-        // Creating a hierarchical "Neural Arm" structure
-        for (let i = 7; i < SERVERS.length; i++) {
-            // Map roughly to specific satellites to create distinct clustered arms
-            // 7 goes to 1, 8 goes to 2, etc. Wrap around for 13.
-            const targetSatellite = ((i - 7) % 6) + 1;
-            createConduit(i, targetSatellite, conduitLinesPerOuter, 25.0);
-        }
+        // LAYER 2: Inner Faces (1-6) to each other (Octahedron edges)
+        // 1(X+) connects to 3(Y+), 4(Y-), 5(Z+), 6(Z-)
+        const innerEdges = [
+            [1, 3], [1, 4], [1, 5], [1, 6],
+            [2, 3], [2, 4], [2, 5], [2, 6],
+            [3, 5], [3, 6],
+            [4, 5], [4, 6]
+        ];
+        innerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 10, 15.0));
+
+        // LAYER 3: Outer Corners (7-14) to Inner Faces (1-6)
+        const faceToCorner = [
+            [1, 7], [1, 9], [1, 11], [1, 13], // +X Face (1) connects to +X Corners
+            [2, 8], [2, 10], [2, 12], [2, 14], // -X Face (2) connects to -X Corners
+            [3, 7], [3, 8], [3, 11], [3, 12], // +Y Face (3) connects to +Y Corners
+            [4, 9], [4, 10], [4, 13], [4, 14], // -Y Face (4) connects to -Y Corners
+            [5, 7], [5, 8], [5, 9], [5, 10],  // +Z Face (5) connects to +Z Corners
+            [6, 11], [6, 12], [6, 13], [6, 14] // -Z Face (6) connects to -Z Corners
+        ];
+        faceToCorner.forEach(([face, corner]) => createConduit(corner, face, 12, 20.0));
+
+        // LAYER 4: Outer Corners (7-14) to each other (Outer Mega-Cube edges)
+        const outerEdges = [
+            [7, 8], [7, 9], [7, 11],
+            [8, 10], [8, 12],
+            [9, 10], [9, 13],
+            [11, 12], [11, 13],
+            [10, 14], [12, 14], [13, 14]
+        ];
+        outerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 16, 25.0));
 
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };
     }, []);

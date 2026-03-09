@@ -456,50 +456,51 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 
 
 // ═════════════════════════════════════════════════════════════════════
-// COMPONENT: 3D CENTRAL & 6 SATELLITE NEURAL SWARM (Clean Circuitry)
+// COMPONENT: 3D NEURAL SWARM — Flat Hexagonal Star + Ecosystem Ring
 // ═════════════════════════════════════════════════════════════════════
-const cx = -12;
-const cy = -2;
-const cz = -8;
-const R = 110; // Inner cube face distance
-const D = 220; // Outer cube corner distance
+const INNER_R = 38; // Inner satellite hex ring radius  
+const OUTER_R = 80; // Outer ecosystem ring radius
+
+// Ecosystem project metadata (name + brand color)
+const ECOSYSTEM_PROJECTS = [
+    { name: "xExchange", color: "#01f2f0", tvl: "$142M", type: "DEX" },
+    { name: "Hatom", color: "#facc15", tvl: "$98M", type: "LENDING" },
+    { name: "AshSwap", color: "#f472b6", tvl: "$24M", type: "STABLE DEX" },
+    { name: "xMoney", color: "#22c55e", tvl: "—", type: "PAYMENTS" },
+    { name: "OneDex", color: "#c084fc", tvl: "$8M", type: "DEX" },
+    { name: "Itheum", color: "#f43f5e", tvl: "—", type: "DATA NFT" },
+    { name: "ZoidPay", color: "#3b82f6", tvl: "—", type: "CRYPTO CARD" },
+    { name: "BwareLabs", color: "#a3e635", tvl: "—", type: "INFRA / RPC" },
+];
 
 const SERVERS = [
-    // 0: Master Protocol Core (Center of the 3D Cube)
-    { center: new THREE.Vector3(cx, cy, cz), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 4.0 },
+    // 0: Master Core (MultiversX / XCron center)
+    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 0.9 },
 
-    // 1-6: Satellite Region Clusters (The 6 Faces of the Inner Cube)
-    ...[
-        new THREE.Vector3(cx + R, cy, cz),
-        new THREE.Vector3(cx - R, cy, cz),
-        new THREE.Vector3(cx, cy + R, cz),
-        new THREE.Vector3(cx, cy - R, cz),
-        new THREE.Vector3(cx, cy, cz + R),
-        new THREE.Vector3(cx, cy, cz - R)
-    ].map((pos, i) => ({
-        center: pos,
+    // 1-6: Inner Satellite Ring (flat hexagon on XY plane)
+    ...Array(6).fill(0).map((_, i) => ({
+        center: new THREE.Vector3(
+            Math.cos(i * Math.PI / 3) * INNER_R,
+            Math.sin(i * Math.PI / 3) * INNER_R,
+            0
+        ),
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
         hex: ["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i],
         count: 20,
-        size: 2.5
+        size: 0.5
     })),
 
-    // 7-14: MultiversX Ecosystem Projects (All 8 Corners of the Outer Mega-Cube)
-    ...[
-        { name: "xExchange", color: "#01f2f0", pos: new THREE.Vector3(cx + D, cy + D, cz + D) },
-        { name: "Hatom", color: "#facc15", pos: new THREE.Vector3(cx - D, cy + D, cz + D) },
-        { name: "AshSwap", color: "#f472b6", pos: new THREE.Vector3(cx + D, cy - D, cz + D) },
-        { name: "xMoney", color: "#22c55e", pos: new THREE.Vector3(cx - D, cy - D, cz + D) },
-        { name: "xSpotlight", color: "#c084fc", pos: new THREE.Vector3(cx + D, cy + D, cz - D) },
-        { name: "Itheum", color: "#f43f5e", pos: new THREE.Vector3(cx - D, cy + D, cz - D) },
-        { name: "ZoidPay", color: "#3b82f6", pos: new THREE.Vector3(cx + D, cy - D, cz - D) },
-        { name: "BwareLabs", color: "#ffffff", pos: new THREE.Vector3(cx - D, cy - D, cz - D) },
-    ].map((proj, i) => ({
-        center: proj.pos,
+    // 7-14: Ecosystem Outer Ring (wider hexagon, same XY plane)
+    ...ECOSYSTEM_PROJECTS.map((proj, i) => ({
+        center: new THREE.Vector3(
+            Math.cos(i * Math.PI / 4) * OUTER_R,
+            Math.sin(i * Math.PI / 4) * OUTER_R,
+            0
+        ),
         color: new THREE.Color(proj.color),
         hex: proj.color,
-        count: 15,
-        size: 3.5 // Ecosystem nodes are huge anchors
+        count: 10,
+        size: 0.45
     }))
 ];
 
@@ -590,41 +591,16 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             }
         };
 
-        // LAYER 1: Master (0) to Inner Faces (1-6)
+        // LAYER 1: Inner Satellites (1-6) → Master Core (0)
         for (let i = 1; i <= 6; i++) {
-            createConduit(i, 0, conduitLinesPerSatellite, 40.0);
+            createConduit(i, 0, conduitLinesPerSatellite, 8.0);
         }
 
-        // LAYER 2: Inner Faces (1-6) to each other (Octahedron edges)
-        // 1(X+) connects to 3(Y+), 4(Y-), 5(Z+), 6(Z-)
-        const innerEdges = [
-            [1, 3], [1, 4], [1, 5], [1, 6],
-            [2, 3], [2, 4], [2, 5], [2, 6],
-            [3, 5], [3, 6],
-            [4, 5], [4, 6]
-        ];
-        innerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 5, 10.0)); // Cleaned up density
-
-        // LAYER 3: Outer Corners (7-14) to Inner Faces (1-6)
-        const faceToCorner = [
-            [1, 7], [1, 9], [1, 11], [1, 13], // +X Face (1) connects to +X Corners
-            [2, 8], [2, 10], [2, 12], [2, 14], // -X Face (2) connects to -X Corners
-            [3, 7], [3, 8], [3, 11], [3, 12], // +Y Face (3) connects to +Y Corners
-            [4, 9], [4, 10], [4, 13], [4, 14], // -Y Face (4) connects to -Y Corners
-            [5, 7], [5, 8], [5, 9], [5, 10],  // +Z Face (5) connects to +Z Corners
-            [6, 11], [6, 12], [6, 13], [6, 14] // -Z Face (6) connects to -Z Corners
-        ];
-        faceToCorner.forEach(([face, corner]) => createConduit(corner, face, 5, 14.0)); // Cleaned up density
-
-        // LAYER 4: Outer Corners (7-14) to each other (Outer Mega-Cube edges)
-        const outerEdges = [
-            [7, 8], [7, 9], [7, 11],
-            [8, 10], [8, 12],
-            [9, 10], [9, 13],
-            [11, 12], [11, 13],
-            [10, 14], [12, 14], [13, 14]
-        ];
-        outerEdges.forEach(([src, tgt]) => createConduit(src, tgt, 8, 18.0)); // Cleaned up density
+        // LAYER 2: Ecosystem Nodes (7-14) → Nearest Inner Satellite (1-6)
+        for (let i = 7; i < SERVERS.length; i++) {
+            const nearestSat = ((i - 7) % 6) + 1;
+            createConduit(i, nearestSat, conduitLinesPerOuter, 6.0);
+        }
 
 
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };
@@ -997,6 +973,37 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
                                 <OmniPanel color={SERVERS[6].hex} position={[12.6, 0.0, 0]} width={350} scale={0.9}><TPSGauge tps={d.tps * 0.5} history={tpsHistory} /></OmniPanel>
                             </>
                         )}
+
+
+                        {idx >= 7 && idx <= 14 && (() => {
+                            const proj = ECOSYSTEM_PROJECTS[idx - 7];
+                            if (!proj) return null;
+                            return (
+                                <>
+                                    <PanelConnectionLine toX={0.0} toY={8.0} toZ={0} color={SERVERS[idx].hex} />
+                                    <OmniPanel color={SERVERS[idx].hex} position={[0.0, 8.0, 0]} width={350} scale={1.0} title={proj.name.toUpperCase()}>
+                                        <div className="flex flex-col gap-3 font-mono text-xs bg-[#050505]/95 p-4 rounded-lg border border-white/10">
+                                            <div className="flex justify-between border-b border-white/[0.05] pb-2">
+                                                <span className="text-white">TYPE</span>
+                                                <span style={{ color: proj.color }} className="font-bold">{proj.type}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/[0.05] pb-2">
+                                                <span className="text-white">TVL</span>
+                                                <span className="text-white font-bold">{proj.tvl}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/[0.05] pb-2">
+                                                <span className="text-white">CHAIN</span>
+                                                <span className="text-cyan-400">MULTIVERSX</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-white">STATUS</span>
+                                                <span className="text-emerald-400 font-bold">● LIVE</span>
+                                            </div>
+                                        </div>
+                                    </OmniPanel>
+                                </>
+                            );
+                        })()}
                     </group>
                 )
             ))}
@@ -1063,7 +1070,7 @@ export default function WarRoom() {
 
             {/* 3D CANVAS BOARD WITH CAMERA CONTROLS */}
             <div className="absolute inset-0 z-0">
-                <Canvas camera={{ position: [250, 150, 350], fov: 60 }}>
+                <Canvas camera={{ position: [0, 0, 160], fov: 60 }}>
                     <OrbitControls
                         enableZoom={true}
                         enablePan={true}

@@ -474,8 +474,8 @@ const ECOSYSTEM_PROJECTS = [
 ];
 
 const SERVERS = [
-    // 0: Master Core (MultiversX / XCron center)
-    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#ffffff"), hex: "#ffffff", count: 40, size: 3.0 },
+    // 0: Master Core (MultiversX center)
+    { center: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#23F7DD"), hex: "#23F7DD", count: 40, size: 3.0 },
 
     // 1-6: Inner Satellite Ring (flat hexagon on XY plane)
     ...Array(6).fill(0).map((_, i) => ({
@@ -484,8 +484,8 @@ const SERVERS = [
             Math.sin(i * Math.PI / 3) * INNER_R,
             0
         ),
-        color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
-        hex: ["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i],
+        color: new THREE.Color("#23F7DD"),
+        hex: "#23F7DD",
         count: 20,
         size: 4.0
     })),

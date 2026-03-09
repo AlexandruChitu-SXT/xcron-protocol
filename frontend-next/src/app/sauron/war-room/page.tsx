@@ -715,9 +715,13 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
     return (
         <group ref={groupRef} position={[0, 0, 0]}>
-            {/* The laser pathways/circuitry - Crisp rendering */}
+            {/* The laser pathways/circuitry - Neon glow */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.4} depthWrite={false} />
+                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+            </lineSegments>
+            {/* Duplicate layer for bloom-like glow effect */}
+            <lineSegments geometry={lineGeo}>
+                <lineBasicMaterial vertexColors transparent opacity={0.15} depthWrite={false} blending={THREE.AdditiveBlending} />
             </lineSegments>
 
             {/* Invisible Hitboxes for Conduits so cables are clickable */}
@@ -774,13 +778,25 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                         {/* Outer Glowing Shell */}
                         <mesh scale={isActive ? 1.5 : 1} rotation={cubeRotation}>
                             <boxGeometry args={[boxSize, boxSize, boxSize]} />
-                            <meshBasicMaterial color={server.color} transparent opacity={isActive ? 0.9 : 0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
+                            <meshBasicMaterial color={server.color} transparent opacity={isActive ? 0.9 : 0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
+                        </mesh>
+                        {/* Halo Glow Shell — larger, faint outer ring */}
+                        <mesh scale={isActive ? 2.2 : 1.6} rotation={cubeRotation}>
+                            <boxGeometry args={[boxSize, boxSize, boxSize]} />
+                            <meshBasicMaterial color={server.color} transparent opacity={0.08} blending={THREE.AdditiveBlending} depthWrite={false} />
                         </mesh>
                         {/* Inner Solid Core */}
                         <mesh position={[0, 0, 0]} rotation={cubeRotation}>
                             <boxGeometry args={[boxSize * 0.4, boxSize * 0.4, boxSize * 0.4]} />
-                            <meshBasicMaterial color="#ffffff" opacity={isActive ? 1.0 : 0.7} transparent />
+                            <meshBasicMaterial color="#ffffff" opacity={isActive ? 1.0 : 0.8} transparent />
                         </mesh>
+                        {/* Pulsing center beacon (master only) */}
+                        {i === 0 && (
+                            <mesh rotation={cubeRotation}>
+                                <boxGeometry args={[boxSize * 2.5, boxSize * 2.5, boxSize * 2.5]} />
+                                <meshBasicMaterial color="#23F7DD" transparent opacity={0.06} blending={THREE.AdditiveBlending} depthWrite={false} />
+                            </mesh>
+                        )}
                     </mesh>
                 )
             })}
@@ -803,13 +819,16 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
 
     return (
         <>
-            <ambientLight intensity={0.4} />
-            <pointLight position={[0, 0, 0]} intensity={2} color="#06b6d4" />
+            <ambientLight intensity={0.3} />
+            <pointLight position={[0, 0, 0]} intensity={3} color="#23F7DD" distance={400} />
+            <pointLight position={[200, 200, 200]} intensity={0.8} color="#f7931a" distance={500} />
+            <pointLight position={[-200, -200, -200]} intensity={0.8} color="#9945ff" distance={500} />
+            <pointLight position={[200, -200, 200]} intensity={0.5} color="#e84142" distance={500} />
 
             {/* Continental Neural Swarm */}
             <NeuralNetwork tps={d.tps} activeServers={activeServers} setActiveServers={setActiveServers} />
 
-            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+            <Stars radius={300} depth={150} count={8000} factor={6} saturation={0.1} fade speed={0.5} />
 
             {/* ---> INTERACTIVE DATA POP-UPS (Only shown when server is selected) <--- */}
             {SERVERS.map((server, idx) => (
@@ -1110,13 +1129,15 @@ export default function WarRoom() {
 
             {/* 3D CANVAS BOARD WITH CAMERA CONTROLS */}
             <div className="absolute inset-0 z-0">
-                <Canvas camera={{ position: [0, 0, 160], fov: 60 }}>
+                <Canvas camera={{ position: [0, 60, 420], fov: 55 }}>
                     <OrbitControls
                         enableZoom={true}
                         enablePan={true}
                         enableRotate={true}
-                        maxDistance={1000}
+                        maxDistance={1200}
                         minDistance={2}
+                        autoRotate={true}
+                        autoRotateSpeed={0.3}
                         makeDefault
                     />
                     <MatrixScene d={d} tpsHistory={tpsHistory} tick={tick} />

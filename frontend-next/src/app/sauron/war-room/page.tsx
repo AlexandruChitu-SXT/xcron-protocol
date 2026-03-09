@@ -464,14 +464,34 @@ const SERVERS = [
     // 1-6: Satellite Region Clusters (Expanded Hexagon)
     ...Array(6).fill(0).map((_, i) => ({
         center: new THREE.Vector3(
-            -12 + Math.cos(i * Math.PI / 3) * 65, // Increased from 38 to 65 for massive distance
-            -2 + (Math.random() - 0.5) * 20,
-            -8 + Math.sin(i * Math.PI / 3) * 65
+            -12 + Math.cos(i * Math.PI / 3) * 120, // Pushed inner satellites to 120
+            -2 + (Math.random() - 0.5) * 40,
+            -8 + Math.sin(i * Math.PI / 3) * 120
         ),
         color: new THREE.Color(["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i]),
         hex: ["#06b6d4", "#f43f5e", "#eab308", "#10b981", "#d946ef", "#8b5cf6"][i],
         count: 20,
-        size: 2.5 // Significantly larger nodes so cables don't look like they end in nothing
+        size: 2.5
+    })),
+    // 7-13: MultiversX Ecosystem Projects (Outer Orbital Ring)
+    ...[
+        { name: "xExchange", color: "#01f2f0" }, // Cyan
+        { name: "Hatom", color: "#facc15" },     // Yellow
+        { name: "AshSwap", color: "#f472b6" },   // Pink
+        { name: "xMoney", color: "#22c55e" },    // Green
+        { name: "xSpotlight", color: "#c084fc" },// Purple
+        { name: "Itheum", color: "#f43f5e" },    // Red
+        { name: "ZoidPay", color: "#3b82f6" },   // Blue
+    ].map((proj, i) => ({
+        center: new THREE.Vector3(
+            -12 + Math.cos(i * Math.PI / 3.5) * 260, // Massive outermost distance
+            -2 + (Math.random() - 0.5) * 100, // Extreme vertical Z-axis chaos
+            -8 + Math.sin(i * Math.PI / 3.5) * 260
+        ),
+        color: new THREE.Color(proj.color),
+        hex: proj.color,
+        count: 15,
+        size: 3.5 // Ecosystem nodes are huge anchors
     }))
 ];
 
@@ -491,7 +511,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         const masterCenter = SERVERS[0].center;
         const conduitLinesPerSatellite = 80; // Massive thick bundles 
 
-        for (let i = 1; i <= 6; i++) {
+        for (let i = 1; i < SERVERS.length; i++) {
             const satCenter = SERVERS[i].center;
             const satColor = SERVERS[i].color;
             const boxRadiusSat = SERVERS[i].size * 1.5;
@@ -988,7 +1008,7 @@ export default function WarRoom() {
 
             {/* 3D CANVAS BOARD WITH CAMERA CONTROLS */}
             <div className="absolute inset-0 z-0">
-                <Canvas camera={{ position: [0, 0, 140], fov: 60 }}>
+                <Canvas camera={{ position: [0, 0, 320], fov: 60 }}>
                     <OrbitControls
                         enableZoom={true}
                         enablePan={true}

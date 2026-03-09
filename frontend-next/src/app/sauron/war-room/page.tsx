@@ -605,23 +605,42 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         const hexEdges = [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]];
         hexEdges.forEach(([a, b]) => createConduit(a, b, 10, 4.0));
 
-        // LAYER 2: Cube Corners (7-14) → Nearest Inner Satellite
+        // LAYER 2: Every Cube Corner (7-14) → Master Core (0) directly
         for (let i = 7; i < SERVERS.length; i++) {
-            const nearestSat = ((i - 7) % 6) + 1;
-            createConduit(i, nearestSat, conduitLinesPerOuter, 5.0);
+            createConduit(i, 0, 8, 5.0);
         }
+
+        // LAYER 2.5: Each Cube Corner → Two closest inner satellites
+        const cornerToSats: [number, number[]][] = [
+            [7, [1, 3]], [8, [2, 3]], [9, [1, 4]], [10, [2, 4]],
+            [11, [1, 5]], [12, [2, 5]], [13, [1, 6]], [14, [2, 6]]
+        ];
+        cornerToSats.forEach(([corner, sats]) => {
+            sats.forEach(sat => createConduit(corner, sat, 6, 4.0));
+        });
 
         // LAYER 3: Cube Edges — All 12 edges of the outer cube wireframe
         const cubeEdges = [
-            [7, 8], [7, 9], [7, 11],   // From corner (+,+,+)
-            [8, 10], [8, 12],           // From corner (-,+,+)
-            [9, 10], [9, 13],           // From corner (+,-,+)
-            [10, 14],                   // From corner (-,-,+)
-            [11, 12], [11, 13],         // From corner (+,+,-)
-            [12, 14],                   // From corner (-,+,-)
-            [13, 14]                    // From corner (+,-,-)
+            [7, 8], [7, 9], [7, 11],
+            [8, 10], [8, 12],
+            [9, 10], [9, 13],
+            [10, 14],
+            [11, 12], [11, 13],
+            [12, 14],
+            [13, 14]
         ];
         cubeEdges.forEach(([a, b]) => createConduit(a, b, 8, 4.0));
+
+        // LAYER 4: Cube Face Diagonals — fills the large triangular gaps
+        const faceDiags = [
+            [7, 10], [8, 9],   // Front face
+            [11, 14], [12, 13], // Back face
+            [7, 12], [8, 11],   // Top face
+            [9, 14], [10, 13],  // Bottom face
+            [7, 13], [9, 11],   // Right face
+            [8, 14], [10, 12]   // Left face
+        ];
+        faceDiags.forEach(([a, b]) => createConduit(a, b, 4, 3.0));
 
 
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };

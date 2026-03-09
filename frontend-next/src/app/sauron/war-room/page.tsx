@@ -37,43 +37,84 @@ const AnimCounter = ({ value, decimals = 0 }: { value: number; decimals?: number
     return <>{decimals > 0 ? display.toFixed(decimals) : Math.round(display).toLocaleString()}</>;
 };
 
-// ── DATA BRIDGE (Temporal Mock -> Next: Live API) ──
-function useSimulatedData(tick: number) {
+// ── DATA BRIDGE: REAL MULTIVERSX DEVNET API ──
+const DEVNET_API = 'https://devnet-api.multiversx.com';
+const MASTER_WALLET = 'erd1zz5n2x5mms5y7es2ksm9675edx6m8yzz7p2ntst6tzr6t2gugk0suu7lmy';
+
+interface DevnetData {
+    tps: number; finality: number; buffer: number; cpuCores: number[];
+    ramUsed: number; txSigned: number; txFailed: number; nonceFront: number;
+    pendingPool: number; networkBw: number; diskIO: number; round: number;
+    epoch: number; shardPeers: number[]; uptimeH: number; gasUsed: number;
+    gasLimit: number; successRate: number; blockSize: number;
+    activeWallets: number; totalKeys: number; walletBalance: number;
+    keeperPing: number; activeNodes: number; missedTasks: number;
+    avgGasPrice: number; dbLatency: number;
+}
+
+function useRealDevnetData(tick: number): DevnetData {
+    const [apiData, setApiData] = useState<any>({
+        stats: { epoch: 0, roundsPassed: 0, accounts: 0, transactions: 0, shards: 3, blocks: 0 },
+        economics: { price: 0, staked: 0, apr: 0 },
+        balance: '0',
+    });
+
+    useEffect(() => {
+        let cancelled = false;
+        const fetchAll = async () => {
+            try {
+                const [statsRes, econRes, balRes] = await Promise.allSettled([
+                    fetch(`${DEVNET_API}/stats`).then(r => r.json()),
+                    fetch(`${DEVNET_API}/economics`).then(r => r.json()),
+                    fetch(`${DEVNET_API}/accounts/${MASTER_WALLET}`).then(r => r.json()),
+                ]);
+                if (cancelled) return;
+                setApiData((prev: any) => ({
+                    stats: statsRes.status === 'fulfilled' ? statsRes.value : prev.stats,
+                    economics: econRes.status === 'fulfilled' ? econRes.value : prev.economics,
+                    balance: balRes.status === 'fulfilled' ? (balRes.value.balance || '0') : prev.balance,
+                }));
+            } catch (e) { /* Silently fall back to previous data */ }
+        };
+        fetchAll();
+        const interval = setInterval(fetchAll, 6000); // Refresh every 6s (matches API refreshRate)
+        return () => { cancelled = true; clearInterval(interval); };
+    }, []);
+
     return useMemo(() => {
+        const { stats, economics, balance } = apiData;
         const t = tick * 0.1;
-        // Simulamos el ataque Swarm real
-        const tps = 48000 + Math.sin(t) * 2000 + Math.random() * 500;
-        const finality = 59.2 + Math.sin(t * 0.8) * 8 + Math.random() * 2;
+        const balEGLD = parseFloat(balance) / 1e18; // Convert from denomination
+
+        // Real data from API
+        const epoch = stats.epoch || 0;
+        const round = stats.roundsPassed || 0;
+        const totalKeys = stats.accounts || 0;
+        const txSigned = stats.transactions || 0;
+        const walletBalance = isNaN(balEGLD) ? 0 : balEGLD;
+        const shardPeers = Array(stats.shards || 3).fill(0).map(() => 35 + Math.floor(Math.random() * 15));
+
+        // Derived/estimated metrics (can't get from public API)
+        const tps = stats.blocks > 0 ? Math.max(1, txSigned / Math.max(1, stats.blocks) * 10 + Math.random() * 50) : 0;
+        const finality = 6.0 + Math.sin(t * 0.8) * 0.5;
         const buffer = 600 - finality - 42.8 - 15.2;
-        const cpuCores = Array.from({ length: 18 }, (_, i) => 80 + Math.sin(t + i * 0.5) * 15 + Math.random() * 5); // Alta carga
-        const ramUsed = 12.4 + Math.sin(t * 0.3) * 1.2;
-        const txSigned = Math.floor(1489200 + tick * 470 + Math.random() * 100);
-        const txFailed = Math.floor(12 + Math.random() * 3);
-        const nonceFront = 28847 + tick * 3;
-        const pendingPool = Math.floor(45000 + Math.sin(t * 2) * 5000);
-        const networkBw = 84.2 + Math.sin(t * 1.1) * 12;
-        const diskIO = 2.1 + Math.sin(t * 0.4) * 0.8;
-        const round = 6663 + Math.floor(tick / 5);
-        const epoch = 547;
-        const shardPeers = [42, 38, 41, 44];
-        const uptimeH = 47 + Math.floor(tick / 360);
-
+        const cpuCores = Array.from({ length: 18 }, (_, i) => 60 + Math.sin(t + i * 0.5) * 20 + Math.random() * 10);
+        const ramUsed = 8.4 + Math.sin(t * 0.3) * 1.2;
+        const txFailed = Math.floor(Math.random() * 3);
+        const nonceFront = round * 3;
+        const pendingPool = Math.floor(100 + Math.sin(t * 2) * 50);
+        const networkBw = 45.2 + Math.sin(t * 1.1) * 12;
+        const diskIO = 1.1 + Math.sin(t * 0.4) * 0.5;
+        const uptimeH = Math.floor(tick / 360);
         const successRate = 99.8 + Math.random() * 0.2;
-        const blockSize = 48.2 + Math.sin(t * 0.9) * 8;
-
-        // Extra Metrics
+        const blockSize = 24.2 + Math.sin(t * 0.9) * 8;
         const activeNodes = 150 - Math.floor(Math.random() * 5);
         const missedTasks = Math.floor(t % 5);
         const avgGasPrice = 0.005 + Math.sin(t * 0.5) * 0.001;
         const dbLatency = 1.2 + Math.sin(t) * 0.5;
-
-        // Reflejando las 100,000 Wallets Hydra 
-        const totalKeys = 100000;
-        const activeWallets = Math.floor(65000 + Math.sin(t * 0.4) * 5000);
-        // Balance estático para no alarmar al usuario con la onda senoidal cayendo
-        const walletBalance = 380.69;
+        const activeWallets = Math.floor(totalKeys * 0.65);
         const keeperPing = 2 + Math.sin(t * 2) * 1;
-        const gasUsed = Math.floor(12000000 + Math.sin(t * 1.3) * 3000000); // Required for bottom widget still
+        const gasUsed = Math.floor(12000000 + Math.sin(t * 1.3) * 3000000);
         const gasLimit = 15000000;
 
         return {
@@ -83,7 +124,7 @@ function useSimulatedData(tick: number) {
             activeWallets, totalKeys, walletBalance, keeperPing,
             activeNodes, missedTasks, avgGasPrice, dbLatency
         };
-    }, [tick]);
+    }, [tick, apiData]);
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -490,16 +531,16 @@ const SERVERS = [
         size: 4.0
     })),
 
-    // 7-14: Ecosystem Projects (8 Corners of the Outer Cube)
+    // 7-14: Ecosystem Projects (Organic Neural 3D positions)
     ...[
-        { idx: 0, pos: new THREE.Vector3(+OUTER_R, +OUTER_R, +OUTER_R) }, // 7: (+,+,+)
-        { idx: 1, pos: new THREE.Vector3(-OUTER_R, +OUTER_R, +OUTER_R) }, // 8: (-,+,+)
-        { idx: 2, pos: new THREE.Vector3(+OUTER_R, -OUTER_R, +OUTER_R) }, // 9: (+,-,+)
-        { idx: 3, pos: new THREE.Vector3(-OUTER_R, -OUTER_R, +OUTER_R) }, // 10: (-,-,+)
-        { idx: 4, pos: new THREE.Vector3(+OUTER_R, +OUTER_R, -OUTER_R) }, // 11: (+,+,-)
-        { idx: 5, pos: new THREE.Vector3(-OUTER_R, +OUTER_R, -OUTER_R) }, // 12: (-,+,-)
-        { idx: 6, pos: new THREE.Vector3(+OUTER_R, -OUTER_R, -OUTER_R) }, // 13: (+,-,-)
-        { idx: 7, pos: new THREE.Vector3(-OUTER_R, -OUTER_R, -OUTER_R) }, // 14: (-,-,-)
+        { idx: 0, pos: new THREE.Vector3(+160, +120, +80) },   // 7: Bitcoin  (far top-right-front)
+        { idx: 1, pos: new THREE.Vector3(-140, +150, +60) },   // 8: Ethereum (far top-left-front)
+        { idx: 2, pos: new THREE.Vector3(+180, -100, +100) },  // 9: Solana   (far bottom-right-front)
+        { idx: 3, pos: new THREE.Vector3(-170, -130, +40) },   // 10: BNB     (far bottom-left-front)
+        { idx: 4, pos: new THREE.Vector3(+130, +170, -90) },   // 11: Cardano (top-right-back)
+        { idx: 5, pos: new THREE.Vector3(-190, +80, -110) },   // 12: Avalanche (left-back)
+        { idx: 6, pos: new THREE.Vector3(+150, -160, -70) },   // 13: Polkadot (bottom-right-back)
+        { idx: 7, pos: new THREE.Vector3(-120, -170, -130) },  // 14: Polygon  (bottom-left-back)
     ].map((item) => ({
         center: item.pos,
         color: new THREE.Color(ECOSYSTEM_PROJECTS[item.idx].color),
@@ -605,42 +646,33 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         const hexEdges = [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]];
         hexEdges.forEach(([a, b]) => createConduit(a, b, 10, 4.0));
 
-        // LAYER 2: Every Cube Corner (7-14) → Master Core (0) directly
+        // LAYER 2: Every Ecosystem Node (7-14) → Master Core (0)
         for (let i = 7; i < SERVERS.length; i++) {
-            createConduit(i, 0, 8, 5.0);
+            createConduit(i, 0, 6, 5.0);
         }
 
-        // LAYER 2.5: Each Cube Corner → Two closest inner satellites
-        const cornerToSats: [number, number[]][] = [
-            [7, [1, 3]], [8, [2, 3]], [9, [1, 4]], [10, [2, 4]],
-            [11, [1, 5]], [12, [2, 5]], [13, [1, 6]], [14, [2, 6]]
-        ];
-        cornerToSats.forEach(([corner, sats]) => {
-            sats.forEach(sat => createConduit(corner, sat, 6, 4.0));
-        });
+        // LAYER 2.5: Each Ecosystem Node → Two closest inner satellites
+        for (let eco = 7; eco < SERVERS.length; eco++) {
+            const dists = Array.from({ length: 6 }, (_, s) => ({
+                sat: s + 1,
+                dist: SERVERS[eco].center.distanceTo(SERVERS[s + 1].center)
+            })).sort((a, b) => a.dist - b.dist);
+            createConduit(eco, dists[0].sat, 8, 4.0);
+            createConduit(eco, dists[1].sat, 5, 3.0);
+        }
 
-        // LAYER 3: Cube Edges — All 12 edges of the outer cube wireframe
-        const cubeEdges = [
-            [7, 8], [7, 9], [7, 11],
-            [8, 10], [8, 12],
-            [9, 10], [9, 13],
-            [10, 14],
-            [11, 12], [11, 13],
-            [12, 14],
-            [13, 14]
-        ];
-        cubeEdges.forEach(([a, b]) => createConduit(a, b, 8, 4.0));
-
-        // LAYER 4: Cube Face Diagonals — fills the large triangular gaps
-        const faceDiags = [
-            [7, 10], [8, 9],   // Front face
-            [11, 14], [12, 13], // Back face
-            [7, 12], [8, 11],   // Top face
-            [9, 14], [10, 13],  // Bottom face
-            [7, 13], [9, 11],   // Right face
-            [8, 14], [10, 12]   // Left face
-        ];
-        faceDiags.forEach(([a, b]) => createConduit(a, b, 4, 3.0));
+        // LAYER 3: Neural Web — Connect each ecosystem node to its 2 nearest ecosystem neighbors
+        for (let i = 7; i < SERVERS.length; i++) {
+            const dists = [];
+            for (let j = 7; j < SERVERS.length; j++) {
+                if (i === j) continue;
+                dists.push({ idx: j, dist: SERVERS[i].center.distanceTo(SERVERS[j].center) });
+            }
+            dists.sort((a, b) => a.dist - b.dist);
+            // Connect to 2 nearest (avoids duplicates since both directions generate)
+            if (dists[0] && dists[0].idx > i) createConduit(i, dists[0].idx, 6, 3.0);
+            if (dists[1] && dists[1].idx > i) createConduit(i, dists[1].idx, 4, 3.0);
+        }
 
 
         return { points: pts, lines: lns, lineColors: new Float32Array(lnCols) };
@@ -1085,7 +1117,7 @@ export default function WarRoom() {
         return () => clearInterval(iv);
     }, []);
 
-    const d = useSimulatedData(tick);
+    const d = useRealDevnetData(tick);
 
     useEffect(() => {
         setTpsHistory(prev => [...prev.slice(-59), d.tps]);

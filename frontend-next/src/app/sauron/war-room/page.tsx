@@ -489,11 +489,13 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
         // 1. Generate strictly defined, dense conduits from each Satellite to the Master Core
         const masterCenter = SERVERS[0].center;
-        const conduitLinesPerSatellite = 45; // Much Thicker bundles
+        const conduitLinesPerSatellite = 80; // Massive thick bundles 
 
         for (let i = 1; i <= 6; i++) {
             const satCenter = SERVERS[i].center;
             const satColor = SERVERS[i].color;
+            const boxRadiusSat = SERVERS[i].size * 1.5;
+            const boxRadiusMaster = SERVERS[0].size * 1.5;
 
             // Add the server points themselves to the strict points list
             if (i === 1) {
@@ -507,14 +509,25 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
             for (let c = 0; c < conduitLinesPerSatellite; c++) {
                 // Determine a slight random offset vector perpendicular to the main direction
                 const dir = new THREE.Vector3().subVectors(masterCenter, satCenter).normalize();
-                const randomPerp = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).cross(dir).normalize();
-                // Radius of the conduit tube
-                const spread = (Math.random() * 12.0); // Amplio spread para no apelotonar
-                const offset = randomPerp.multiplyScalar(spread);
+
+                // Pure chaos offset to hit the corners of the isometric cubes
+                const randomPerp = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+                ).normalize();
+
+                // Radius of the huge conduit tube (spread far out like optic fiber cables)
+                const spread = (Math.random() * 30.0);
+                const offset = randomPerp.clone().multiplyScalar(spread);
+
+                // Offset the start and end so they don't clip through the center of the solid cube
+                const startPoint = new THREE.Vector3().copy(satCenter).add(randomPerp.clone().multiplyScalar(boxRadiusSat));
+                const endPoint = new THREE.Vector3().copy(masterCenter).add(randomPerp.clone().multiplyScalar(boxRadiusMaster));
 
                 // Create a segmented line for this strand
                 const segments = 12;
-                let prevPt = new THREE.Vector3().copy(satCenter).add(offset.clone().multiplyScalar(0.2));
+                let prevPt = new THREE.Vector3().copy(startPoint).add(offset.clone().multiplyScalar(0.2));
 
                 for (let seg = 1; seg <= segments; seg++) {
                     const fraction = seg / segments;
@@ -522,7 +535,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
                     const taper = Math.sin(fraction * Math.PI);
                     const currentOffset = offset.clone().multiplyScalar(taper);
 
-                    const nextPt = new THREE.Vector3().lerpVectors(satCenter, masterCenter, fraction).add(currentOffset);
+                    const nextPt = new THREE.Vector3().lerpVectors(startPoint, endPoint, fraction).add(currentOffset);
 
                     // Add the line segment
                     lns.push(prevPt, nextPt);

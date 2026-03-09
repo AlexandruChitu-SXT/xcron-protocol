@@ -458,8 +458,8 @@ const StatCard = ({ label, value, unit, color, sub }: { label: string; value: Re
 // ═════════════════════════════════════════════════════════════════════
 // COMPONENT: 3D NEURAL SWARM — Flat Hexagonal Star + Ecosystem Ring
 // ═════════════════════════════════════════════════════════════════════
-const INNER_R = 38; // Inner satellite hex ring radius  
-const OUTER_R = 80; // Outer ecosystem ring radius
+const INNER_R = 75; // Inner satellite hex ring radius (pushed far from center)
+const OUTER_R = 140; // Outer ecosystem ring radius
 
 // Ecosystem project metadata (name + brand color)
 const ECOSYSTEM_PROJECTS = [

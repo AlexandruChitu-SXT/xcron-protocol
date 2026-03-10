@@ -798,7 +798,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
     }, [lines, lineColors]);
 
     // Sparks (Live Transactions) logic - Flying ALONG the strict conduits
-    const NUM_SPARKS = 150; // Optimized spark particles to prevent WebGL GPU stalling
+    const NUM_SPARKS = 800;
     const sparkData = useMemo(() => {
         return Array(NUM_SPARKS).fill(0).map(() => {
             // Pick a random line segment to start
@@ -829,7 +829,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
         if (sparksRef.current && lines.length > 0) {
             sparkData.forEach((spark, i) => {
                 // Fast-forward sparks if deploying swarm
-                const currentSpeedMultiplier = isDeploying ? 15 : 1;
+                const currentSpeedMultiplier = isDeploying ? 6 : 1;
                 spark.progress += spark.speed * currentSpeedMultiplier * delta;
 
                 if (spark.progress > 1) {
@@ -850,7 +850,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
                 // Smoothly route between nodes
                 dummy.position.lerpVectors(spark.start, spark.end, spark.progress);
                 // Scale spark based on progress (fade in/out effect). Much larger during deployment.
-                const baseScale = isDeploying ? 8.0 : 1.5;
+                const baseScale = isDeploying ? 12.0 : 2.0;
                 const scale = Math.sin(spark.progress * Math.PI) * baseScale;
                 dummy.scale.set(scale, scale, scale);
 
@@ -865,11 +865,11 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
         <group ref={groupRef} position={[0, 0, 0]}>
             {/* The laser pathways/circuitry - Neon glow */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} vertexColors transparent opacity={0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+                <lineBasicMaterial ref={materialRef} color={isDeploying ? "#ff003c" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 1.0 : 0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
             </lineSegments>
             {/* Duplicate layer for bloom-like glow effect */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial vertexColors transparent opacity={0.15} depthWrite={false} blending={THREE.AdditiveBlending} />
+                <lineBasicMaterial color={isDeploying ? "#ff003c" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 0.8 : 0.15} depthWrite={false} blending={THREE.AdditiveBlending} />
             </lineSegments>
 
             {/* Invisible Hitboxes for Conduits so cables are clickable */}

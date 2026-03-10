@@ -4,7 +4,6 @@ import { WalletProvider } from "@/hooks/useWallet";
 import { useExecutionNotifier } from "@/hooks/useExecutionNotifier";
 import AiChat from "@/components/AiChat";
 import { NetworkBadge } from "@/components/NetworkBadge";
-import { Analytics } from '@vercel/analytics/react';
 import { ReactNode } from 'react';
 
 import { usePathname } from 'next/navigation';
@@ -23,7 +22,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             {children}
             <ExecutionNotifier />
             {!isSauron && <AiChat />}
-            {!isSauron && <Analytics />}
         </WalletProvider>
     );
 }

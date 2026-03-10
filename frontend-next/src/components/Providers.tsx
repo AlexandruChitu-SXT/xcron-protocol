@@ -16,7 +16,7 @@ function ExecutionNotifier() {
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const pathname = usePathname() || '';
-    const isSauron = pathname.startsWith('/sauron');
+    const isSauron = pathname.startsWith('/sauron') || pathname.startsWith('/battlesofnodes');
 
     return (
         <WalletProvider>

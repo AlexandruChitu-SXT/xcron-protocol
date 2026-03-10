@@ -699,10 +699,9 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
     useFrame((state, delta) => {
         if (groupRef.current) {
-            // 3D Tumble
-            groupRef.current.rotation.x -= delta * 0.1;
-            groupRef.current.rotation.y += delta * 0.15;
-            // groupRef.current.rotation.z -= delta * 0.05;
+            // Just a microscopic organic floating effect (breathing), NO auto-spinning!
+            groupRef.current.rotation.x = 0.02 * Math.sin(state.clock.elapsedTime * 0.5);
+            groupRef.current.position.y = 2 * Math.sin(state.clock.elapsedTime * 0.8);
         }
     });
 

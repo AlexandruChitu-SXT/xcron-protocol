@@ -850,7 +850,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
                 // Smoothly route between nodes
                 dummy.position.lerpVectors(spark.start, spark.end, spark.progress);
                 // Scale spark based on progress (fade in/out effect). Much larger during deployment.
-                const baseScale = isDeploying ? 12.0 : 2.0;
+                const baseScale = isDeploying ? 3.0 : 1.5;
                 const scale = Math.sin(spark.progress * Math.PI) * baseScale;
                 dummy.scale.set(scale, scale, scale);
 
@@ -865,11 +865,11 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
         <group ref={groupRef} position={[0, 0, 0]}>
             {/* The laser pathways/circuitry - Neon glow */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} color={isDeploying ? "#0bf4f3" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 1.0 : 0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+                <lineBasicMaterial ref={materialRef} vertexColors={true} transparent opacity={isDeploying ? 0.75 : 0.45} depthWrite={false} blending={THREE.AdditiveBlending} />
             </lineSegments>
             {/* Duplicate layer for bloom-like glow effect */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial color={isDeploying ? "#0bf4f3" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 0.8 : 0.15} depthWrite={false} blending={THREE.AdditiveBlending} />
+                <lineBasicMaterial vertexColors={true} transparent opacity={isDeploying ? 0.35 : 0.15} depthWrite={false} blending={THREE.AdditiveBlending} />
             </lineSegments>
 
             {/* Invisible Hitboxes for Conduits so cables are clickable */}
@@ -951,7 +951,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
 
             <instancedMesh ref={sparksRef} args={useMemo(() => [null as any, null as any, NUM_SPARKS], [NUM_SPARKS])}>
                 <sphereGeometry args={useMemo(() => [0.8, 6, 6], [])} />
-                <meshBasicMaterial color={isDeploying ? "#d946ef" : "#ffffff"} transparent opacity={isDeploying ? 1.0 : 0.8} blending={THREE.AdditiveBlending} depthWrite={false} />
+                <meshBasicMaterial color={isDeploying ? "#39ff14" : "#ffffff"} transparent opacity={isDeploying ? 0.9 : 0.6} blending={THREE.AdditiveBlending} depthWrite={false} />
             </instancedMesh>
         </group>
     );

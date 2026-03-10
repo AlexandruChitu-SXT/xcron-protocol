@@ -692,7 +692,7 @@ const SERVERS = [
     { center: new THREE.Vector3(R * 0.5, -R * 0.866, 0), color: "#f97316", name: "AS-02", size: 4.5 }
 ].map(s => ({ ...s, hex: s.color, count: 20 }));
 
-const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; activeServers: number[]; setActiveServers: any }) => {
+const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { tps: number; activeServers: number[]; setActiveServers: any; isDeploying?: boolean }) => {
     const groupRef = useRef<THREE.Group>(null);
     const materialRef = useRef<THREE.LineBasicMaterial>(null);
     const sparksRef = useRef<THREE.InstancedMesh>(null);
@@ -826,7 +826,9 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
         // Move transaction sparks strictly along the segment lines
         if (sparksRef.current && lines.length > 0) {
             sparkData.forEach((spark, i) => {
-                spark.progress += spark.speed * delta;
+                // Fast-forward sparks if deploying swarm
+                const currentSpeedMultiplier = isDeploying ? 15 : 1;
+                spark.progress += spark.speed * currentSpeedMultiplier * delta;
 
                 if (spark.progress > 1) {
                     spark.progress = 0;
@@ -957,7 +959,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 // ═════════════════════════════════════════════════════════════════════
 // MATRIX LEVEL 3D SCENE (React Three Fiber)
 // ═════════════════════════════════════════════════════════════════════
-const MatrixScene = ({ d, tpsHistory, tick }: any) => {
+const MatrixScene = ({ d, tpsHistory, tick, isDeploying }: any) => {
     const [activeServers, setActiveServers] = useState<number[]>([]); // Default to all hidden for dramatic effect
 
     return (
@@ -969,7 +971,7 @@ const MatrixScene = ({ d, tpsHistory, tick }: any) => {
             <pointLight position={[200, -200, 200]} intensity={0.5} color="#e84142" distance={500} />
 
             {/* Continental Neural Swarm */}
-            <NeuralNetwork tps={d.tps} activeServers={activeServers} setActiveServers={setActiveServers} />
+            <NeuralNetwork tps={d.tps} activeServers={activeServers} setActiveServers={setActiveServers} isDeploying={isDeploying} />
 
             <Stars radius={300} depth={150} count={8000} factor={6} saturation={0.1} fade speed={0.5} />
 
@@ -1208,7 +1210,7 @@ export default function WarRoom() {
     const [isDeploying, setIsDeploying] = useState(false);
     const [energyLevel, setEnergyLevel] = useState(0);
 
-    // Burst logic: Automatically reset after 12 seconds
+    // Burst logic: Automatically reset after 5 seconds
     useEffect(() => {
         if (isDeploying) {
             let e = 100;
@@ -1216,12 +1218,12 @@ export default function WarRoom() {
             const iv = setInterval(() => {
                 e -= 1;
                 setEnergyLevel(Math.max(e, 0));
-            }, 120);
+            }, 50); // 100 steps * 50ms = 5000ms
             
             const to = setTimeout(() => {
                 setIsDeploying(false);
                 setEnergyLevel(100);
-            }, 12000); // 12 seconds burst
+            }, 5000); // 5 seconds burst
             
             return () => { clearInterval(iv); clearTimeout(to); };
         } else {
@@ -1331,7 +1333,7 @@ export default function WarRoom() {
                         maxPolarAngle={Math.PI}
                         makeDefault
                     />
-                    <MatrixScene d={d} tpsHistory={tpsHistory} tick={tick} />
+                    <MatrixScene d={d} tpsHistory={tpsHistory} tick={tick} isDeploying={isDeploying} />
                 </Canvas>
             </div>
         </div>

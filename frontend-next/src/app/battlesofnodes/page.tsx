@@ -961,7 +961,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 // MATRIX LEVEL 3D SCENE (React Three Fiber)
 // ═════════════════════════════════════════════════════════════════════
 const MatrixScene = ({ d, tpsHistory, tick }: any) => {
-    const [activeServers, setActiveServers] = useState<number[]>([0]); // Default to Master Core
+    const [activeServers, setActiveServers] = useState<number[]>([]); // Default to all hidden for dramatic effect
 
     return (
         <>

@@ -698,11 +698,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     const sparksRef = useRef<THREE.InstancedMesh>(null);
 
     useFrame((state, delta) => {
-        if (groupRef.current) {
-            // Just a microscopic organic floating effect (breathing), NO auto-spinning!
-            groupRef.current.rotation.x = 0.02 * Math.sin(state.clock.elapsedTime * 0.5);
-            groupRef.current.position.y = 2 * Math.sin(state.clock.elapsedTime * 0.8);
-        }
+        // 100% FROZEN - NO MOVEMENT AS REQUESTED
     });
 
     const { points, lines, lineColors } = useMemo(() => {

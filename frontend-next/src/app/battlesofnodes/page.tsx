@@ -1317,7 +1317,7 @@ export default function WarRoom() {
 
             {/* 3D CANVAS BOARD WITH CAMERA CONTROLS */}
             <div className="absolute inset-0 z-0">
-                <Canvas camera={{ position: [0, 40, 1400], fov: 55 }}>
+                <Canvas camera={{ position: [0, 40, 450], fov: 55 }}>
                     <OrbitControls
                         enableZoom={true}
                         enablePan={true}

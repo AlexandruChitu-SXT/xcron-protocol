@@ -684,12 +684,12 @@ const ActivityMatrix = ({ value = 0, max = 100, color }: { value: number, max: n
 const R = 160; // Tighter, more compact starfish design
 const SERVERS = [
     { center: new THREE.Vector3(0, 0, 0), color: "#ffffff", name: "Master Core", size: 6.0 }, // Brilliant White Center
-    { center: new THREE.Vector3(R, 0, 0), color: "#f43f5e", name: "NY-01", size: 4.5 }, // Neon Rose
-    { center: new THREE.Vector3(R * 0.5, R * 0.866, 0), color: "#a855f7", name: "SA-01", size: 4.5 }, // Deep Purple
-    { center: new THREE.Vector3(-R * 0.5, R * 0.866, 0), color: "#3b82f6", name: "EU-01", size: 4.5 }, // Royal Blue
-    { center: new THREE.Vector3(-R, 0, 0), color: "#10b981", name: "EU-02", size: 4.5 }, // Vibrant Emerald
-    { center: new THREE.Vector3(-R * 0.5, -R * 0.866, 0), color: "#eab308", name: "AS-01", size: 4.5 }, // Warning Yellow
-    { center: new THREE.Vector3(R * 0.5, -R * 0.866, 0), color: "#f97316", name: "AS-02", size: 4.5 } // Security Orange
+    { center: new THREE.Vector3(R, 0, R * 0.4), color: "#f43f5e", name: "NY-01", size: 4.5 }, // Neon Rose
+    { center: new THREE.Vector3(R * 0.5, R * 0.866, -R * 0.6), color: "#a855f7", name: "SA-01", size: 4.5 }, // Deep Purple
+    { center: new THREE.Vector3(-R * 0.5, R * 0.866, R * 0.6), color: "#3b82f6", name: "EU-01", size: 4.5 }, // Royal Blue
+    { center: new THREE.Vector3(-R, 0, -R * 0.4), color: "#10b981", name: "EU-02", size: 4.5 }, // Vibrant Emerald
+    { center: new THREE.Vector3(-R * 0.5, -R * 0.866, R * 0.6), color: "#eab308", name: "AS-01", size: 4.5 }, // Warning Yellow
+    { center: new THREE.Vector3(R * 0.5, -R * 0.866, -R * 0.6), color: "#f97316", name: "AS-02", size: 4.5 } // Security Orange
 ].map(s => ({ ...s, hex: s.color, count: 20 }));
 
 const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; activeServers: number[]; setActiveServers: any }) => {
@@ -699,10 +699,10 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
 
     useFrame((state, delta) => {
         if (groupRef.current) {
-            // Gentle organic sway on X
-            groupRef.current.rotation.x = 0.05 + Math.sin(Date.now() / 3000) * 0.05;
-            // FERRIS WHEEL / ROULETTE ROTATION on Z axis
-            groupRef.current.rotation.z -= delta * 0.15;
+            // 3D Tumble
+            groupRef.current.rotation.x -= delta * 0.1;
+            groupRef.current.rotation.y += delta * 0.15;
+            // groupRef.current.rotation.z -= delta * 0.05;
         }
     });
 

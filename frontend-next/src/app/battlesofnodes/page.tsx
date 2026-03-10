@@ -697,10 +697,12 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers }: { tps: number; 
     const materialRef = useRef<THREE.LineBasicMaterial>(null);
     const sparksRef = useRef<THREE.InstancedMesh>(null);
 
-    useFrame(() => {
+    useFrame((state, delta) => {
         if (groupRef.current) {
-            // Gentle organic sway
+            // Gentle organic sway on X
             groupRef.current.rotation.x = 0.05 + Math.sin(Date.now() / 3000) * 0.05;
+            // FERRIS WHEEL / ROULETTE ROTATION on Z axis
+            groupRef.current.rotation.z -= delta * 0.15;
         }
     });
 
@@ -1328,8 +1330,7 @@ export default function WarRoom() {
                         enableRotate={true}
                         maxDistance={2500}
                         minDistance={2}
-                        autoRotate={true}
-                        autoRotateSpeed={0.5}
+                        autoRotate={false}
                         minPolarAngle={0}
                         maxPolarAngle={Math.PI}
                         makeDefault

@@ -12,7 +12,8 @@ import {
     Terminal,
     KeyRound,
     Menu,
-    X
+    X,
+    Globe
 } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 import { NetworkBadge } from "@/components/NetworkBadge";
@@ -24,6 +25,9 @@ export function Sidebar() {
     const { wallet, connect, disconnect, setShowConnectModal } = useWallet();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
+    // Hide sidebar completely on War Room (full-width telemetry dashboard)
+    if (pathname === "/battlesofnodes") return null;
+
     const routes = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
         { href: "/schedule", label: "Schedule Task", icon: ListTodo },
@@ -32,6 +36,7 @@ export function Sidebar() {
         { href: "/clone-keys", label: "Clone-Keys", icon: KeyRound },
         { href: "/keeper", label: "Keeper Node", icon: Network },
         { href: "/stats", label: "Protocol Stats", icon: Activity },
+        { href: "/battlesofnodes", label: "War Room 3D", icon: Globe },
         { href: "/admin", label: "Admin Panel", icon: Terminal, strict: true },
     ];
 
@@ -78,7 +83,7 @@ export function Sidebar() {
                 `}
             >
                 <div className="p-6">
-                    <Link href="/" className="flex items-center gap-4 group mb-4">
+                    <Link href="/" className="flex items-center gap-4 group mb-4" onClick={() => setIsMobileOpen(false)}>
                         <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-300 pointer-events-none drop-shadow-[0_0_20px_rgba(192,132,252,0.3)] shrink-0">
                             {/* Órbitas 3D perfectas en SVG (Evita el achatamiento de los hijos por rotateX) */}
                             <svg className="absolute inset-[-20%] w-[140%] h-[140%] overflow-visible group-hover:scale-110 transition-transform duration-700" viewBox="0 0 100 100">
@@ -157,6 +162,7 @@ export function Sidebar() {
                             <Link
                                 key={route.href}
                                 href={route.href}
+                                onClick={() => setIsMobileOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group ${isActive
                                     ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
                                     : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"

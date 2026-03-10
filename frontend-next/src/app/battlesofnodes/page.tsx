@@ -1251,7 +1251,7 @@ export default function WarRoom() {
                 >
                     <ArrowLeft className="w-4 h-4 text-cyan-400 group-hover:-translate-x-1 transition-transform" />
                     <span className="text-[10px] font-mono tracking-widest text-slate-300 group-hover:text-cyan-300">
-                        WAR ROOM
+                        BACK
                     </span>
                 </Link>
             </div>

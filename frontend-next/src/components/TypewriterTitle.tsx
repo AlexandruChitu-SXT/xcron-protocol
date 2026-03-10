@@ -3,7 +3,7 @@ import type { CSSProperties, ElementType } from 'react';
 
 interface TypewriterTitleProps {
     text: string;
-    as?: ElementType;       // render as h1, p, div, span, etc.
+    as?: ElementType<any> | string; // render as h1, p, div, span, etc.
     className?: string;
     speed?: number;
     style?: CSSProperties;

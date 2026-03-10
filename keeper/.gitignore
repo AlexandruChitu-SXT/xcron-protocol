@@ -1,9 +1,0 @@
-node_modules/
-dist/
-.secrets/
-*.pem
-.env
-keeper-config.json
-keeper-config.testnet.json
-keeper-logs/
-build_error.txt

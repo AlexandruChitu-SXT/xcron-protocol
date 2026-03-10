@@ -147,9 +147,9 @@
         {
             "step": "scCall",
             "id": "non-assigned-keeper-blocked",
-            "comment": "Keeper2 tries to execute during grace period \u2014 should be blocked if not assigned",
+            "comment": "Keeper1 tries to execute during grace period \u2014 should be blocked if not assigned",
             "tx": {
-                "from": "address:keeper2",
+                "from": "address:keeper1",
                 "to": "sc:scheduler",
                 "function": "executeTask",
                 "arguments": [
@@ -173,9 +173,9 @@
         {
             "step": "scCall",
             "id": "non-assigned-keeper-after-grace",
-            "comment": "Keeper2 can now execute after grace period",
+            "comment": "Keeper1 can now execute after grace period",
             "tx": {
-                "from": "address:keeper2",
+                "from": "address:keeper1",
                 "to": "sc:scheduler",
                 "function": "executeTask",
                 "arguments": [

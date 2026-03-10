@@ -5,6 +5,7 @@ import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '@/
 import { CONTRACTS, NETWORK } from '@/config';
 import { TypewriterTitle } from '@/components/TypewriterTitle';
 import { ProtocolRadar } from '@/components/ProtocolRadar';
+import { NetworkTelemetry } from '@/components/NetworkTelemetry';
 
 interface ProtocolData {
     totalTasks: number;
@@ -166,6 +167,11 @@ export default function ProtocolStats() {
                     bgClass="bg-purple-500/10 border-purple-500/20"
                     loading={loading}
                 />
+            </div>
+
+            {/* Network Telemetry Topology Map */}
+            <div className="mb-8">
+                <NetworkTelemetry activeKeepers={data?.activeKeepers ?? 0} />
             </div>
 
             {/* Detailed Metrics Grid */}

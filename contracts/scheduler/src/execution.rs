@@ -31,7 +31,18 @@ pub trait ExecutionModule:
             "Task not Pending"
         );
         self.require_registered_keeper(&keeper);
+
+        // S-15: MEV / Commit-Reveal Guard
+        // If a task passed through Commit-Reveal, it is exclusively locked to the assigned keeper.
+        if let Some(assigned) = &task.assigned_keeper {
+            require!(
+                &keeper == assigned,
+                "MEV Protection: Task locked to the Committing Keeper"
+            );
+        }
+
         self.require_task_ripe(task_id, &task);
+
 
         // S-1: Verify target is still safe (could have been blacklisted after scheduling)
         self.require_safe_target(&task.target_contract, &task.target_endpoint);
@@ -62,20 +73,40 @@ pub trait ExecutionModule:
         }
 
         // Round-robin assignment: fair task distribution among keepers
+        // S-13: Crypto-Round-Robin (Anti Front-Running). Target timestamp + task_id prevents 
+        // keepers from pre-calculating their assigned tasks and hoarding them out of greed.
         let keeper_count = self.keeper_list().len();
         if keeper_count > 1 {
-            let assigned_index = ((task_id - 1) % keeper_count as u64) as usize + 1;
+            let ripe_time = match &task.trigger {
+                common::types::Trigger::TimeOnce { target_time } => *target_time,
+                common::types::Trigger::TimeRecurring { start_time, .. } => *start_time,
+                _ => self
+                    .blockchain()
+                    .get_block_timestamp_seconds()
+                    .as_u64_seconds(),
+            };
+            
+            // Generate a pseudo-random index based on task_id + ripe_time + prev_block_hash
+            // This ensures assignments are stable for the same task in the same block but unpredictable in advance
+            let mut hash_data = ManagedBuffer::new();
+            hash_data.append(&ManagedBuffer::from(task_id.to_be_bytes().as_ref()));
+            hash_data.append(&ManagedBuffer::from(ripe_time.to_be_bytes().as_ref()));
+            
+            // SECURITY PATCH: Inject on-chain entropy to prevent off-chain prediction
+            let current_nonce = self.blockchain().get_block_nonce();
+            let prev_block_hash = self.blockchain().get_prev_block_hash_by_nonce(current_nonce - 1);
+            hash_data.append(&ManagedBuffer::from(prev_block_hash.as_managed_buffer().to_boxed_bytes().as_slice()));
+            
+            let hash = self.crypto().sha256(&hash_data);
+            let mut hash_bytes = [0u8; 8];
+            hash_bytes.copy_from_slice(&hash.as_managed_buffer().to_boxed_bytes().as_slice()[0..8]);
+            
+            let pseudo_rand = u64::from_be_bytes(hash_bytes);
+            let assigned_index = (pseudo_rand % keeper_count as u64) as usize + 1;
+            
             let assigned_keeper = self.keeper_list().get(assigned_index);
 
             if keeper != assigned_keeper {
-                let ripe_time = match &task.trigger {
-                    common::types::Trigger::TimeOnce { target_time } => *target_time,
-                    common::types::Trigger::TimeRecurring { start_time, .. } => *start_time,
-                    _ => self
-                        .blockchain()
-                        .get_block_timestamp_seconds()
-                        .as_u64_seconds(),
-                };
                 let current_time = self
                     .blockchain()
                     .get_block_timestamp_seconds()
@@ -128,8 +159,9 @@ pub trait ExecutionModule:
         self.tasks(task_id).set(&task);
         self.remove_from_indices(task_id, &task);
 
-        // H-2: Release reentrancy guard BEFORE async call.
-        self.executing_guard().set(false);
+        // BUG FIX: Reentrancy Guard MUST NOT be released before the async call.
+        // It remains locked until execution_callback returns.
+        // REMOVED: self.executing_guard().set(false);
 
         // Build clean args for target call
         let mut clean_args = ManagedVec::new();
@@ -270,6 +302,7 @@ pub trait ExecutionModule:
             ManagedAsyncCallResult::Err(_) => {
                 // ❌ Target execution failed — refund user, no keeper payment
                 task.status = common::types::TaskStatus::Failed;
+                task.assigned_keeper = None; // Free the MEV lock on failure
                 task.completed_at = self
                     .blockchain()
                     .get_block_timestamp_seconds()
@@ -286,10 +319,8 @@ pub trait ExecutionModule:
                 self.target_failure_count(&task.target_contract)
                     .set(new_failures);
 
-                // S-7: Auto-blacklist targets with >10 consecutive failures
-                if new_failures >= 10 {
-                    self.target_blacklist().insert(task.target_contract.clone());
-                }
+                // S-7: Auto-blacklist logic REMOVED (Ecosystem DoS vector neutralized)
+                // Blacklist must only be curated globally via admin.rs by governance.
 
                 // Refund entire deposit to task owner
                 self.send().direct_egld(&task.owner, &task.deposit);
@@ -298,9 +329,11 @@ pub trait ExecutionModule:
                 // P5: Notify KeeperRegistry of failure (triggers progressive slashing)
                 self.forward_keeper_result(&keeper, false);
 
-                self.task_executed_event(task_id, &keeper, false);
             }
         }
+
+        // 🛡️ SECURITY PATCH: Release Reentrancy Guard AFTER the full async lifecycle completes
+        self.executing_guard().set(false);
     }
 
     /// Recover tasks stuck in Executing state. Only callable by owner.
@@ -369,3 +402,4 @@ pub trait ExecutionModule:
         }
     }
 }
+ 

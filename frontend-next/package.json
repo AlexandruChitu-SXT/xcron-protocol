@@ -16,6 +16,9 @@
     "@multiversx/sdk-wallet-connect-provider": "^6.1.4",
     "@multiversx/sdk-web-wallet-provider": "^5.1.1",
     "@radix-ui/react-separator": "^1.1.8",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@types/three": "^0.183.1",
     "@vercel/analytics": "^1.6.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.35.0",
@@ -24,7 +27,8 @@
     "protobufjs": "^8.0.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -865,11 +865,11 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
         <group ref={groupRef} position={[0, 0, 0]}>
             {/* The laser pathways/circuitry - Neon glow */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial ref={materialRef} color={isDeploying ? "#ff003c" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 1.0 : 0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+                <lineBasicMaterial ref={materialRef} color={isDeploying ? "#0bf4f3" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 1.0 : 0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
             </lineSegments>
             {/* Duplicate layer for bloom-like glow effect */}
             <lineSegments geometry={lineGeo}>
-                <lineBasicMaterial color={isDeploying ? "#ff003c" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 0.8 : 0.15} depthWrite={false} blending={THREE.AdditiveBlending} />
+                <lineBasicMaterial color={isDeploying ? "#0bf4f3" : "#ffffff"} vertexColors={!isDeploying} transparent opacity={isDeploying ? 0.8 : 0.15} depthWrite={false} blending={THREE.AdditiveBlending} />
             </lineSegments>
 
             {/* Invisible Hitboxes for Conduits so cables are clickable */}
@@ -951,7 +951,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
 
             <instancedMesh ref={sparksRef} args={useMemo(() => [null as any, null as any, NUM_SPARKS], [NUM_SPARKS])}>
                 <sphereGeometry args={useMemo(() => [0.8, 6, 6], [])} />
-                <meshBasicMaterial color={isDeploying ? "#ff003c" : "#ffffff"} transparent opacity={isDeploying ? 1.0 : 0.8} blending={THREE.AdditiveBlending} depthWrite={false} />
+                <meshBasicMaterial color={isDeploying ? "#d946ef" : "#ffffff"} transparent opacity={isDeploying ? 1.0 : 0.8} blending={THREE.AdditiveBlending} depthWrite={false} />
             </instancedMesh>
         </group>
     );
@@ -1220,12 +1220,12 @@ export default function WarRoom() {
             const iv = setInterval(() => {
                 e -= 1;
                 setEnergyLevel(Math.max(e, 0));
-            }, 80); // 100 steps * 80ms = 8000ms
+            }, 60); // 100 steps * 60ms = 6000ms
             
             const to = setTimeout(() => {
                 setIsDeploying(false);
                 setEnergyLevel(100);
-            }, 8000); // 8 seconds burst
+            }, 6000); // 6 seconds burst
             
             return () => { clearInterval(iv); clearTimeout(to); };
         } else {

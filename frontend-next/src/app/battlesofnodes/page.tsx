@@ -1216,20 +1216,21 @@ export default function WarRoom() {
     // Burst logic: Automatically reset after 12 seconds
     useEffect(() => {
         if (isDeploying) {
-            let e = 0;
+            let e = 100;
+            setEnergyLevel(100);
             const iv = setInterval(() => {
-                e += 10;
-                setEnergyLevel(Math.min(e, 100));
-            }, 50);
+                e -= 1;
+                setEnergyLevel(Math.max(e, 0));
+            }, 120);
             
             const to = setTimeout(() => {
                 setIsDeploying(false);
-                setEnergyLevel(0);
+                setEnergyLevel(100);
             }, 12000); // 12 seconds burst
             
             return () => { clearInterval(iv); clearTimeout(to); };
         } else {
-            setEnergyLevel(0);
+            setEnergyLevel(100);
         }
     }, [isDeploying]);
 
@@ -1284,7 +1285,7 @@ export default function WarRoom() {
             <div className="absolute bottom-12 right-12 z-50 pointer-events-auto flex flex-col items-end gap-2">
                 {isDeploying && (
                     <div className="text-[#facc15] font-mono text-[10px] uppercase tracking-widest animate-pulse font-bold bg-black/50 px-3 py-1 border border-[#facc15]/30 rounded">
-                        Energy Discharging: {100 - energyLevel}%
+                        Energy Discharging: {energyLevel}%
                     </div>
                 )}
                 <motion.button 

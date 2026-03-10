@@ -807,8 +807,8 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
                 start: lines[lineIndex] || new THREE.Vector3(),
                 end: lines[lineIndex + 1] || new THREE.Vector3(),
                 progress: Math.random(),
-                // Much faster speed for the demo burst effect as requested
-                speed: 2.5 + Math.random() * 5.0,
+                // Smoother speed so they don't jump visual geometries on 60fps
+                speed: 0.5 + Math.random() * 1.5,
                 // Assign to a random line chunk to follow
                 lineIdx: lineIndex
             };
@@ -828,8 +828,8 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
         // Move transaction sparks strictly along the segment lines
         if (sparksRef.current && lines.length > 0) {
             sparkData.forEach((spark, i) => {
-                // Fast-forward sparks if deploying swarm
-                const currentSpeedMultiplier = isDeploying ? 6 : 1;
+                // Speed multiplier when injecting 
+                const currentSpeedMultiplier = isDeploying ? 4.5 : 1;
                 spark.progress += spark.speed * currentSpeedMultiplier * delta;
 
                 if (spark.progress > 1) {
@@ -840,8 +840,11 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
                     if (nextIdx < lines.length - 1 && lines[nextIdx] && Math.abs(lines[nextIdx].x - spark.end.x) < 0.1) {
                         spark.lineIdx = nextIdx;
                     } else {
-                        // Reset to a random new starting segment
-                        spark.lineIdx = Math.floor(Math.random() * ((lines.length - 2) / 2)) * 2;
+                        // Reset to the Master Core perfectly (each strand has exactly 32 segments = 64 vectors)
+                        // There are 6 arms * 12 strands = 72 total strands.
+                        const totalStrands = 72;
+                        const randomStrand = Math.floor(Math.random() * totalStrands);
+                        spark.lineIdx = randomStrand * 64;
                     }
                     spark.start = lines[spark.lineIdx] || new THREE.Vector3();
                     spark.end = lines[spark.lineIdx + 1] || new THREE.Vector3();

@@ -849,8 +849,9 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
 
                 // Smoothly route between nodes
                 dummy.position.lerpVectors(spark.start, spark.end, spark.progress);
-                // Scale spark based on progress (fade in/out effect)
-                const scale = Math.sin(spark.progress * Math.PI) * 1.5;
+                // Scale spark based on progress (fade in/out effect). Much larger during deployment.
+                const baseScale = isDeploying ? 8.0 : 1.5;
+                const scale = Math.sin(spark.progress * Math.PI) * baseScale;
                 dummy.scale.set(scale, scale, scale);
 
                 dummy.updateMatrix();
@@ -948,10 +949,9 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
                 )
             })}
 
-            {/* Transaction Sparks (InstancedMesh for performance) */}
             <instancedMesh ref={sparksRef} args={useMemo(() => [null as any, null as any, NUM_SPARKS], [NUM_SPARKS])}>
                 <sphereGeometry args={useMemo(() => [0.8, 6, 6], [])} />
-                <meshBasicMaterial color="#ffffff" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} />
+                <meshBasicMaterial color={isDeploying ? "#ff003c" : "#ffffff"} transparent opacity={isDeploying ? 1.0 : 0.8} blending={THREE.AdditiveBlending} depthWrite={false} />
             </instancedMesh>
         </group>
     );
@@ -1220,12 +1220,12 @@ export default function WarRoom() {
             const iv = setInterval(() => {
                 e -= 1;
                 setEnergyLevel(Math.max(e, 0));
-            }, 50); // 100 steps * 50ms = 5000ms
+            }, 80); // 100 steps * 80ms = 8000ms
             
             const to = setTimeout(() => {
                 setIsDeploying(false);
                 setEnergyLevel(100);
-            }, 5000); // 5 seconds burst
+            }, 8000); // 8 seconds burst
             
             return () => { clearInterval(iv); clearTimeout(to); };
         } else {

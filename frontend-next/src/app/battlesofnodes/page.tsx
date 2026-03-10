@@ -1242,7 +1242,7 @@ export default function WarRoom() {
     }, [d.tps]);
 
     return (
-        <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans text-white">
+        <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans text-white z-[500]">
             {/* Back to Dashboard Navigation */}
             <div className="absolute bottom-12 left-12 z-[300]">
                 <Link 

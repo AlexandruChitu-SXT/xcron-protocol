@@ -1242,9 +1242,13 @@ export default function WarRoom() {
     return (
         <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans text-white">
             {/* 2D HEADER (Overlays WebGL) */}
-            <div className="absolute top-0 left-0 w-full z-[200] px-12 pb-2 flex justify-between items-end pointer-events-none">
+            <div className="absolute top-0 left-0 w-full z-[200] px-12 pt-8 flex justify-between items-start pointer-events-none">
                 {/* Sci-Fi Glassmorphism Title Card */}
                 <div className="relative flex flex-col items-center group">
+                    {/* Glowing Power Tubes attaching to the ceiling */}
+                    <div className="absolute -top-8 left-[15%] w-[2px] h-8 bg-gradient-to-b from-transparent via-cyan-400/80 to-cyan-400 shadow-[0_0_12px_#22d3ee] opacity-90" />
+                    <div className="absolute -top-8 right-[15%] w-[2px] h-8 bg-gradient-to-b from-transparent via-fuchsia-400/80 to-fuchsia-400 shadow-[0_0_12px_#e879f9] opacity-90" />
+                    
                     <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/0 via-fuchsia-500/20 to-cyan-500/0 blur-md opacity-50 group-hover:opacity-100 transition duration-1000" />
                     <div 
                         className="relative flex flex-col items-center px-6 py-3 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
@@ -1288,19 +1292,19 @@ export default function WarRoom() {
                     className="group relative flex flex-col items-end"
                     disabled={isDeploying}
                 >
-                    <div className={`bg-black/80 backdrop-blur-xl border p-4 rounded-xl shadow-[0_0_30px_rgba(244,63,94,0.3)] transition-all cursor-pointer relative overflow-hidden ${isDeploying ? 'border-[#facc15] shadow-[0_0_80px_rgba(250,204,21,0.8)]' : 'border-rose-500/50 hover:shadow-[0_0_50px_rgba(244,63,94,0.6)] hover:border-rose-400'}`}>
-                        {/* Energy fill background when deploying */}
+                    <div className={`flex flex-col items-center justify-center aspect-square w-28 bg-black/80 backdrop-blur-xl border p-3 rounded-2xl shadow-[0_0_30px_rgba(244,63,94,0.3)] transition-all cursor-pointer relative overflow-hidden ${isDeploying ? 'border-[#facc15] shadow-[0_0_80px_rgba(250,204,21,0.8)]' : 'border-rose-500/50 hover:shadow-[0_0_50px_rgba(244,63,94,0.6)] hover:border-rose-400'}`}>
+                        {/* Energy fill background when deploying (bottom up) */}
                         {isDeploying && (
                             <div 
-                                className="absolute left-0 bottom-0 top-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/20 to-yellow-500/40 pointer-events-none"
-                                style={{ width: `${energyLevel}%`, transition: 'width 100ms linear' }} 
+                                className="absolute left-0 bottom-0 right-0 bg-gradient-to-t from-yellow-500/40 via-yellow-500/20 to-yellow-500/0 pointer-events-none"
+                                style={{ height: `${energyLevel}%`, transition: 'height 100ms linear' }} 
                             />
                         )}
 
-                        <div className="flex items-center gap-3 relative z-10">
-                            <div className={`w-3 h-3 rounded-full ${isDeploying ? 'bg-white shadow-[0_0_20px_#ffffff,0_0_40px_#facc15] animate-ping' : 'bg-rose-500 shadow-[0_0_10px_#f43f5e] animate-pulse'}`} />
-                            <span className={`font-mono font-black tracking-widest text-lg ${isDeploying ? 'text-white drop-shadow-[0_0_10px_#facc15]' : 'text-rose-100'}`}>
-                                {isDeploying ? 'SWARM INJECTING...' : 'DEPLOY SWARM'}
+                        <div className="flex flex-col items-center justify-center gap-3 relative z-10 mt-1">
+                            <div className={`w-5 h-5 rounded-full ${isDeploying ? 'bg-white shadow-[0_0_20px_#ffffff,0_0_40px_#facc15] animate-ping' : 'bg-rose-500 shadow-[0_0_15px_#f43f5e] animate-pulse'}`} />
+                            <span className={`font-mono font-black tracking-widest text-[11px] text-center leading-snug ${isDeploying ? 'text-white drop-shadow-[0_0_10px_#facc15]' : 'text-rose-100'}`}>
+                                {isDeploying ? 'INJECTING' : 'DEPLOY\nSWARM'}
                             </span>
                         </div>
                     </div>

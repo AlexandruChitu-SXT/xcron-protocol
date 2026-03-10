@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, Stars, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════
    ENTERPRISE TELEMETRY DASHBOARD — ZERO GLOW, CRISP TEXT
@@ -1241,6 +1243,19 @@ export default function WarRoom() {
 
     return (
         <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans text-white">
+            {/* Back to Dashboard Navigation */}
+            <div className="absolute top-6 left-6 z-[300]">
+                <Link 
+                    href="/sauron/war-room" 
+                    className="flex items-center gap-2 px-4 py-2 bg-black/40 hover:bg-black/80 backdrop-blur-md border border-white/10 hover:border-cyan-500/50 rounded-xl transition-all duration-300 group"
+                >
+                    <ArrowLeft className="w-4 h-4 text-cyan-400 group-hover:-translate-x-1 transition-transform" />
+                    <span className="text-[10px] font-mono tracking-widest text-slate-300 group-hover:text-cyan-300">
+                        WAR ROOM
+                    </span>
+                </Link>
+            </div>
+
             {/* 2D HEADER (Overlays WebGL) */}
             <div className="absolute top-0 left-0 w-full z-[200] px-12 pt-8 flex justify-between items-start pointer-events-none">
                 {/* Sci-Fi Glassmorphism Title Card */}

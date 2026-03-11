@@ -1286,7 +1286,7 @@ export default function WarRoom() {
                 }
                 return newArr;
             });
-        }, 100);
+        }, isDeploying ? 100 : 800);
         return () => clearInterval(interval);
     }, [isDeploying, d.tps, d.pendingPool]);
 

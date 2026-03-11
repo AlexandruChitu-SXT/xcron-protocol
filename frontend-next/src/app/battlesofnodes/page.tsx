@@ -1247,6 +1247,7 @@ export default function WarRoom() {
     // High-Frequency Burst Simulator (42ms Snipe Window visually represented every 100ms)
     const [burstStream, setBurstStream] = useState<number[]>(Array(50).fill(0));
     const [mempoolStream, setMempoolStream] = useState<number[]>(Array(50).fill(0));
+    const [ingressStream, setIngressStream] = useState<number[]>(Array(50).fill(0));
     useEffect(() => {
         const interval = setInterval(() => {
             setBurstStream(prev => {
@@ -1256,19 +1257,32 @@ export default function WarRoom() {
                 } else {
                     // Real Devnet TPS baseline + organic 100ms jitter
                     const realBaseline = d.tps || 0;
-                    const jitter = Math.floor(Math.random() * (realBaseline > 10 ? realBaseline * 0.2 : 5)); 
-                    newArr.push(Math.max(0, realBaseline + (Math.random() > 0.5 ? jitter : -jitter))); 
+                    const baseFloor = Math.max(realBaseline, 60 + Math.random() * 20);
+                    const jitter = Math.floor(Math.random() * 15); 
+                    newArr.push(Math.max(0, baseFloor + (Math.random() > 0.5 ? jitter : -jitter))); 
                 }
                 return newArr;
             });
             setMempoolStream(prev => {
                 const newArr = [...prev.slice(1)];
-                const baseMempool = d.pendingPool || 1500;
-                const jitter = Math.floor(Math.random() * (baseMempool * 0.15));
+                const baseMempool = d.pendingPool || Math.floor(600 + Math.random() * 150);
+                const jitter = Math.floor(Math.random() * 40);
                 if (isDeploying) {
                     newArr.push(baseMempool + 150000 + Math.random() * 50000);
                 } else {
                     newArr.push(Math.max(0, baseMempool + (Math.random() > 0.5 ? jitter : -jitter)));
+                }
+                return newArr;
+            });
+            setIngressStream(prev => {
+                const newArr = [...prev.slice(1)];
+                const realBaseline = d.tps || 0;
+                const baseIngress = Math.max(realBaseline * 1.2, 90 + Math.random() * 30);
+                const jitter = Math.floor(Math.random() * 20);
+                if (isDeploying) {
+                    newArr.push(Math.floor(Math.random() * 100000) + 25000);
+                } else {
+                    newArr.push(Math.max(0, baseIngress + (Math.random() > 0.5 ? jitter : -jitter)));
                 }
                 return newArr;
             });
@@ -1439,7 +1453,29 @@ export default function WarRoom() {
             {/* USER INTERACTION HUB */}
             <div className="absolute bottom-6 right-6 z-50 pointer-events-auto flex flex-col items-end gap-3">
                 
-                <div className="flex gap-4 items-end">
+                <div className="flex flex-col gap-3 items-end">
+                    {/* ── INGRESS FLOW GRAPH ── */}
+                    <div className={`group relative transition-all duration-500 overflow-visible h-[90px] w-[280px] opacity-100 cursor-crosshair`}>
+                        <div className={`w-full h-full flex flex-col p-3 rounded-xl bg-black/80 backdrop-blur-xl border border-t-[2px] shadow-lg relative z-10 ${isDeploying ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]' : 'border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.15)] hover:border-purple-400/80'}`}>
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="flex flex-col">
+                                    <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-purple-400/80' : 'text-purple-400/80'}`}>
+                                        {isDeploying ? 'MASSIVE INGRESS' : 'INGRESS FLOW'}
+                                    </span>
+                                    <span className="text-xl font-black text-white leading-none mt-0.5">{ingressStream[Math.max(0, ingressStream.length-1)].toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-purple-400' : 'text-purple-400'}`}>Tx/s</span></span>
+                                </div>
+                                <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-purple-500/20 text-purple-400 border-purple-500/50 animate-pulse' : 'bg-purple-500/10 text-purple-400 border-purple-500/30'}`}>
+                                    {isDeploying ? "SPIKE DETECTED" : "LISTENING"}
+                                </span>
+                            </div>
+                            <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-purple-500' : 'text-purple-400'}`}>
+                                 <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
+                                    <polyline points={ingressStream.map((v, i) => `${Math.max(0, (i / (ingressStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 150000 : 300))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* ── MEMPOOL PRESSURE GRAPH ── */}
                     <div className={`group relative transition-all duration-500 overflow-visible h-[90px] w-[280px] opacity-100 cursor-crosshair`}>
                         <div className={`w-full h-full flex flex-col p-3 rounded-xl bg-black/80 backdrop-blur-xl border border-t-[2px] shadow-lg relative z-10 ${isDeploying ? 'border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 'border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:border-emerald-400/80'}`}>
@@ -1456,7 +1492,7 @@ export default function WarRoom() {
                             </div>
                             <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-rose-500' : 'text-emerald-400'}`}>
                                  <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
-                                    <polyline points={mempoolStream.map((v, i) => `${Math.max(0, (i / (mempoolStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 200000 : 10000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                    <polyline points={mempoolStream.map((v, i) => `${Math.max(0, (i / (mempoolStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 200000 : 2000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
                                 </svg>
                             </div>
                         </div>
@@ -1478,7 +1514,7 @@ export default function WarRoom() {
                             </div>
                             <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-orange-500' : 'text-cyan-400'}`}>
                                  <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
-                                    <polyline points={burstStream.map((v, i) => `${Math.max(0, (i / (burstStream.length - 1))) * 200},${40 - (v / (isDeploying ? 100000 : 1500)) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                    <polyline points={burstStream.map((v, i) => `${Math.max(0, (i / (burstStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 100000 : 300))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
                                 </svg>
                             </div>
                         </div>

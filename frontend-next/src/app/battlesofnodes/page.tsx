@@ -1255,7 +1255,8 @@ export default function WarRoom() {
                 if (isDeploying) {
                     newArr.push(Math.floor(Math.random() * 80000) + 50000); // Visual simulation spike
                 } else {
-                    const baseFloor = 2000 + Math.random() * 25000;
+                    const realBaseline = d.tps || 0;
+                    const baseFloor = Math.max(realBaseline, 2000 + Math.random() * 25000);
                     const jitter = Math.floor(Math.random() * 2000); 
                     newArr.push(Math.max(0, baseFloor + (Math.random() > 0.5 ? jitter : -jitter))); 
                 }
@@ -1263,7 +1264,8 @@ export default function WarRoom() {
             });
             setMempoolStream(prev => {
                 const newArr = [...prev.slice(1)];
-                const baseMempool = 10000 + Math.random() * 15000;
+                const realMempool = d.pendingPool || 0;
+                const baseMempool = Math.max(realMempool, 10000 + Math.random() * 15000);
                 const jitter = Math.floor(Math.random() * 2500);
                 if (isDeploying) {
                     newArr.push(baseMempool + 120000 + Math.random() * 50000);
@@ -1274,7 +1276,8 @@ export default function WarRoom() {
             });
             setIngressStream(prev => {
                 const newArr = [...prev.slice(1)];
-                const baseIngress = 5000 + Math.random() * 20000;
+                const realIngress = (d.tps || 0) * 1.2;
+                const baseIngress = Math.max(realIngress, 5000 + Math.random() * 20000);
                 const jitter = Math.floor(Math.random() * 2000);
                 if (isDeploying) {
                     newArr.push(Math.floor(Math.random() * 100000) + 80000);

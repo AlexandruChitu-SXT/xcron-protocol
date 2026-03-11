@@ -1306,11 +1306,11 @@ export default function WarRoom() {
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-8 text-[11px] font-mono text-white">
-                    <div className="flex flex-col"><span className="text-white">STATUS</span><span className="text-emerald-400 font-bold ">● MATRIX LIVE</span></div>
-                    <div className="flex flex-col"><span className="text-white">{"EPOCH // ROUND"}</span><span className="text-white">{d.epoch} {"//"} {d.round}</span></div>
-                    <div className="flex flex-col"><span className="text-white">TOTAL WALLETS</span><span className="text-white">{d.totalKeys.toLocaleString()}</span></div>
-                    <div className="flex flex-col"><span className="text-white">MASTER BALANCE</span><span className="text-fuchsia-400">{d.walletBalance.toFixed(2)} EGLD</span></div>
+                <div className="flex gap-8 text-[11px] font-mono text-white mt-6 bg-black/40 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                    <div className="flex flex-col"><span className="text-white/60 tracking-widest text-[9px] mb-0.5">STATUS</span><span className="text-emerald-400 font-bold ">● MATRIX LIVE</span></div>
+                    <div className="flex flex-col"><span className="text-white/60 tracking-widest text-[9px] mb-0.5">{"EPOCH // ROUND"}</span><span className="text-white">{d.epoch} {"//"} {d.round}</span></div>
+                    <div className="flex flex-col"><span className="text-white/60 tracking-widest text-[9px] mb-0.5">TOTAL WALLETS</span><span className="text-white">{d.totalKeys.toLocaleString()}</span></div>
+                    <div className="flex flex-col"><span className="text-white/60 tracking-widest text-[9px] mb-0.5">MASTER BALANCE</span><span className="text-fuchsia-400">{d.walletBalance.toFixed(2)} EGLD</span></div>
                 </div>
             </div>
 

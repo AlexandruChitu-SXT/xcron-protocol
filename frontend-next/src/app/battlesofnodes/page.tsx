@@ -965,7 +965,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
 // MATRIX LEVEL 3D SCENE (React Three Fiber)
 // ═════════════════════════════════════════════════════════════════════
 const MatrixScene = ({ d, tpsHistory, tick, isDeploying }: any) => {
-    const [activeServers, setActiveServers] = useState<number[]>([0, 2]); // Master and SA-01 defaults
+    const [activeServers, setActiveServers] = useState<number[]>([]);
 
     return (
         <>

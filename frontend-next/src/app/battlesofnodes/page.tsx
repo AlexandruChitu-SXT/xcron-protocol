@@ -1251,15 +1251,19 @@ export default function WarRoom() {
             setBurstStream(prev => {
                 const newArr = [...prev.slice(1)];
                 if (isDeploying) {
-                    newArr.push(Math.floor(Math.random() * 80000) + 20000); // Massive 20k to 100k spike
+                    newArr.push(Math.floor(Math.random() * 80000) + 20000); // Visual simulation spike
                 } else {
-                    newArr.push(Math.floor(Math.random() * 800) + 100); // Base idle noise (100 to 900)
+                    // Real Devnet TPS baseline + organic 100ms jitter
+                    const realBaseline = d.tps || 0;
+                    const jitter = Math.floor(Math.random() * (realBaseline > 10 ? realBaseline * 0.2 : 5)); 
+                    newArr.push(Math.max(0, realBaseline + (Math.random() > 0.5 ? jitter : -jitter))); 
                 }
                 return newArr;
             });
         }, 100);
         return () => clearInterval(interval);
-    }, [isDeploying]);
+    }, [isDeploying, d.tps]);
+
 
     return (
         <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans text-white z-[500]">

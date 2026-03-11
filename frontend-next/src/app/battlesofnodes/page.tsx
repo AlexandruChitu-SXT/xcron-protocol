@@ -1345,7 +1345,7 @@ export default function WarRoom() {
             </div>
 
             {/* ── LEFT SIDE: PERSISTENT SENSORS ── */}
-            <div className="absolute top-32 left-8 w-48 flex flex-col gap-3 z-[200] pointer-events-none">
+            <div className="absolute bottom-24 left-12 w-48 flex flex-col gap-3 z-[200] pointer-events-none">
                 {/* Global Mempool Pressure */}
                 <div className="group pointer-events-auto relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg p-3 shadow-lg cursor-help transition-colors hover:border-fuchsia-500/50">
                     <div className="flex justify-between items-center mb-2 relative z-10">

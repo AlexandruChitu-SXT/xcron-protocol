@@ -1246,6 +1246,7 @@ export default function WarRoom() {
 
     // High-Frequency Burst Simulator (42ms Snipe Window visually represented every 100ms)
     const [burstStream, setBurstStream] = useState<number[]>(Array(50).fill(0));
+    const [mempoolStream, setMempoolStream] = useState<number[]>(Array(50).fill(0));
     useEffect(() => {
         const interval = setInterval(() => {
             setBurstStream(prev => {
@@ -1260,9 +1261,20 @@ export default function WarRoom() {
                 }
                 return newArr;
             });
+            setMempoolStream(prev => {
+                const newArr = [...prev.slice(1)];
+                const baseMempool = d.pendingPool || 1500;
+                const jitter = Math.floor(Math.random() * (baseMempool * 0.15));
+                if (isDeploying) {
+                    newArr.push(baseMempool + 150000 + Math.random() * 50000);
+                } else {
+                    newArr.push(Math.max(0, baseMempool + (Math.random() > 0.5 ? jitter : -jitter)));
+                }
+                return newArr;
+            });
         }, 100);
         return () => clearInterval(interval);
-    }, [isDeploying, d.tps]);
+    }, [isDeploying, d.tps, d.pendingPool]);
 
 
     return (
@@ -1427,33 +1439,48 @@ export default function WarRoom() {
             {/* USER INTERACTION HUB */}
             <div className="absolute bottom-6 right-6 z-50 pointer-events-auto flex flex-col items-end gap-3">
                 
-                {/* ── SNIPE MICRO-BURST TELEMETRY (42MS WINDOW) ── */}
-                <div className={`group relative transition-all duration-500 overflow-visible h-[90px] w-[280px] opacity-100 cursor-crosshair`}>
-                    <div className={`w-full h-full flex flex-col p-3 rounded-xl bg-black/80 backdrop-blur-xl border border-t-[2px] shadow-lg relative z-10 ${isDeploying ? 'border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.15)] hover:border-cyan-400/80'}`}>
-                        <div className="flex justify-between items-center mb-1">
-                            <div className="flex flex-col">
-                                <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-orange-400/80' : 'text-cyan-400/80'}`}>
-                                    {isDeploying ? '42MS BURST ENGAGED' : '42MS MONITORING'}
+                <div className="flex gap-4 items-end">
+                    {/* ── MEMPOOL PRESSURE GRAPH ── */}
+                    <div className={`group relative transition-all duration-500 overflow-visible h-[90px] w-[280px] opacity-100 cursor-crosshair`}>
+                        <div className={`w-full h-full flex flex-col p-3 rounded-xl bg-black/80 backdrop-blur-xl border border-t-[2px] shadow-lg relative z-10 ${isDeploying ? 'border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 'border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:border-emerald-400/80'}`}>
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="flex flex-col">
+                                    <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-rose-400/80' : 'text-emerald-400/80'}`}>
+                                        {isDeploying ? 'CRITICAL MEMPOOL' : 'MEMPOOL PRESSURE'}
+                                    </span>
+                                    <span className="text-xl font-black text-white leading-none mt-0.5">{mempoolStream[Math.max(0, mempoolStream.length-1)].toLocaleString()} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-rose-400' : 'text-emerald-400'}`}>TXs</span></span>
+                                </div>
+                                <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`}>
+                                    {isDeploying ? "OVERLOAD" : "NORMAL"}
                                 </span>
-                                <span className="text-xl font-black text-white leading-none mt-0.5">{burstStream[Math.max(0, burstStream.length-1)].toLocaleString()} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-orange-400' : 'text-cyan-400'}`}>TPS</span></span>
                             </div>
-                            <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 animate-pulse' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'}`}>
-                                {isDeploying ? "DESYNC" : "STABLE"}
-                            </span>
-                        </div>
-                        <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-orange-500' : 'text-cyan-400'}`}>
-                             <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
-                                <polyline points={burstStream.map((v, i) => `${Math.max(0, (i / (burstStream.length - 1))) * 200},${40 - (v / (isDeploying ? 100000 : 1500)) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                            </svg>
+                            <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-rose-500' : 'text-emerald-400'}`}>
+                                 <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
+                                    <polyline points={mempoolStream.map((v, i) => `${Math.max(0, (i / (mempoolStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 200000 : 10000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full mb-3 right-0 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[300]">
-                        <div className={`bg-black/90 backdrop-blur-xl p-3 border rounded-lg shadow-lg ${isDeploying ? 'border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.2)]' : 'border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]'}`}>
-                            <span className={`text-[9px] font-bold block mb-1 tracking-widest uppercase ${isDeploying ? 'text-orange-400' : 'text-cyan-400'}`}>Micro-Burst Telemetry</span>
-                            <p className={`text-[8px] leading-relaxed font-mono ${isDeploying ? 'text-orange-200/80' : 'text-cyan-200/80'}`}>
-                                Ultra-high frequency scanning matrix. Actively monitoring and injecting payload spikes within targeted 42-millisecond windows.
-                            </p>
+
+                    {/* ── SNIPE MICRO-BURST TELEMETRY (42MS WINDOW) ── */}
+                    <div className={`group relative transition-all duration-500 overflow-visible h-[90px] w-[280px] opacity-100 cursor-crosshair`}>
+                        <div className={`w-full h-full flex flex-col p-3 rounded-xl bg-black/80 backdrop-blur-xl border border-t-[2px] shadow-lg relative z-10 ${isDeploying ? 'border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.15)] hover:border-cyan-400/80'}`}>
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="flex flex-col">
+                                    <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-orange-400/80' : 'text-cyan-400/80'}`}>
+                                        {isDeploying ? '42MS BURST ENGAGED' : 'TRANSACTION THROUGHPUT'}
+                                    </span>
+                                    <span className="text-xl font-black text-white leading-none mt-0.5">{burstStream[Math.max(0, burstStream.length-1)].toLocaleString()} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-orange-400' : 'text-cyan-400'}`}>TPS</span></span>
+                                </div>
+                                <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 animate-pulse' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'}`}>
+                                    {isDeploying ? "DESYNC" : "STABLE"}
+                                </span>
+                            </div>
+                            <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-orange-500' : 'text-cyan-400'}`}>
+                                 <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
+                                    <polyline points={burstStream.map((v, i) => `${Math.max(0, (i / (burstStream.length - 1))) * 200},${40 - (v / (isDeploying ? 100000 : 1500)) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
                 </div>

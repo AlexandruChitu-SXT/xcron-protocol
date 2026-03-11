@@ -1462,7 +1462,7 @@ export default function WarRoom() {
                                     <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-purple-400/80' : 'text-purple-400/80'}`}>
                                         {isDeploying ? 'MASSIVE INGRESS' : 'INGRESS FLOW'}
                                     </span>
-                                    <span className="text-xl font-black text-white leading-none mt-0.5">{ingressStream[Math.max(0, ingressStream.length-1)].toLocaleString()} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-purple-400' : 'text-purple-400'}`}>Tx/s</span></span>
+                                    <span className="text-xl font-black text-white leading-none mt-0.5">{Math.floor(ingressStream[Math.max(0, ingressStream.length-1)]).toLocaleString('es-ES', { maximumFractionDigits: 0 })} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-purple-400' : 'text-purple-400'}`}>Tx/s</span></span>
                                 </div>
                                 <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-purple-500/20 text-purple-400 border-purple-500/50 animate-pulse' : 'bg-purple-500/10 text-purple-400 border-purple-500/30'}`}>
                                     {isDeploying ? "SPIKE DETECTED" : "LISTENING"}
@@ -1484,7 +1484,7 @@ export default function WarRoom() {
                                     <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-rose-400/80' : 'text-emerald-400/80'}`}>
                                         {isDeploying ? 'CRITICAL MEMPOOL' : 'MEMPOOL PRESSURE'}
                                     </span>
-                                    <span className="text-xl font-black text-white leading-none mt-0.5">{mempoolStream[Math.max(0, mempoolStream.length-1)].toLocaleString()} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-rose-400' : 'text-emerald-400'}`}>TXs</span></span>
+                                    <span className="text-xl font-black text-white leading-none mt-0.5">{Math.floor(mempoolStream[Math.max(0, mempoolStream.length-1)]).toLocaleString('es-ES', { maximumFractionDigits: 0 })} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-rose-400' : 'text-emerald-400'}`}>TXs</span></span>
                                 </div>
                                 <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`}>
                                     {isDeploying ? "OVERLOAD" : "NORMAL"}
@@ -1506,7 +1506,7 @@ export default function WarRoom() {
                                     <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-orange-400/80' : 'text-cyan-400/80'}`}>
                                         {isDeploying ? '42MS BURST ENGAGED' : 'TRANSACTION THROUGHPUT'}
                                     </span>
-                                    <span className="text-xl font-black text-white leading-none mt-0.5">{burstStream[Math.max(0, burstStream.length-1)].toLocaleString()} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-orange-400' : 'text-cyan-400'}`}>TPS</span></span>
+                                    <span className="text-xl font-black text-white leading-none mt-0.5">{Math.floor(burstStream[Math.max(0, burstStream.length-1)]).toLocaleString('es-ES', { maximumFractionDigits: 0 })} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-orange-400' : 'text-cyan-400'}`}>TPS</span></span>
                                 </div>
                                 <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 animate-pulse' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'}`}>
                                     {isDeploying ? "DESYNC" : "STABLE"}

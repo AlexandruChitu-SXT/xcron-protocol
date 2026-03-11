@@ -1373,6 +1373,52 @@ export default function WarRoom() {
                         </div>
                     </div>
                 </div>
+
+                {/* ── THE FINAL ROUND (PIPELINE) ── */}
+                <div className="group pointer-events-auto relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg p-3 shadow-lg cursor-crosshair transition-all hover:border-[#facc15]/60 hover:shadow-[0_0_25px_rgba(250,204,21,0.2)]">
+                    <div className="flex justify-between items-center mb-1 relative z-10">
+                        <span className="text-[8px] text-[#facc15] font-black tracking-widest uppercase transition-transform group-hover:drop-shadow-[0_0_8px_#facc15]">THE FINAL ROUND</span>
+                        <span className="text-[12px] text-white font-black font-mono animate-pulse drop-shadow-[0_0_5px_rgba(255,255,255,0.8)] leading-none mt-0.5">? <span className="text-[7px] text-[#facc15] tracking-widest">PAYLOAD</span></span>
+                    </div>
+                    
+                    {/* Electrifying Pipeline Graphic */}
+                    <div className="w-full h-6 mt-1.5 relative z-10 flex items-center justify-center overflow-visible">
+                        {/* Background subtle wire */}
+                        <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-[1px] bg-white/5 w-full" />
+                        
+                        {/* The Electric Ray */}
+                        <svg viewBox="0 0 100 20" preserveAspectRatio="none" className="w-full h-full absolute inset-0 overflow-visible drop-shadow-[0_0_4px_rgba(250,204,21,0.8)] group-hover:drop-shadow-[0_0_15px_rgba(250,204,21,1)] transition-all">
+                             <polyline 
+                                points="0,10 15,10 20,2 25,18 30,10 45,10 50,2 55,18 60,10 75,10 80,4 85,16 90,10 100,10" 
+                                fill="none" 
+                                stroke="#facc15" 
+                                strokeWidth="1" 
+                                strokeLinejoin="miter" 
+                                strokeLinecap="square"
+                                className="opacity-80 group-hover:animate-ping"
+                            />
+                            <polyline 
+                                points="0,10 15,10 20,2 25,18 30,10 45,10 50,2 55,18 60,10 75,10 80,4 85,16 90,10 100,10" 
+                                fill="none" 
+                                stroke="#ffffff" 
+                                strokeWidth="0.5" 
+                                strokeLinejoin="miter" 
+                                strokeLinecap="square"
+                                className="opacity-90 animate-pulse group-hover:opacity-100"
+                            />
+                        </svg>
+                        {/* Glowing node inside the pipe */}
+                        <div className="absolute w-[3px] h-[3px] bg-white rounded-full shadow-[0_0_10px_#ffffff,0_0_20px_#facc15] animate-ping" style={{ left: '49%' }} />
+                    </div>
+
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 w-48 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[300]">
+                        <div className="bg-black/90 backdrop-blur-xl p-3 border border-[#facc15]/40 rounded-lg shadow-[0_0_20px_rgba(250,204,21,0.25)]">
+                            <span className="text-[9px] font-bold text-[#facc15] block mb-1 tracking-widest uppercase">The Pipeline</span>
+                            <p className="text-[8px] text-yellow-100/80 leading-relaxed font-mono">Massive stress injection duct reserved for final protocol destabilization. Total volumetric capacity is classified.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             {/* USER INTERACTION HUB */}
             <div className="absolute bottom-6 right-6 z-50 pointer-events-auto flex flex-col items-end gap-3">

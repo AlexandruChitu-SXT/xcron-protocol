@@ -965,7 +965,7 @@ const NeuralNetwork = ({ tps, activeServers, setActiveServers, isDeploying }: { 
 // MATRIX LEVEL 3D SCENE (React Three Fiber)
 // ═════════════════════════════════════════════════════════════════════
 const MatrixScene = ({ d, tpsHistory, tick, isDeploying }: any) => {
-    const [activeServers, setActiveServers] = useState<number[]>([]); // Default to all hidden for dramatic effect
+    const [activeServers, setActiveServers] = useState<number[]>([0, 2]); // Master and SA-01 defaults
 
     return (
         <>
@@ -1244,6 +1244,23 @@ export default function WarRoom() {
         setTpsHistory(prev => [...prev.slice(-59), d.tps]);
     }, [d.tps]);
 
+    // High-Frequency Burst Simulator (42ms Snipe Window visually represented every 100ms)
+    const [burstStream, setBurstStream] = useState<number[]>(Array(50).fill(0));
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setBurstStream(prev => {
+                const newArr = [...prev.slice(1)];
+                if (isDeploying) {
+                    newArr.push(Math.floor(Math.random() * 80000) + 20000); // Massive 20k to 100k spike
+                } else {
+                    newArr.push(Math.floor(Math.random() * 800) + 100); // Base idle noise (100 to 900)
+                }
+                return newArr;
+            });
+        }, 100);
+        return () => clearInterval(interval);
+    }, [isDeploying]);
+
     return (
         <div className="fixed inset-0 bg-[#020202] overflow-hidden font-sans text-white z-[500]">
             {/* Back to Dashboard Navigation */}
@@ -1296,45 +1313,137 @@ export default function WarRoom() {
                     <div className="flex flex-col"><span className="text-white">MASTER BALANCE</span><span className="text-fuchsia-400">{d.walletBalance.toFixed(2)} EGLD</span></div>
                 </div>
             </div>
-            {/* USER INTERACTION HUB */}
-            <div className="absolute bottom-12 right-12 z-50 pointer-events-auto flex flex-col items-end gap-2">
-                {isDeploying && (
-                    <div className="text-[#facc15] font-mono text-[10px] uppercase tracking-widest animate-pulse font-bold bg-black/50 px-3 py-1 border border-[#facc15]/30 rounded">
-                        Energy Discharging: {energyLevel}%
+
+            {/* ── LEFT SIDE: PERSISTENT SENSORS ── */}
+            <div className="absolute top-32 left-8 w-48 flex flex-col gap-3 z-[200] pointer-events-none">
+                {/* Global Mempool Pressure */}
+                <div className="group pointer-events-auto relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg p-3 shadow-lg cursor-help transition-colors hover:border-fuchsia-500/50">
+                    <div className="flex justify-between items-center mb-2 relative z-10">
+                        <span className="text-[8px] text-fuchsia-400 font-bold tracking-widest uppercase">MEMPOOL LOAD</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-ping" />
                     </div>
-                )}
-                <motion.button 
-                    onClick={() => setIsDeploying(true)}
-                    whileHover={{ scale: isDeploying ? 1 : 1.05 }}
-                    whileTap={{ scale: isDeploying ? 1 : 0.95 }}
-                    className="group relative flex flex-col items-end"
-                    disabled={isDeploying}
-                >
-                    <div className={`flex flex-col items-center justify-center aspect-square w-28 bg-black/80 backdrop-blur-xl border p-3 rounded-2xl shadow-[0_0_30px_rgba(244,63,94,0.3)] transition-all cursor-pointer relative overflow-hidden ${isDeploying ? 'border-[#facc15] shadow-[0_0_80px_rgba(250,204,21,0.8)]' : 'border-rose-500/50 hover:shadow-[0_0_50px_rgba(244,63,94,0.6)] hover:border-rose-400'}`}>
-                        {/* Energy fill background when deploying (bottom up) */}
+                    <div className="flex items-end justify-between gap-0.5 h-6 opacity-80 relative z-10">
+                        {Array(15).fill(0).map((_, i) => (
+                            <div key={`mempool-${i}`} className="flex-1 bg-fuchsia-500/60 rounded-t" style={{ height: `${Math.max(10, Math.random() * 100)}%`, transition: 'height 800ms ease' }} />
+                        ))}
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 w-48 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[300]">
+                        <div className="bg-black/90 backdrop-blur-xl p-3 border border-fuchsia-500/30 rounded-lg shadow-[0_0_15px_rgba(217,70,239,0.2)]">
+                            <span className="text-[9px] font-bold text-fuchsia-400 block mb-1 tracking-widest uppercase">Mempool Simulator</span>
+                            <p className="text-[8px] text-fuchsia-200/80 leading-relaxed font-mono">Real-time visual monitoring of global transaction saturation queued for block consensus.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Keeper Swarm Synchronization */}
+                <div className="group pointer-events-auto relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg p-3 shadow-lg cursor-help transition-colors hover:border-emerald-500/50">
+                    <div className="flex justify-between items-center mb-2 relative z-10">
+                        <span className="text-[8px] text-emerald-400 font-bold tracking-widest uppercase">SWARM TRACER</span>
+                        <span className="text-[8px] text-emerald-400 font-mono font-bold animate-pulse">OK</span>
+                    </div>
+                    <div className="grid grid-cols-8 gap-1 opacity-80 relative z-10">
+                        {Array(24).fill(0).map((_, i) => (
+                            <div key={`tracer-${i}`} className={`h-1.5 rounded-[1px] ${Math.random() > 0.15 ? 'bg-emerald-500/80 shadow-[0_0_8px_#10b981]' : 'bg-white/10'}`} style={{ transition: 'background-color 400ms ease' }} />
+                        ))}
+                    </div>
+                     {/* Tooltip */}
+                    <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 w-48 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[300]">
+                        <div className="bg-black/90 backdrop-blur-xl p-3 border border-emerald-500/30 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                            <span className="text-[9px] font-bold text-emerald-400 block mb-1 tracking-widest uppercase">Keeper Nodes</span>
+                            <p className="text-[8px] text-emerald-200/80 leading-relaxed font-mono">Live synchronization matrix and continuous heartbeat of remote Rust workers ready to inject.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* DB IO Utilization */}
+                <div className="group pointer-events-auto relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg p-3 shadow-lg cursor-help transition-colors hover:border-cyan-500/50">
+                    <div className="flex justify-between items-center mb-1 relative z-10">
+                        <span className="text-[8px] text-cyan-400 font-bold tracking-widest uppercase">NODE I/O</span>
+                        <span className="text-[8px] text-cyan-400 font-mono font-bold">{(Math.random() * 120 + 30).toFixed(1)} MB/s</span>
+                    </div>
+                    <div className="w-full bg-black/60 rounded-full h-1 mt-1 overflow-hidden relative z-10">
+                         <div className="bg-cyan-500 h-1 transition-all duration-700" style={{ width: `${Math.random() * 80 + 10}%` }}></div>
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 w-48 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[300]">
+                        <div className="bg-black/90 backdrop-blur-xl p-3 border border-cyan-500/30 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                            <span className="text-[9px] font-bold text-cyan-400 block mb-1 tracking-widest uppercase">Disk Threshold</span>
+                            <p className="text-[8px] text-cyan-200/80 leading-relaxed font-mono">Asynchronous local disk R/W operations generated during highly-distributed structural attacks.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/* USER INTERACTION HUB */}
+            <div className="absolute bottom-6 right-6 z-50 pointer-events-auto flex flex-col items-end gap-3">
+                
+                {/* ── SNIPE MICRO-BURST TELEMETRY (42MS WINDOW) ── */}
+                <div className={`group relative transition-all duration-500 overflow-visible h-[90px] w-[280px] opacity-100 cursor-crosshair`}>
+                    <div className={`w-full h-full flex flex-col p-3 rounded-xl bg-black/80 backdrop-blur-xl border border-t-[2px] shadow-lg relative z-10 ${isDeploying ? 'border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.15)] hover:border-cyan-400/80'}`}>
+                        <div className="flex justify-between items-center mb-1">
+                            <div className="flex flex-col">
+                                <span className={`text-[8px] font-bold tracking-widest uppercase ${isDeploying ? 'text-orange-400/80' : 'text-cyan-400/80'}`}>
+                                    {isDeploying ? '42MS BURST ENGAGED' : '42MS MONITORING'}
+                                </span>
+                                <span className="text-xl font-black text-white leading-none mt-0.5">{burstStream[Math.max(0, burstStream.length-1)].toLocaleString()} <span className={`text-[9px] tracking-wider ${isDeploying ? 'text-orange-400' : 'text-cyan-400'}`}>TPS</span></span>
+                            </div>
+                            <span className={`text-[7px] px-1.5 py-0.5 rounded-[3px] font-bold border ${isDeploying ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 animate-pulse' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'}`}>
+                                {isDeploying ? "DESYNC" : "STABLE"}
+                            </span>
+                        </div>
+                        <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-orange-500' : 'text-cyan-400'}`}>
+                             <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
+                                <polyline points={burstStream.map((v, i) => `${Math.max(0, (i / (burstStream.length - 1))) * 200},${40 - (v / (isDeploying ? 100000 : 1500)) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                            </svg>
+                        </div>
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full mb-3 right-0 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[300]">
+                        <div className={`bg-black/90 backdrop-blur-xl p-3 border rounded-lg shadow-lg ${isDeploying ? 'border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.2)]' : 'border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]'}`}>
+                            <span className={`text-[9px] font-bold block mb-1 tracking-widest uppercase ${isDeploying ? 'text-orange-400' : 'text-cyan-400'}`}>Micro-Burst Telemetry</span>
+                            <p className={`text-[8px] leading-relaxed font-mono ${isDeploying ? 'text-orange-200/80' : 'text-cyan-200/80'}`}>
+                                Ultra-high frequency scanning matrix. Actively monitoring and injecting payload spikes within targeted 42-millisecond windows.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {isDeploying && (
+                         <div className="text-[#facc15] font-mono text-[9px] uppercase tracking-widest animate-pulse font-bold bg-black/50 px-2 py-1 border border-[#facc15]/30 rounded-lg">
+                             Energy: {energyLevel}%
+                         </div>
+                    )}
+                    <motion.button 
+                        onClick={() => setIsDeploying(true)}
+                        whileHover={{ scale: isDeploying ? 1 : 1.05 }}
+                        whileTap={{ scale: isDeploying ? 1 : 0.95 }}
+                        disabled={isDeploying}
+                        className={`relative flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-black/80 backdrop-blur-xl border transition-all cursor-pointer overflow-hidden group ${isDeploying ? 'border-[#facc15] shadow-[0_0_40px_rgba(250,204,21,0.6)]' : 'border-rose-500/50 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] hover:border-rose-400'}`}
+                    >
+                        {/* Energy fill background when deploying */}
                         {isDeploying && (
                             <div 
-                                className="absolute left-0 bottom-0 right-0 bg-gradient-to-t from-yellow-500/40 via-yellow-500/20 to-yellow-500/0 pointer-events-none"
-                                style={{ height: `${energyLevel}%`, transition: 'height 100ms linear' }} 
+                                className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-yellow-500/40 via-yellow-500/20 to-yellow-500/0 pointer-events-none"
+                                style={{ width: `${energyLevel}%`, transition: 'width 100ms linear' }} 
                             />
                         )}
 
-                        <div className="flex flex-col items-center justify-center gap-3 relative z-10 mt-1">
-                            <div className={`w-5 h-5 rounded-full ${isDeploying ? 'bg-white shadow-[0_0_20px_#ffffff,0_0_40px_#facc15] animate-ping' : 'bg-rose-500 shadow-[0_0_15px_#f43f5e] animate-pulse'}`} />
-                            <span className={`font-mono font-black tracking-widest text-[11px] text-center leading-snug ${isDeploying ? 'text-white drop-shadow-[0_0_10px_#facc15]' : 'text-rose-100'}`}>
-                                {isDeploying ? 'INJECTING' : 'DEPLOY\nSWARM'}
-                            </span>
-                        </div>
-                    </div>
-                    {!isDeploying && (
-                        <div className="mt-2 w-72 text-right opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md bg-black/40 p-3 rounded border border-white/5">
-                            <p className="font-mono text-[10px] text-rose-200/80 leading-relaxed tracking-wide">
-                                <strong className="text-rose-400 block mb-1">WHAT DOES THIS DO?</strong>
-                                Initiates a massive stress injection to the Devnet. Your wallet will sign and broadcast <span className="text-[#facc15] font-bold">10,000+ direct transactions</span> that will generate visible computational load across the holographic matrix and real-world validators.
-                            </p>
-                        </div>
-                    )}
-                </motion.button>
+                        <div className={`w-2.5 h-2.5 rounded-full z-10 ${isDeploying ? 'bg-white shadow-[0_0_10px_#ffffff,0_0_20px_#facc15] animate-ping' : 'bg-rose-500 shadow-[0_0_8px_#f43f5e] animate-pulse'}`} />
+                        <span className={`font-mono font-black tracking-widest text-[11px] leading-none z-10 ${isDeploying ? 'text-white drop-shadow-[0_0_8px_#facc15]' : 'text-rose-100'}`}>
+                            {isDeploying ? 'INJECTING' : 'DEPLOY SWARM'}
+                        </span>
+                        
+                        {!isDeploying && (
+                            <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 w-64 text-right opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md bg-black/60 p-2.5 rounded border border-white/10 pointer-events-none">
+                                <p className="font-mono text-[9px] text-rose-200/80 leading-relaxed tracking-wide">
+                                    <strong className="text-rose-400 block mb-0.5">42MS SNIPE ACTIVATION</strong>
+                                    Inject 100,000+ payloads to saturate mempool and trigger Gateway desynchronization.
+                                </p>
+                            </div>
+                        )}
+                    </motion.button>
+                </div>
             </div>
 
             {/* 3D CANVAS BOARD WITH CAMERA CONTROLS */}

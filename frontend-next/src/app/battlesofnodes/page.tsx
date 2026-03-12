@@ -1344,8 +1344,8 @@ export default function WarRoom() {
                 </div>
             </div>
 
-            {/* ── LEFT SIDE: PERSISTENT SENSORS ── */}
-            <div className="absolute bottom-24 left-12 w-48 flex flex-col gap-3 z-[200] pointer-events-none">
+            {/* ── LEFT SIDE: PERSISTENT SENSORS (Hidden on Mobile) ── */}
+            <div className="absolute bottom-24 left-12 w-48 hidden lg:flex flex-col gap-3 z-[200] pointer-events-none">
                 {/* Global Mempool Pressure */}
                 <div className="group pointer-events-auto relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg p-3 shadow-lg cursor-help transition-colors hover:border-fuchsia-500/50">
                     <div className="flex justify-between items-center mb-2 relative z-10">
@@ -1450,8 +1450,8 @@ export default function WarRoom() {
                     </div>
                 </div>
             </div>
-            {/* USER INTERACTION HUB */}
-            <div className="absolute bottom-6 right-6 z-50 pointer-events-auto flex flex-col items-end gap-3">
+            {/* USER INTERACTION HUB (Hidden on Mobile) */}
+            <div className="absolute bottom-6 right-6 z-50 pointer-events-auto hidden lg:flex flex-col items-end gap-3">
                 
                 <div className="flex flex-col gap-3 items-end">
                     {/* ── INGRESS FLOW GRAPH ── */}
@@ -1470,7 +1470,7 @@ export default function WarRoom() {
                             </div>
                             <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-purple-500' : 'text-purple-400'}`}>
                                  <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
-                                    <polyline points={ingressStream.map((v, i) => `${Math.max(0, (i / (ingressStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 180000 : 30000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                    <polyline points={ingressStream.map((v, i) => `${Math.max(0, (i / (ingressStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 180000 : 30000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
                                 </svg>
                             </div>
                         </div>
@@ -1492,7 +1492,7 @@ export default function WarRoom() {
                             </div>
                             <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-rose-500' : 'text-emerald-400'}`}>
                                  <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
-                                    <polyline points={mempoolStream.map((v, i) => `${Math.max(0, (i / (mempoolStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 200000 : 30000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                    <polyline points={mempoolStream.map((v, i) => `${Math.max(0, (i / (mempoolStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 200000 : 30000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
                                 </svg>
                             </div>
                         </div>
@@ -1514,7 +1514,7 @@ export default function WarRoom() {
                             </div>
                             <div className={`flex-1 w-full mt-1 ${isDeploying ? 'text-orange-500' : 'text-cyan-400'}`}>
                                  <svg viewBox={`0 0 200 40`} preserveAspectRatio="none" className="w-full h-full">
-                                    <polyline points={burstStream.map((v, i) => `${Math.max(0, (i / (burstStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 130000 : 30000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                    <polyline points={burstStream.map((v, i) => `${Math.max(0, (i / (burstStream.length - 1))) * 200},${40 - Math.min(1, (v / (isDeploying ? 130000 : 30000))) * 40}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
                                 </svg>
                             </div>
                         </div>

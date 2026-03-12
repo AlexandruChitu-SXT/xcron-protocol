@@ -1307,16 +1307,16 @@ export default function WarRoom() {
             </div>
 
             {/* 2D HEADER (Overlays WebGL) */}
-            <div className="absolute top-0 left-0 w-full z-[200] px-12 pt-8 flex justify-between items-start pointer-events-none">
+            <div className="absolute top-0 left-0 w-full z-[200] px-4 md:px-12 pt-4 md:pt-8 flex flex-col md:flex-row justify-between items-center md:items-start pointer-events-none gap-4">
                 {/* Sci-Fi Glassmorphism Title Card */}
                 <div className="relative flex flex-col items-center group">
                     {/* Glowing Power Tubes attaching to the ceiling */}
-                    <div className="absolute -top-8 left-[15%] w-[2px] h-8 bg-gradient-to-b from-transparent via-cyan-400/80 to-cyan-400 shadow-[0_0_12px_#22d3ee] opacity-90" />
-                    <div className="absolute -top-8 right-[15%] w-[2px] h-8 bg-gradient-to-b from-transparent via-fuchsia-400/80 to-fuchsia-400 shadow-[0_0_12px_#e879f9] opacity-90" />
+                    <div className="absolute -top-8 left-[15%] w-[2px] h-8 bg-gradient-to-b from-transparent via-cyan-400/80 to-cyan-400 shadow-[0_0_12px_#22d3ee] opacity-90 hidden md:block" />
+                    <div className="absolute -top-8 right-[15%] w-[2px] h-8 bg-gradient-to-b from-transparent via-fuchsia-400/80 to-fuchsia-400 shadow-[0_0_12px_#e879f9] opacity-90 hidden md:block" />
                     
                     <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/0 via-fuchsia-500/20 to-cyan-500/0 blur-md opacity-50 group-hover:opacity-100 transition duration-1000" />
                     <div 
-                        className="relative flex flex-col items-center px-6 py-3 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
+                        className="relative flex flex-col items-center px-4 md:px-6 py-2 md:py-3 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden w-full max-w-[95vw] md:max-w-none"
                         style={{
                             boxShadow: `0 4px 20px 0 rgba(0, 0, 0, 0.7), inset 0 0 15px -10px #d946ef, inset 0 0 40px -25px #06b6d4`
                         }}
@@ -1327,16 +1327,16 @@ export default function WarRoom() {
                         <div className="absolute bottom-0 left-0 w-3 h-3 border-b-[1.5px] border-l-[1.5px] border-fuchsia-400/50" />
                         <div className="absolute bottom-0 right-0 w-3 h-3 border-b-[1.5px] border-r-[1.5px] border-cyan-400/50" />
 
-                        <h1 className="text-base font-black tracking-[0.15em] text-center flex flex-col items-center whitespace-nowrap drop-shadow-[0_0_10px_rgba(217,70,239,0.5)]">
-                            <span className="text-cyan-400">XCRON PROTOCOL // BATTLE OF NODES</span>
-                            <span className="text-fuchsia-400 mt-1 text-xl tracking-[0.2em] font-bold">SUPERNOVA '26</span>
+                        <h1 className="text-xs md:text-base font-black tracking-[0.1em] md:tracking-[0.15em] text-center flex flex-col items-center drop-shadow-[0_0_10px_rgba(217,70,239,0.5)]">
+                            <span className="text-cyan-400 break-words w-full px-2">XCRON PROTOCOL // BATTLE OF NODES</span>
+                            <span className="text-fuchsia-400 mt-0.5 md:mt-1 text-sm md:text-xl tracking-[0.1em] md:tracking-[0.2em] font-bold">SUPERNOVA '26</span>
                         </h1>
-                        <div className="mt-1 text-[8px] font-mono tracking-[0.4em] font-bold text-white/50 uppercase">
+                        <div className="mt-1 flex text-[6px] md:text-[8px] font-mono tracking-[0.2em] md:tracking-[0.4em] font-bold text-white/50 uppercase">
                             Global Command WebGL Matrix
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-8 text-[11px] font-mono text-white mt-6 bg-black/40 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <div className="hidden md:flex gap-8 text-[11px] font-mono text-white mt-6 bg-black/40 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                     <div className="flex flex-col"><span className="text-white/60 tracking-widest text-[9px] mb-0.5">STATUS</span><span className="text-emerald-400 font-bold ">● MATRIX LIVE</span></div>
                     <div className="flex flex-col"><span className="text-white/60 tracking-widest text-[9px] mb-0.5">{"EPOCH // ROUND"}</span><span className="text-white">{d.epoch} {"//"} {d.round}</span></div>
                     <div className="flex flex-col"><span className="text-white/60 tracking-widest text-[9px] mb-0.5">TOTAL WALLETS</span><span className="text-white">{d.totalKeys.toLocaleString()}</span></div>

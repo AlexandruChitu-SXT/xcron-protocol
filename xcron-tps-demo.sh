@@ -61,6 +61,6 @@ echo -e "\n${GREEN}🚀 IGNITION! Executing Tokio Tasks...${NC}"
     --tps 50000 \
     --broadcasters 2500 \
     --wallets 500 \
-    --gateway "https://testnet-api.multiversx.com" \
-    --chain-id "T" \
+    --gateway "https://devnet-api.multiversx.com" \
+    --chain-id "D" \
     --wallets-file "../.secrets/hydra-keys.json"

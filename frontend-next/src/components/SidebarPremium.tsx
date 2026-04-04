@@ -12,8 +12,7 @@ import {
     Terminal,
     KeyRound,
     Menu,
-    X,
-    Globe
+    X
 } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 import { NetworkBadge } from "@/components/NetworkBadge";

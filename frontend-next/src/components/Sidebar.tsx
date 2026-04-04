@@ -25,8 +25,6 @@ export function Sidebar() {
     const { wallet, connect, disconnect, setShowConnectModal } = useWallet();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-    // Hide sidebar completely on War Room (full-width telemetry dashboard)
-    if (pathname === "/battlesofnodes") return null;
 
     const routes = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -36,7 +34,7 @@ export function Sidebar() {
         { href: "/clone-keys", label: "Clone-Keys", icon: KeyRound },
         { href: "/keeper", label: "Keeper Node", icon: Network },
         { href: "/stats", label: "Protocol Stats", icon: Activity },
-        { href: "/battlesofnodes", label: "War Room 3D", icon: Globe },
+
         { href: "/admin", label: "Admin Panel", icon: Terminal, strict: true },
     ];
 

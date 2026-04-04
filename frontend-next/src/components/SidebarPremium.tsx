@@ -33,7 +33,7 @@ export function SidebarPremium() {
         { href: "/clone-keys", label: "Clone-Keys", icon: KeyRound },
         { href: "/keeper", label: "Keeper Node", icon: Network },
         { href: "/stats", label: "Protocol Stats", icon: Activity },
-        { href: "/battlesofnodes", label: "War Room 3D", icon: Globe },
+
         { href: "/admin", label: "Admin Panel", icon: Terminal, strict: true },
     ];
 

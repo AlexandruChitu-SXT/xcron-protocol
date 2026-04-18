@@ -129,6 +129,18 @@ pub trait StorageModule {
     fn intent_by_id(&self, intent_id: u64) -> SingleValueMapper<common::types::Intent<Self::Api>>;
 
     // ═══════════════════════════════════════════════════════════════════
+    //  PRE-COGNITIVE INTENTS STORAGE (PCIT)
+    // ═══════════════════════════════════════════════════════════════════
+
+    #[view(getPreCognitiveIntentNonce)]
+    #[storage_mapper("pre_cognitive_intent_nonce")]
+    fn pre_cognitive_intent_nonce(&self) -> SingleValueMapper<u64>;
+
+    #[view(getPreCognitiveIntent)]
+    #[storage_mapper("pre_cognitive_intent_by_id")]
+    fn pre_cognitive_intent_by_id(&self, intent_id: u64) -> SingleValueMapper<common::types::PreCognitiveIntent<Self::Api>>;
+
+    // ═══════════════════════════════════════════════════════════════════
     //  TASKS STORAGE
     // ═══════════════════════════════════════════════════════════════════
     // ── Security: Rate limiting per round ───────────────────

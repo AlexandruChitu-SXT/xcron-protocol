@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XCron | Sauron's Eye Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .eye {
+            color: #ff4444;
+            font-size: 28px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { text-shadow: 0 0 5px #ff4444; }
+            50% { text-shadow: 0 0 20px #ff4444, 0 0 30px #ff0000; }
+            100% { text-shadow: 0 0 5px #ff4444; }
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #58a6ff;
+            margin-top: 10px;
+        }
+        .metric-value.error {
+            color: #ff7b72;
+        }
+        .chart-container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title"><span class="eye">👁️</span> Sauron's Eye - Command Center</div>
+        <div style="color: #8b949e;">Localhost (Master Node Connection)</div>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div>Network Ingress Flow (TPS)</div>
+            <div class="metric-value" id="current-tps">0</div>
+        </div>
+        <div class="metric-card">
+            <div>Total Transactions Fired</div>
+            <div class="metric-value" id="total-sent" style="color: #3fb950;">0</div>
+        </div>
+        <div class="metric-card">
+            <div>Firewall Blocks / Errors</div>
+            <div class="metric-value error" id="total-errors">0</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="tpsChart"></canvas>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('tpsChart').getContext('2d');
+        
+        // Setup Chart
+        const tpsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(60).fill(''),
+                datasets: [{
+                    label: 'Ingress Flow (TPS)',
+                    data: Array(60).fill(0),
+                    borderColor: '#58a6ff',
+                    backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#30363d' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#c9d1d9' } }
+                }
+            }
+        });
+
+        let previousSent = 0;
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/metrics');
+                const data = await response.json();
+                
+                const totalSent = data.sent;
+                const totalErrors = data.errors;
+                
+                // Calculate TPS (since last second)
+                const currentTps = totalSent - previousSent;
+                previousSent = totalSent;
+
+                // Update UI
+                document.getElementById('current-tps').innerText = currentTps.toLocaleString();
+                document.getElementById('total-sent').innerText = totalSent.toLocaleString();
+                document.getElementById('total-errors').innerText = totalErrors.toLocaleString();
+
+                // Update Chart
+                const chartData = tpsChart.data.datasets[0].data;
+                chartData.push(currentTps);
+                chartData.shift(); // Remove oldest data point
+                tpsChart.update();
+
+            } catch (err) {
+                console.error("Master Node Connection Lost", err);
+            }
+        }
+
+        // Poll every 1 second
+        setInterval(fetchMetrics, 1000);
+    </script>
+</body>
+</html>

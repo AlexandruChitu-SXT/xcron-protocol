@@ -21,6 +21,21 @@ pub trait HelpersModule: crate::storage::StorageModule {
         }
     }
 
+    /// Vector 16 "Chronos" Armor - Safe Timestamp Extraction
+    /// 
+    /// Supernova 600ms PBFT can inject milliseconds into `get_block_timestamp_seconds()` causing
+    /// massive time-drift and Escrow deadlocks across the protocol. This function detects inflation
+    /// and safely normalizes it back to Unix Seconds without disrupting legacy execution limits.
+    fn get_safe_block_timestamp(&self) -> u64 {
+        let raw_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        // Fallback detection: if time exceeds 100 Billion seconds, it's injected as MS.
+        if raw_time > 100_000_000_000u64 {
+            raw_time / 1000
+        } else {
+            raw_time
+        }
+    }
+
     /// Calculate protocol fee for a single execution.
     ///
     /// For recurring tasks: fee is based on deposit/remaining_execs (per-execution share).
@@ -98,11 +113,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             }
             _ => {
                 // Time-based: re-index at current time + 10s (grace period for retry)
-                let next_time = self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds()
-                    + 10;
+                let next_time = self.get_safe_block_timestamp() + 10;
                 self.time_index(next_time).insert(task_id);
             }
         }
@@ -119,11 +130,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
         remaining_execs: u64,
         remaining_deposit: BigUint,
     ) {
-        let next_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds()
-            + interval;
+        let next_time = self.get_safe_block_timestamp() + interval;
         let new_id = self.task_nonce().get() + 1;
         self.task_nonce().set(new_id);
 
@@ -143,10 +150,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             max_retries: original_task.max_retries,
             retry_count: 0,
             ttl_seconds: original_task.ttl_seconds,
-            created_at: self
-                .blockchain()
-                .get_block_timestamp_seconds()
-                .as_u64_seconds(),
+            created_at: self.get_safe_block_timestamp(),
             status: common::types::TaskStatus::Pending,
             assigned_keeper: None,
             completed_at: 0,

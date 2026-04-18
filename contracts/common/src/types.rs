@@ -49,6 +49,37 @@ pub enum IntentStatus {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  PRE-COGNITIVE INTENT TYPES (XCron PCIT)
+// ═══════════════════════════════════════════════════════════════════
+
+/// A Pre-Cognitive Intent represents the Root of a Merkle Tree of conditional actions 
+/// pre-calculated by an AI Agent. It decouples the Agent's strategy (off-chain inference)
+/// from the execution (on-chain Keepers).
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct PreCognitiveIntent<M: ManagedTypeApi> {
+    pub id: u64,
+    pub owner: ManagedAddress<M>,
+    pub token_in: TokenIdentifier<M>,
+    pub amount_in: BigUint<M>,
+    /// The Merkle Root identifying all pre-approved condition/execution branches.
+    pub merkle_root: ManagedByteArray<M, 32>,
+    pub deadline: u64,
+    pub keeper_fee: BigUint<M>,
+    pub status: PreCognitiveIntentStatus,
+    pub executed_by: Option<ManagedAddress<M>>,
+}
+
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Debug)]
+pub enum PreCognitiveIntentStatus {
+    Pending,
+    Executed,
+    Cancelled,
+    Expired,
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  TASK TYPES
 // ═══════════════════════════════════════════════════════════════════
 

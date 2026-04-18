@@ -10,6 +10,7 @@ pub trait CommitRevealModule:
     crate::storage::StorageModule
     + crate::events::EventsModule
     + crate::validation::ValidationModule
+    + crate::helpers::HelpersModule
     + common::pausable::PausableModule
 {
     /// CR-1: Commit to execute a task (prevents frontrunning).
@@ -33,10 +34,7 @@ pub trait CommitRevealModule:
         let commit_info = common::types::CommitInfo {
             keeper: keeper.clone(),
             commit_hash,
-            commit_timestamp: self
-                .blockchain()
-                .get_block_timestamp_seconds()
-                .as_u64_seconds(),
+            commit_timestamp: self.get_safe_block_timestamp(),
             bond,
         };
 
@@ -65,10 +63,7 @@ pub trait CommitRevealModule:
         require!(commit_info.keeper == keeper, "Not the committing keeper");
 
         // Check reveal window
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
         let reveal_window = self.reveal_window().get();
         require!(
             current_time <= commit_info.commit_timestamp + reveal_window,
@@ -107,10 +102,7 @@ pub trait CommitRevealModule:
         );
 
         let commit_info = self.commits(task_id).get();
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
         let reveal_window = self.reveal_window().get();
 
         require!(

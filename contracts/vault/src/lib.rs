@@ -143,6 +143,9 @@ pub trait VaultContract:
         }
         self.withdraw_event(&caller, &amount);
 
+        // V-22 FIX: Record pending unbond to prevent permanent loss
+        self.pending_withdrawals(&caller).update(|p| *p += &amount);
+
         // Interaction: async undelegate
         let delegation_addr = self.delegation_contract().get();
         self.tx()
@@ -168,7 +171,45 @@ pub trait VaultContract:
             self.user_balance(&caller).set(&(&current + &amount));
             let total = self.total_deposited().get();
             self.total_deposited().set(&(&total + &amount));
+            
+            // V-22 FIX: Remove from pending withdrawals entirely because unDelegate failed
+            let pending = self.pending_withdrawals(&caller).get();
+            if pending >= amount {
+                self.pending_withdrawals(&caller).set(&(&pending - &amount));
+            }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  V-22 UNBONDED FUNDS RETRIEVAL (10-EPOCH DELAY FIX)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// Fetches unbonded funds from the staking provider after 10 epochs.
+    #[endpoint(claimUnbonded)]
+    fn claim_unbonded(&self) {
+        self.require_not_paused();
+        let delegation_addr = self.delegation_contract().get();
+        // Fire and forget to retrieve unbonded EGLD into Vault
+        let _ = self.tx()
+            .to(&delegation_addr)
+            .raw_call("claimUnbonded")
+            .gas(15_000_000u64)
+            .register_promise();
+    }
+
+    /// User pulls their unbonded funds from the Vault.
+    #[endpoint(withdrawUnbonded)]
+    fn withdraw_unbonded(&self) {
+        self.require_not_paused();
+        let caller = self.blockchain().get_caller();
+        let amount_due = self.pending_withdrawals(&caller).get();
+        require!(amount_due > 0u64, "No pending withdrawals");
+
+        let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        require!(sc_balance >= amount_due, "Unbonded funds not yet available from provider");
+
+        self.pending_withdrawals(&caller).clear();
+        self.send().direct_egld(&caller, &amount_due);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -240,23 +281,30 @@ pub trait VaultContract:
         require!(!self.max_slippage_bps().is_empty(), ERR_SLIPPAGE_NOT_SET);
 
         let dex_addr = self.dex_pair_contract().get();
-        let swap_amount = self.swap_amount_per_execution().get();
+        let swap_amount_config = self.swap_amount_per_execution().get();
+        let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        
+        let swap_amount = if swap_amount_config > BigUint::zero() && swap_amount_config < sc_balance {
+            swap_amount_config
+        } else {
+            sc_balance
+        };
 
-        // C-1 FIX: Calculate min_amount_out using slippage protection
-        // For now, use slippage_bps as percentage of input (simple protection).
-        // A proper oracle-based calculation would be ideal for production.
-        let slippage_bps = self.max_slippage_bps().get();
-        let min_out = &swap_amount * (10_000u64 - slippage_bps) / 10_000u64;
+        if swap_amount > BigUint::zero() {
+            // C-1 FIX: Calculate min_amount_out using slippage protection
+            let slippage_bps = self.max_slippage_bps().get();
+            let min_out = &swap_amount * (10_000u64 - slippage_bps) / 10_000u64;
 
-        self.tx()
-            .to(&dex_addr)
-            .raw_call("swapTokensFixedInput")
-            .egld(&swap_amount)
-            .argument(&min_out)
-            .gas(20_000_000u64)
+            self.tx()
+                .to(&dex_addr)
+                .raw_call("swapTokensFixedInput")
+                .egld(&swap_amount)
+                .argument(&min_out)
+                .gas(20_000_000u64)
             .callback(self.callbacks().swap_callback())
             .gas_for_callback(5_000_000u64)
             .register_promise();
+        }
     }
 
     #[promises_callback]
@@ -377,6 +425,16 @@ pub trait VaultContract:
         self.delegation_contract().set(&addr);
     }
 
+    /// V-21 FIX: Recover Vault trapped yield (Yield Trap bypass)
+    #[endpoint(rescueYield)]
+    #[only_owner]
+    fn rescue_yield(&self, amount: BigUint) {
+        let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        require!(sc_balance >= amount, "Insufficient liquid balance");
+        let caller = self.blockchain().get_caller();
+        self.send().direct_egld(&caller, &amount);
+    }
+
     /// Configure DEX pair contract for swap/DCA/stop-loss strategies.
     #[only_owner]
     #[endpoint(setDexPairContract)]
@@ -460,6 +518,10 @@ pub trait VaultContract:
 
     #[storage_mapper("compound_count")]
     fn compound_count(&self) -> SingleValueMapper<u64>;
+
+    // V-22 FIX
+    #[storage_mapper("pending_withdrawals")]
+    fn pending_withdrawals(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
 
     // -- Addresses --
     #[storage_mapper("delegation_contract")]

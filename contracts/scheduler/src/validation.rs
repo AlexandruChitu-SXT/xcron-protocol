@@ -2,7 +2,7 @@ multiversx_sc::imports!();
 
 /// Validation logic for the Scheduler contract.
 #[multiversx_sc::module]
-pub trait ValidationModule: crate::storage::StorageModule {
+pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::HelpersModule {
     /// Verify a keeper is authorized to execute tasks.
     /// Phase 1: checks whitelist. Phase 2+: cross-shard call to KeeperRegistry.
     fn require_registered_keeper(&self, keeper: &ManagedAddress) {
@@ -90,10 +90,7 @@ pub trait ValidationModule: crate::storage::StorageModule {
 
     /// Verify a task's trigger condition is met (task is "ripe").
     fn require_task_ripe(&self, _task_id: u64, task: &common::types::Task<Self::Api>) {
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
 
         // H-3: TTL expiry check — prevent execution of stale tasks
         if task.ttl_seconds > 0 {

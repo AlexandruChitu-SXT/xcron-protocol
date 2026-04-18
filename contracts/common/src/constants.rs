@@ -9,6 +9,10 @@ pub const DEFAULT_PROTOCOL_FEE_BPS: u64 = 3_000;
 /// Minimum gas limit for task execution (5 million)
 pub const MIN_GAS_LIMIT: u64 = 5_000_000;
 
+/// Maximum gas limit allowed for task execution (300 million)
+/// S-20 FIX: Prevents "Unexecutable Gas Trap" and node exhaustion
+pub const MAX_GAS_LIMIT: u64 = 300_000_000;
+
 /// Minimum TTL in seconds (1 minute)
 pub const MIN_TTL_SECONDS: u64 = 60;
 

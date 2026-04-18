@@ -1,0 +1,37 @@
+[package]
+name = "xcron-keeper-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+base64 = "0.22.1"
+bech32 = "0.9.1"
+crossterm = "0.29.0"
+ed25519-dalek = "2.2.0"
+env_logger = "0.11.9"
+futures = "0.3.32"
+glob = "0.3.3"
+hex = "0.4.3"
+log = "0.4.29"
+rand = "0.8.5"
+ratatui = "0.30.0"
+regex = "1.12.3"
+reqwest = { version = "0.13.2", features = ["json"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.50.0", features = ["full", "sync"] }
+clap = { version = "4.5.3", features = ["derive"] }
+num-bigint = "0.4.6"
+tokio-tungstenite = { version = "0.21.0", features = ["native-tls"] }
+
+[[bin]]
+name = "vector1_deadlock"
+path = "src/bin/vector1_pbft_deadlock.rs"
+
+[[bin]]
+name = "vector2_underflow"
+path = "src/bin/vector2_rating_underflow.rs"
+
+[[bin]]
+name = "vector3_memory_bomb"
+path = "src/bin/vector3_memory_bomb.rs"

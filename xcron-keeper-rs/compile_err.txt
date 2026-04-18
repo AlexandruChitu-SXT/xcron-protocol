@@ -1,0 +1,38 @@
+   Compiling xcron-keeper-rs v0.1.0 (/Users/alejandrochitu/xcron-protocol/xcron-keeper-rs)
+error[E0425]: cannot find value `rx` in this scope
+   --> src/main.rs:775:46
+    |
+775 | ...                   if let Some(v) = rx.borrow().clone() {
+    |                                        ^^ not found in this scope
+
+error[E0425]: cannot find value `rx` in this scope
+   --> src/main.rs:822:46
+    |
+822 | ...                   if let Some(o) = rx.borrow().clone() {
+    |                                        ^^ not found in this scope
+
+warning: unused import: `run_dashboard`
+  --> src/main.rs:12:11
+   |
+12 | use tui::{run_dashboard, AppStats};
+   |           ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `tokio::sync::mpsc`
+  --> src/main.rs:17:5
+   |
+17 | use tokio::sync::mpsc;
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `tick_rate`
+  --> src/tui.rs:47:9
+   |
+47 |     let tick_rate = Duration::from_millis(250);
+   |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_tick_rate`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+For more information about this error, try `rustc --explain E0425`.
+warning: `xcron-keeper-rs` (bin "xcron-keeper-rs") generated 3 warnings
+error: could not compile `xcron-keeper-rs` (bin "xcron-keeper-rs") due to 2 previous errors; 3 warnings emitted

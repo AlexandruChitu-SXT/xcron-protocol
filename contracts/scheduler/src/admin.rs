@@ -6,6 +6,7 @@ multiversx_sc::imports!();
 pub trait AdminModule:
     crate::storage::StorageModule
     + crate::validation::ValidationModule
+    + crate::helpers::HelpersModule
     + common::pausable::PausableModule
 {
     /// S-3: Blacklist a malicious target contract (owner only).

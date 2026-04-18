@@ -184,13 +184,10 @@ pub trait KeeperRegistryContract:
             // Liquid system — transfer directly
             self.send().direct_egld(&treasury, &slash_amount);
         } else {
-            // Delegated system — trigger unDelegate and register debt
+            // Delegated system — V-23 PATCH: Do not `sync_call` unDelegate
+            // Accumulate debt. Admin can unDelegate in bulk later.
+            // Prevents Panic from min-unbond limits skipping the slash penalty.
             self.slashed_pending_unbond(&keeper).update(|debt| *debt += &slash_amount);
-            let _ = self.tx()
-                .to(&provider)
-                .raw_call("unDelegate")
-                .argument(&slash_amount)
-                .sync_call();
         }
 
         self.keeper_slashed_event(&keeper, &slash_amount, &reason);
@@ -234,12 +231,8 @@ pub trait KeeperRegistryContract:
             if provider.is_zero() {
                 self.send().direct_egld(&treasury, &slash_amount);
             } else {
+                // V-23 PATCH: Do not `sync_call` unDelegate
                 self.slashed_pending_unbond(&keeper).update(|debt| *debt += &slash_amount);
-                let _ = self.tx()
-                    .to(&provider)
-                    .raw_call("unDelegate")
-                    .argument(&slash_amount)
-                    .sync_call();
             }
 
             self.keeper_slashed_event(&keeper, &slash_amount, &ManagedBuffer::from(

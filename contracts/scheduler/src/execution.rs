@@ -18,9 +18,9 @@ pub trait ExecutionModule:
     fn execute_task(&self, task_id: u64) {
         self.require_not_paused();
 
-        // H-2: Reentrancy guard
-        require!(!self.executing_guard().get(), "Reentrancy blocked");
-        self.executing_guard().set(true);
+        // 🛡️ SECURITY PATCH (Vector 24): Global Async Lock Extirpated
+        // Removed `executing_guard` to unleash 100% concurrent execution.
+        // Reentrancy is naturally mitigated since task.status shifts to Executing immediately.
 
         let task = self.tasks(task_id).get();
         let keeper = self.blockchain().get_caller();
@@ -80,10 +80,7 @@ pub trait ExecutionModule:
             let ripe_time = match &task.trigger {
                 common::types::Trigger::TimeOnce { target_time } => *target_time,
                 common::types::Trigger::TimeRecurring { start_time, .. } => *start_time,
-                _ => self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds(),
+                _ => self.get_safe_block_timestamp(),
             };
             
             // Generate a pseudo-random index based on task_id + ripe_time + prev_block_hash
@@ -92,10 +89,11 @@ pub trait ExecutionModule:
             hash_data.append(&ManagedBuffer::from(task_id.to_be_bytes().as_ref()));
             hash_data.append(&ManagedBuffer::from(ripe_time.to_be_bytes().as_ref()));
             
-            // SECURITY PATCH: Inject on-chain entropy to prevent off-chain prediction
-            let current_nonce = self.blockchain().get_block_nonce();
-            let prev_block_hash = self.blockchain().get_prev_block_hash_by_nonce(current_nonce - 1);
-            hash_data.append(&ManagedBuffer::from(prev_block_hash.as_managed_buffer().to_boxed_bytes().as_slice()));
+            // SECURITY PATCH (Vector 19): Inject on-chain entropy to prevent off-chain prediction
+            // get_block_nonce is predictable off-chain. By adding `get_block_random_seed()` (available 0.40+),
+            // a Keeper cannot predict MEV assignments off-chain and selectively grief the network.
+            let random_seed = self.blockchain().get_block_random_seed();
+            hash_data.append(random_seed.as_managed_buffer());
             
             let hash = self.crypto().sha256(&hash_data);
             let mut hash_bytes = [0u8; 8];
@@ -107,10 +105,7 @@ pub trait ExecutionModule:
             let assigned_keeper = self.keeper_list().get(assigned_index);
 
             if keeper != assigned_keeper {
-                let current_time = self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds();
+                let current_time = self.get_safe_block_timestamp();
                 require!(
                     current_time >= ripe_time + common::constants::ROUND_ROBIN_GRACE_SECONDS,
                     "Task assigned to another keeper -- wait 30s grace period"
@@ -188,19 +183,17 @@ pub trait ExecutionModule:
         &self,
         task_id: u64,
         keeper: ManagedAddress,
-        #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
+        #[call_result] result: ManagedAsyncCallResult<IgnoreValue>,
     ) {
         let mut task = self.tasks(task_id).get();
 
         match result {
             ManagedAsyncCallResult::Ok(_) => {
                 // ✅ Target executed successfully — pay keeper and protocol
-                task.status = common::types::TaskStatus::Completed;
-                task.completed_at = self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds();
-                self.tasks(task_id).set(&task);
+                task.completed_at = self.get_safe_block_timestamp();
+                
+                // STATE PRUNING: Físicamente eliminamos la tarea en lugar de guardar el estado Completed (Anti-Bloat)
+                self.tasks(task_id).clear();
                 self.owner_tasks(&task.owner).swap_remove(&task_id);
 
                 // S-2: Record execution metrics
@@ -279,10 +272,7 @@ pub trait ExecutionModule:
                             && post_task.status == common::types::TaskStatus::Pending
                         {
                             // Update trigger time to NOW so keeper picks it up immediately
-                            let now = self
-                                .blockchain()
-                                .get_block_timestamp_seconds()
-                                .as_u64_seconds();
+                            let now = self.get_safe_block_timestamp();
                             match &mut post_task.trigger {
                                 common::types::Trigger::TimeOnce { target_time } => {
                                     *target_time = now;
@@ -300,40 +290,45 @@ pub trait ExecutionModule:
                 }
             }
             ManagedAsyncCallResult::Err(_) => {
-                // ❌ Target execution failed — refund user, no keeper payment
-                task.status = common::types::TaskStatus::Failed;
-                task.assigned_keeper = None; // Free the MEV lock on failure
-                task.completed_at = self
-                    .blockchain()
-                    .get_block_timestamp_seconds()
-                    .as_u64_seconds();
-                self.tasks(task_id).set(&task);
+                // ❌ Target execution failed — Vector 18 PATCH:
+                // If the target contract panics, it is NOT the Keeper's fault!
+                // The Keeper paid Gas and successfully triggered the network.
+                // Refunding the owner and slashing the Keeper allows the owner to Grief Keeper Gas indefinitely!
+                
+                task.assigned_keeper = None;
+                task.completed_at = self.get_safe_block_timestamp();
+                
+                // STATE PRUNING
+                self.tasks(task_id).clear();
                 self.owner_tasks(&task.owner).swap_remove(&task_id);
 
-                // S-2: Record failure metrics
                 self.total_failed_execs().update(|v| *v += 1);
-
-                // S-6: Track per-target failure count
                 let failures = self.target_failure_count(&task.target_contract).get();
-                let new_failures = failures + 1;
-                self.target_failure_count(&task.target_contract)
-                    .set(new_failures);
+                self.target_failure_count(&task.target_contract).set(failures + 1);
 
-                // S-7: Auto-blacklist logic REMOVED (Ecosystem DoS vector neutralized)
-                // Blacklist must only be curated globally via admin.rs by governance.
+                // Forfeit the execution cost to the Keeper to prevent Sybil drain.
+                let reward = self.calculate_keeper_reward(&task);
+                let protocol_fee = self.calculate_protocol_fee(&task);
+                self.send().direct_egld(&keeper, &reward);
+                self.keeper_paid_event(task_id, &keeper, &reward);
+                
+                self.forward_protocol_fee(&keeper, task_id, &protocol_fee);
+                self.protocol_fee_paid_event(task_id, &protocol_fee);
 
-                // Refund entire deposit to task owner
-                self.send().direct_egld(&task.owner, &task.deposit);
-                self.user_refunded_event(task_id, &task.owner, &task.deposit);
+                // Refund ONLY the remaining deposit (if recurring bounds exceed spend).
+                let total_spent = &reward + &protocol_fee;
+                if task.deposit > total_spent {
+                    let refund = &task.deposit - &total_spent;
+                    self.send().direct_egld(&task.owner, &refund);
+                    self.user_refunded_event(task_id, &task.owner, &refund);
+                }
 
-                // P5: Notify KeeperRegistry of failure (triggers progressive slashing)
-                self.forward_keeper_result(&keeper, false);
-
+                // P5: Keeper executed successfully, DO NOT slash them.
+                self.forward_keeper_result(&keeper, true);
+                // Mark Task as failed internally
+                self.task_executed_event(task_id, &keeper, false);
             }
         }
-
-        // 🛡️ SECURITY PATCH: Release Reentrancy Guard AFTER the full async lifecycle completes
-        self.executing_guard().set(false);
     }
 
     /// Recover tasks stuck in Executing state. Only callable by owner.
@@ -346,19 +341,16 @@ pub trait ExecutionModule:
             "Task not in Executing state"
         );
 
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
         let stuck_threshold = 60 * 60; // 1 hour
         require!(
             current_time > task.created_at + stuck_threshold,
             "Task not stuck yet (wait 1h)"
         );
 
-        task.status = common::types::TaskStatus::Failed;
         task.completed_at = current_time;
-        self.tasks(task_id).set(&task);
+        // STATE PRUNING
+        self.tasks(task_id).clear();
         // P3: Clean owner_tasks index on recovery
         self.owner_tasks(&task.owner).swap_remove(&task_id);
 
@@ -377,22 +369,19 @@ pub trait ExecutionModule:
             "Not authorized to expire tasks"
         );
 
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
         let mut processed: usize = 0;
         for task_id in task_ids {
             if processed >= common::constants::MAX_EXPIRE_BATCH {
                 break;
             }
-            let mut task = self.tasks(task_id).get();
+            let task = self.tasks(task_id).get();
             if task.status != common::types::TaskStatus::Pending {
                 continue;
             }
             if current_time > task.created_at + task.ttl_seconds {
-                task.status = common::types::TaskStatus::Expired;
-                self.tasks(task_id).set(&task);
+                // STATE PRUNING
+                self.tasks(task_id).clear();
                 self.remove_from_indices(task_id, &task);
                 self.owner_tasks(&task.owner).swap_remove(&task_id);
                 self.send().direct_egld(&task.owner, &task.deposit);

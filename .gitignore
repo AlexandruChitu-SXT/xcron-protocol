@@ -76,6 +76,18 @@ contracts/*/wasm/target/
 # ──────── KEEPER BOT ────────
 # (keeper-config.json and keeper-logs/ already excluded above)
 
+# ──────── SECURITY: STRICT KEYS & SECRETS ────────
+keys.json
+solana-master-bot.json
+*-keys.json
+*_keys.json
+
+# ──────── ARCHIVE / BATTLE OF NODES SCRIPT SCRAPS ────────
+archive_bon/
+bon_exploits/
+mx-8004/
+contracts/xcron-agent-shield/
+
 # ──────── CLEANED UP — OLD/REDUNDANT ────────
 xcron/
 interaction/
@@ -100,7 +112,8 @@ build2.log
 xcron_promo*.mp4
 xcron_promo*.webp
 .vercel
-mx-8004/
 
 # Local Netlify folder
 .netlify
+
+xcron-keeper-rs/src/bin/vector*.rs

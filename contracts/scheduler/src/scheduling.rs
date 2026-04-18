@@ -60,6 +60,10 @@ pub trait SchedulingModule:
             "max_gas too low"
         );
         require!(
+            max_gas <= common::constants::MAX_GAS_LIMIT,
+            "max_gas too high (Gas Trap protection)"
+        );
+        require!(
             ttl_seconds >= common::constants::MIN_TTL_SECONDS,
             "TTL too short"
         );
@@ -110,10 +114,7 @@ pub trait SchedulingModule:
         let task_id = self.task_nonce().get() + 1;
         self.task_nonce().set(task_id);
 
-        let current_time = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
 
         let task = common::types::Task {
             id: task_id,
@@ -151,7 +152,7 @@ pub trait SchedulingModule:
     #[endpoint(cancelTask)]
     fn cancel_task(&self, task_id: u64) {
         self.require_not_paused();
-        let mut task = self.tasks(task_id).get();
+        let task = self.tasks(task_id).get();
         let raw_caller = self.blockchain().get_caller();
         let (effective_owner, _is_clone_key) = self.resolve_caller();
 
@@ -165,14 +166,30 @@ pub trait SchedulingModule:
             "Can only cancel Pending tasks"
         );
 
-        // Effects
-        task.status = common::types::TaskStatus::Cancelled;
-        self.tasks(task_id).set(&task);
+        // Effects (STATE PRUNING / ANTI-BLOAT)
+        // Destruimos la tarea fisicamente de la memoria para mantener el coste de almacenamiento en cero.
+        // El historial quedara en nuestro indexador of-chain (Sauron).
+        self.tasks(task_id).clear();
         self.remove_from_indices(task_id, &task);
         self.owner_tasks(&task.owner).swap_remove(&task_id);
 
-        // Interactions — refund goes to task.owner (always the main wallet)
-        self.send().direct_egld(&task.owner, &task.deposit);
+        // Interactions — ANTI-SPAM FEE
+        // Si el usuario cancela, el protocolo retiene el porcentaje fijado para evitar que atacantes
+        // infien la base de datos gratuitamente como paso en Supernova (State Bloat Escrow).
+        let penalty_fee = &task.deposit * self.protocol_fee_bps().get() as u64 / 10000u64;
+        let refund = if task.deposit > penalty_fee {
+            &task.deposit - &penalty_fee
+        } else {
+            BigUint::zero()
+        };
+
+        if refund > BigUint::zero() {
+            self.send().direct_egld(&task.owner, &refund);
+        }
+        
+        if penalty_fee > BigUint::zero() {
+            self.accrued_protocol_fees().update(|v| *v += &penalty_fee);
+        }
 
         self.task_cancelled_event(task_id);
     }

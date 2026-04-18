@@ -76,13 +76,13 @@ impl KeeperWallet {
             // Try 'privateKey' first (from NodeJS script), fallback to 'secretHex'
             let hex_key = jw["privateKey"].as_str().or(jw["secretHex"].as_str()).unwrap_or("");
             
-            // NodeJS Ed25519 outputs 64-byte hex string (32 seed + 32 pubkey).
-            // Dalek SigningKey needs only the 32 byte seed.
-            let seed_hex = if hex_key.len() > 64 { &hex_key[0..64] } else { hex_key };
+            // NodeJS Ed25519 outputs 128-character hex string (64 bytes total: 32 seed + 32 pubkey).
+            // Dalek SigningKey needs only the 32 byte seed (first 64 hex chars).
+            let seed_hex = if hex_key.len() >= 64 { &hex_key[0..64] } else { hex_key };
             
             let seed_bytes = hex::decode(seed_hex)?;
             if seed_bytes.len() != 32 {
-                return Err("Invalid seed length in JSON".into());
+                return Err(format!("Invalid seed length in JSON for address: {}", address).into());
             }
             let mut seed = [0u8; 32];
             seed.copy_from_slice(&seed_bytes);
@@ -105,5 +105,53 @@ impl KeeperWallet {
             *b = rand::random::<u8>();
         }
         bech32::encode("erd", bytes.to_base32(), Variant::Bech32).unwrap_or_else(|_| String::from("erd1qqqqqqqqqqqqqpgqjq6g52c9dxy7vtckspndqxhqmm0mmken7k8sahvvd5"))
+    }
+
+    /// Generates a complete throwaway KeeperWallet on the fly for MEV Backruns
+    pub fn generate_throwaway() -> Self {
+        let mut seed = [0u8; 32];
+        for b in seed.iter_mut() {
+            *b = rand::random::<u8>();
+        }
+        let signing_key = SigningKey::from_bytes(&seed);
+        let verifying_key = VerifyingKey::from(&signing_key);
+        let bech32_address = bech32::encode("erd", verifying_key.as_bytes().to_base32(), Variant::Bech32).unwrap();
+        Self {
+            signing_key,
+            bech32_address,
+        }
+    }
+
+    /// Determines the shard of a bech32 address (0, 1, or 2 for 3-shard networks)
+    pub fn get_shard(bech32_addr: &str, num_shards: u8) -> u8 {
+        if let Ok((_hrp, data, _variant)) = bech32::decode(bech32_addr) {
+            let bytes: Vec<u8> = bech32::FromBase32::from_base32(&data).unwrap_or_default();
+            if !bytes.is_empty() {
+                return bytes[bytes.len() - 1] % num_shards;
+            }
+        }
+        0
+    }
+
+    /// Generates a random address guaranteed to be in a DIFFERENT shard than sender_shard
+    pub fn generate_cross_shard_address(sender_shard: u8, num_shards: u8) -> String {
+        loop {
+            let addr = Self::generate_random_address();
+            let target_shard = Self::get_shard(&addr, num_shards);
+            if target_shard != sender_shard {
+                return addr;
+            }
+        }
+    }
+
+    /// Convierte una dirección Bech32 (erd1...) a formato Hexadecimal de 32 bytes (64 caracteres)
+    pub fn bech32_to_hex(bech32_addr: &str) -> String {
+        if let Ok((_hrp, data, _variant)) = bech32::decode(bech32_addr) {
+            let bytes: Vec<u8> = bech32::FromBase32::from_base32(&data).unwrap_or_default();
+            if !bytes.is_empty() {
+                return hex::encode(bytes);
+            }
+        }
+        "0000000000000000000000000000000000000000000000000000000000000000".to_string()
     }
 }

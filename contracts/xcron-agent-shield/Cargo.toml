@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+    "common",
+    "proxies",
+    "identity-registry",
+    "identity-registry/meta",
+    "validation-registry",
+    "validation-registry/meta",
+    "reputation-registry",
+    "reputation-registry/meta",
+    "escrow",
+    "escrow/meta",
+    "tests"
+]

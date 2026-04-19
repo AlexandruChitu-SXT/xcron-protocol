@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, feat/*, rc/* ]
+  pull_request:
+    branches: [ master, feat/*, rc/* ]
+  workflow_dispatch:
+
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    uses: multiversx/mx-sc-actions/.github/workflows/setup.yml@v6.0.0
+    with:
+      rust-toolchain: "1.86"
+
+  build-contracts:
+    needs: setup
+    uses: multiversx/mx-sc-actions/.github/workflows/build-contracts.yml@v6.0.0
+    with:
+      rust-toolchain: "1.86"
+
+  rust-tests:
+    uses: multiversx/mx-sc-actions/.github/workflows/rust-tests.yml@v6.0.0
+    with:
+      rust-toolchain: "1.86"
+
+  wasm-tests:
+    needs: build-contracts
+    uses: multiversx/mx-sc-actions/.github/workflows/wasm-tests.yml@v6.0.0
+    with:
+      rust-toolchain: "1.86"
+
+  coverage:
+    needs: setup
+    uses: multiversx/mx-sc-actions/.github/workflows/coverage.yml@v6.0.0
+    with:
+      rust-toolchain: "1.86"
+      coverage-args: --ignore-filename-regex='/(tests|interactor|meta|wasm|output|proxies|common)/|/\.cargo/|/\.rustup/|proxy\.rs$|storage\.rs$|structs\.rs$|events\.rs$|errors\.rs$' --output ./coverage.md
+
+  interactor-tests:
+    needs: build-contracts
+    uses: multiversx/mx-sc-actions/.github/workflows/interactor-tests.yml@v6.0.0
+    with:
+      rust-toolchain: "1.86"
+
+  generate-report:
+    needs: build-contracts
+    uses: multiversx/mx-sc-actions/.github/workflows/report.yml@v6.0.0
+    with:
+      rust-toolchain: "1.86"

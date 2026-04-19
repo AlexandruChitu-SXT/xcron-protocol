@@ -1,0 +1,2 @@
+[[proxy]]
+path = "interactor/src/validation_registry_proxy.rs"

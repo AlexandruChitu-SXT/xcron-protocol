@@ -171,13 +171,18 @@ pub enum Trigger<M: ManagedTypeApi> {
         interval: u64,
         remaining_execs: u64,
     },
-    /// Execute when an on-chain condition is met (Phase 2+)
-    ConditionOnChain {
+    /// Execute when an on-chain condition is met (State Polling)
+    StateDriven {
         oracle_contract: ManagedAddress<M>,
         query_endpoint: ManagedBuffer<M>,
         query_args: ManagedVec<M, ManagedBuffer<M>>,
         comparator: Comparator,
         threshold: BigUint<M>,
+    },
+    /// Execute immediately when a target contract emits a specific event
+    EventDriven {
+        emitter_contract: ManagedAddress<M>,
+        event_topic: ManagedBuffer<M>,
     },
 }
 

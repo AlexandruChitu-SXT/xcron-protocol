@@ -71,7 +71,10 @@ pub trait HelpersModule: crate::storage::StorageModule {
             common::types::Trigger::TimeRecurring { start_time, .. } => {
                 self.time_index(*start_time).insert(task_id);
             }
-            common::types::Trigger::ConditionOnChain { .. } => {
+            common::types::Trigger::StateDriven { .. } => {
+                self.condition_tasks().insert(task_id);
+            }
+            common::types::Trigger::EventDriven { .. } => {
                 self.condition_tasks().insert(task_id);
             }
         }
@@ -93,7 +96,10 @@ pub trait HelpersModule: crate::storage::StorageModule {
             common::types::Trigger::TimeRecurring { start_time, .. } => {
                 self.time_index(*start_time).swap_remove(&task_id);
             }
-            common::types::Trigger::ConditionOnChain { .. } => {
+            common::types::Trigger::StateDriven { .. } => {
+                self.condition_tasks().swap_remove(&task_id);
+            }
+            common::types::Trigger::EventDriven { .. } => {
                 self.condition_tasks().swap_remove(&task_id);
             }
         }
@@ -108,7 +114,8 @@ pub trait HelpersModule: crate::storage::StorageModule {
     /// Re-index a task for retry pickup.
     fn reindex_task(&self, task_id: u64, task: &common::types::Task<Self::Api>) {
         match &task.trigger {
-            common::types::Trigger::ConditionOnChain { .. } => {
+            common::types::Trigger::StateDriven { .. } 
+            | common::types::Trigger::EventDriven { .. } => {
                 self.condition_tasks().insert(task_id);
             }
             _ => {

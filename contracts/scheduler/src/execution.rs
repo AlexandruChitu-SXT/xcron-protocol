@@ -280,7 +280,7 @@ pub trait ExecutionModule:
                                 common::types::Trigger::TimeRecurring { start_time, .. } => {
                                     *start_time = now;
                                 }
-                                _ => {} // ConditionOnChain keeps its original condition
+                                _ => {} // StateDriven and EventDriven keep their original conditions
                             }
                             self.tasks(post_id).set(&post_task);
                             // Re-index for immediate discovery

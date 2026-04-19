@@ -107,7 +107,7 @@ pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::Help
             common::types::Trigger::TimeRecurring { start_time, .. } => {
                 require!(current_time >= *start_time, "Task not yet ripe");
             }
-            common::types::Trigger::ConditionOnChain {
+            common::types::Trigger::StateDriven {
                 oracle_contract,
                 query_endpoint,
                 query_args: _query_args,
@@ -139,6 +139,15 @@ pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::Help
                 };
 
                 require!(condition_met, "Oracle condition not met");
+            }
+            common::types::Trigger::EventDriven {
+                emitter_contract: _,
+                event_topic: _,
+            } => {
+                // For EventDriven, the task is considered ripe because the trusted Keeper 
+                // evaluates the off-chain WebSocket event before actively triggering the execution.
+                // Purely relies on Keeper whitelist (S-6).
+                require!(true, "EventDriven executed by trusted keeper");
             }
         }
     }

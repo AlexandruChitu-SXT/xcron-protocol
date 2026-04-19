@@ -6,6 +6,7 @@ mod tui;
 pub mod mempool_sniper;
 pub mod ws_sniper;
 pub mod pcit;
+pub mod event_engine;
 
 use wallet::KeeperWallet;
 use transaction::Transaction;
@@ -131,6 +132,8 @@ pub enum AttackMode {
     ArbitrageHft,
     /// Demonstrates off-chain Merkle execution for Pre-Cognitive Intents
     PcitDemo,
+    /// XCron Agentic Infrastructure: State & Event Driven Off-Chain Execution
+    EventKeeper,
 }
 
 fn generate_schedule_payload() -> Vec<u8> {
@@ -235,9 +238,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("🎯 Using {} wallets (limited by --wallets flag)", wallets.len());
     }
 
-    if cli.mode == AttackMode::ArbitrageHft {
+    if cli.mode == AttackMode::ArbitrageHft || cli.mode == AttackMode::EventKeeper {
         wallets.truncate(1);
-        println!("🦅 [xCron HFT] Usando solo 1 Master Wallet. Omitiendo sincronización de 10.000 carteras.");
+        println!("🦅 [xCron HFT / EventKeeper] Usando solo 1 Master Wallet. Omitiendo sincronización de 10.000 carteras.");
     }
 
     // 2. Setup Nonces — fetch real nonces for ALL active wallets
@@ -317,6 +320,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // completely starved the Tokio executor at 50,000 TPS.
     // Transctions are now broadcast directly from the wallet loops below.
     let mut handles = vec![];
+
+    if cli.mode == AttackMode::EventKeeper {
+        println!("🚀 Iniciando Infraestructura Agéntica: State & Event Driven Mode");
+        let sample_tasks = vec![
+            event_engine::InternalTriggerMetadata::EventDriven {
+                task_id: 1,
+                emitter_contract: cli.target_contract.clone(),
+                event_topic: "pauseProtocol".to_string(),
+            },
+            event_engine::InternalTriggerMetadata::StateDriven {
+                task_id: 2,
+                oracle_address: "erd1qqqqqqqqqqqqqpgqeel2kumf0r8ffyhth7pqdujjat9nx0862jpsg2pqaq".to_string(), // WEGLD/USDC oracle example
+                query_endpoint: "getReservesAndTotalSupply".to_string(),
+                comparator: "less_than".to_string(),
+                threshold: 1000000,
+            }
+        ];
+        
+        // Starts the engine in a blocking loop for this mode
+        event_engine::start_event_engine(sample_tasks).await;
+        
+        return Ok(());
+    }
 
     if cli.mode == AttackMode::FundHydra {
         println!("💸 FUNDING HYDRA WALLETS MODE ENGAGED 💸");
@@ -420,7 +446,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     AttackMode::TpsDemo => {
                         // TpsDemo runs completely unhinged now. Zero sleep.
                     },
-                    AttackMode::PreWarm | AttackMode::Stress | AttackMode::MultiKeeper | AttackMode::Fuzz | AttackMode::IntraShard | AttackMode::FundHydra | AttackMode::WrapEgld | AttackMode::DexSwap | AttackMode::CrossShard | AttackMode::RelayedCrossShard | AttackMode::RelayedDex | AttackMode::XcronSwarm | AttackMode::Zeta | AttackMode::Theta | AttackMode::Epsilon | AttackMode::Delta | AttackMode::XcronBoundary | AttackMode::StateDesync | AttackMode::EieOverflow | AttackMode::NonceDesyncV2 | AttackMode::BlsDesync | AttackMode::OrphanFlooding | AttackMode::SurgicalBackrun | AttackMode::ArbitrageHft | AttackMode::PcitDemo => {
+                    AttackMode::PreWarm | AttackMode::Stress | AttackMode::MultiKeeper | AttackMode::Fuzz | AttackMode::IntraShard | AttackMode::FundHydra | AttackMode::WrapEgld | AttackMode::DexSwap | AttackMode::CrossShard | AttackMode::RelayedCrossShard | AttackMode::RelayedDex | AttackMode::XcronSwarm | AttackMode::Zeta | AttackMode::Theta | AttackMode::Epsilon | AttackMode::Delta | AttackMode::XcronBoundary | AttackMode::StateDesync | AttackMode::EieOverflow | AttackMode::NonceDesyncV2 | AttackMode::BlsDesync | AttackMode::OrphanFlooding | AttackMode::SurgicalBackrun | AttackMode::ArbitrageHft | AttackMode::PcitDemo | AttackMode::EventKeeper => {
                         // All these modes disparan continuamente a los Gateways sin parar, 
                         // guiados solo por el TPS total configurado. (SurgicalBackrun/ArbitrageHft lo ignoran dentro de su logic)
                         if cli.mode != AttackMode::SurgicalBackrun && cli.mode != AttackMode::ArbitrageHft {
@@ -769,6 +795,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     AttackMode::TpsDemo => {
                         // High TPS Demonstration: Valid EGLD transfer with XCronProtocol signature
                         (Some(b"XCronProtocol".to_vec()), 100_000, wallet_clone.bech32_address.clone(), "1")
+                    },
+                    AttackMode::EventKeeper => {
+                        (None, 50_000, wallet_clone.bech32_address.clone(), "0")
                     },
                     AttackMode::PcitDemo => {
                         // 1. Emulate AI dynamically picking a branch based on High-Frequency Telemetry

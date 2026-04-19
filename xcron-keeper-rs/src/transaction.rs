@@ -108,6 +108,73 @@ impl Transaction {
         self.relayer_signature = Some(hex::encode(signature_bytes.to_bytes()));
         Ok(())
     }
+
+    /// High-Speed transaction builder for PCIT Execution.
+    /// Constructs the exact MultiVersX ABI payload (`executePreCognitiveLeaf@<intent>@...`)
+    pub fn build_pcit_execution_tx(
+        nonce: u64,
+        sender: &str,
+        scheduler_address: &str,
+        intent_id: u64,
+        proof_hashes: &[[u8; 32]],
+        target_contract: &[u8; 32],
+        target_endpoint: &str,
+        target_args: &[Vec<u8>],
+        expected_token_out: &str,
+        min_return: &num_bigint::BigUint,
+        chain_id: &str,
+    ) -> Self {
+        let mut data = String::from("executePreCognitiveLeaf");
+        
+        // 1. intent_id (u64 -> 8 bytes hex)
+        data.push_str(&format!("@{:016x}", intent_id));
+        
+        // 2. merkle_proof (ManagedVec<[u8;32]>)
+        // Format: u32 length + concatenated 32-byte hashes
+        let mut proof_arg = format!("{:08x}", proof_hashes.len() as u32);
+        for hash in proof_hashes {
+            proof_arg.push_str(&hex::encode(hash));
+        }
+        data.push_str(&format!("@{}", proof_arg));
+        
+        // 3. target_contract (32 bytes)
+        data.push_str(&format!("@{}", hex::encode(target_contract)));
+        
+        // 4. target_endpoint (string bytes)
+        data.push_str(&format!("@{}", hex::encode(target_endpoint.as_bytes())));
+        
+        // 5. target_args (ManagedVec<ManagedBuffer>)
+        // Format: u32 length + (u32 item_len + item_bytes)*
+        let mut args_arg = format!("{:08x}", target_args.len() as u32);
+        for arg in target_args {
+            args_arg.push_str(&format!("{:08x}", arg.len() as u32));
+            args_arg.push_str(&hex::encode(arg));
+        }
+        data.push_str(&format!("@{}", args_arg));
+        
+        // 6. expected_token_out
+        data.push_str(&format!("@{}", hex::encode(expected_token_out.as_bytes())));
+        
+        // 7. min_return (BigUint)
+        let min_ret_hex = if min_return > &num_bigint::BigUint::from(0u32) {
+            hex::encode(min_return.to_bytes_be())
+        } else {
+            String::new()
+        };
+        data.push_str(&format!("@{}", min_ret_hex));
+
+        Transaction::new(
+            nonce,
+            "0", // Execution costs 0 EGLD (Keeper only pays gas)
+            scheduler_address,
+            sender,
+            500_000_000, 
+            30_000_000, 
+            Some(data.as_bytes()),
+            chain_id,
+            1
+        )
+    }
 }
 
 #[cfg(test)]

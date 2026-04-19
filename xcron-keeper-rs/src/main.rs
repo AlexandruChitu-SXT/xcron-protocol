@@ -5,6 +5,7 @@ mod network;
 mod tui;
 pub mod mempool_sniper;
 pub mod ws_sniper;
+pub mod pcit;
 
 use wallet::KeeperWallet;
 use transaction::Transaction;
@@ -128,6 +129,8 @@ pub enum AttackMode {
     TpsDemo,
     /// Professional Flash Arbitrage Engine relying on ws_sniper
     ArbitrageHft,
+    /// Demonstrates off-chain Merkle execution for Pre-Cognitive Intents
+    PcitDemo,
 }
 
 fn generate_schedule_payload() -> Vec<u8> {
@@ -417,7 +420,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     AttackMode::TpsDemo => {
                         // TpsDemo runs completely unhinged now. Zero sleep.
                     },
-                    AttackMode::PreWarm | AttackMode::Stress | AttackMode::MultiKeeper | AttackMode::Fuzz | AttackMode::IntraShard | AttackMode::FundHydra | AttackMode::WrapEgld | AttackMode::DexSwap | AttackMode::CrossShard | AttackMode::RelayedCrossShard | AttackMode::RelayedDex | AttackMode::XcronSwarm | AttackMode::Zeta | AttackMode::Theta | AttackMode::Epsilon | AttackMode::Delta | AttackMode::XcronBoundary | AttackMode::StateDesync | AttackMode::EieOverflow | AttackMode::NonceDesyncV2 | AttackMode::BlsDesync | AttackMode::OrphanFlooding | AttackMode::SurgicalBackrun | AttackMode::ArbitrageHft => {
+                    AttackMode::PreWarm | AttackMode::Stress | AttackMode::MultiKeeper | AttackMode::Fuzz | AttackMode::IntraShard | AttackMode::FundHydra | AttackMode::WrapEgld | AttackMode::DexSwap | AttackMode::CrossShard | AttackMode::RelayedCrossShard | AttackMode::RelayedDex | AttackMode::XcronSwarm | AttackMode::Zeta | AttackMode::Theta | AttackMode::Epsilon | AttackMode::Delta | AttackMode::XcronBoundary | AttackMode::StateDesync | AttackMode::EieOverflow | AttackMode::NonceDesyncV2 | AttackMode::BlsDesync | AttackMode::OrphanFlooding | AttackMode::SurgicalBackrun | AttackMode::ArbitrageHft | AttackMode::PcitDemo => {
                         // All these modes disparan continuamente a los Gateways sin parar, 
                         // guiados solo por el TPS total configurado. (SurgicalBackrun/ArbitrageHft lo ignoran dentro de su logic)
                         if cli.mode != AttackMode::SurgicalBackrun && cli.mode != AttackMode::ArbitrageHft {
@@ -767,6 +770,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // High TPS Demonstration: Valid EGLD transfer with XCronProtocol signature
                         (Some(b"XCronProtocol".to_vec()), 100_000, wallet_clone.bech32_address.clone(), "1")
                     },
+                    AttackMode::PcitDemo => {
+                        // 1. Emulate AI dynamically picking a branch based on High-Frequency Telemetry
+                        let target_sc_addr_hex = "00000000000000000500ebaa4de200cf54fe97a0604c759cd8f6de251daeb90b"; // Target DEX
+                        let mut target_sc_bytes = [0u8; 32];
+                        hex::decode_to_slice(target_sc_addr_hex, &mut target_sc_bytes).unwrap_or_default();
+                        
+                        let leaf = pcit::PcitLeaf {
+                            target_contract: target_sc_bytes,
+                            target_endpoint: "swapTokensFixedInput".to_string(),
+                            target_args: vec![b"USDC-c76f1f".to_vec()],
+                            expected_token_out: "WEGLD-bd4d79".to_string(),
+                            min_return: num_bigint::BigUint::from(100u32),
+                        };
+                        
+                        // Fake sibling path for the multi-path intent (e.g. AI evaluated multiple conditions)
+                        let sibling_mock = [0xAA; 32];
+                        let w_addr = wallet_clone.bech32_address.clone();
+                        let chain_id = chain_id_for_tx.clone();
+
+                        // 2. [HFT Optimization] We offload the array generation and SHA256 hashing to native threads
+                        let tx = tokio::task::spawn_blocking(move || {
+                            Transaction::build_pcit_execution_tx(
+                                current_nonce,
+                                &w_addr,
+                                "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat", // Scheduler SC
+                                42, // AI Intent ID
+                                &[sibling_mock], // Sequential Merkle chain proof array
+                                &leaf.target_contract,
+                                &leaf.target_endpoint,
+                                &leaf.target_args,
+                                &leaf.expected_token_out,
+                                &leaf.min_return,
+                                &chain_id,
+                            )
+                        }).await.unwrap();
+                        
+                        // Because build_pcit_execution_tx Base64-encodes the ABI string internally, 
+                        // we must decode to raw bytes to pass via the (payload, gas, receiver) tuple.
+                        let payload_bytes = base64::Engine::decode(
+                            &base64::engine::general_purpose::STANDARD,
+                            tx.data.as_ref().unwrap()
+                        ).unwrap();
+                        
+                        (Some(payload_bytes), 30_000_000, "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(), "0")
+                    },
                     AttackMode::SurgicalBackrun => {
                         let mut victim_detected = None;
 
@@ -979,7 +1027,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         stats_clone.total_tx_sent.fetch_add(1, Ordering::Relaxed);
                     }
                 } else {
-                    if tx.sign(&wallet_clone.signing_key).is_ok() {
+                    let w_clone = Arc::clone(&wallet_clone);
+                    let mut b_tx = tx;
+                    
+                    // [HFT Optimization] Offload the heavy Ed25519 Elliptic Curve signing 
+                    // out of the Tokio executor and into the blocking thread pool
+                    let (is_signed, tx) = tokio::task::spawn_blocking(move || {
+                        let ok = b_tx.sign(&w_clone.signing_key).is_ok();
+                        (ok, b_tx)
+                    }).await.unwrap();
+
+                    if is_signed {
                         // TpsDemo: synchronous broadcast — wait for response before next TX
                         let failed = match network_clone.broadcast_tx(&tx).await {
                             Ok(hash) => {

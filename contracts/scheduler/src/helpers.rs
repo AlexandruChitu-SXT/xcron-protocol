@@ -77,6 +77,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             common::types::Trigger::EventDriven { .. } => {
                 self.condition_tasks().insert(task_id);
             }
+            common::types::Trigger::QuantumSealedHash { .. } => {}
         }
 
         // Cross-shard optimization: Index task by target shard
@@ -102,6 +103,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
             common::types::Trigger::EventDriven { .. } => {
                 self.condition_tasks().swap_remove(&task_id);
             }
+            common::types::Trigger::QuantumSealedHash { .. } => {}
         }
 
         // Cross-shard optimization: Remove from shard index

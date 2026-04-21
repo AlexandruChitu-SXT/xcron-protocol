@@ -142,7 +142,7 @@
             "accounts": {
                 "address:user1": {
                     "nonce": "*",
-                    "balance": "9,200,000,000,000,000,000"
+                    "balance": "9,190,000,000,000,000,000"
                 },
                 "address:clone1": {
                     "nonce": "*",

@@ -149,6 +149,9 @@ pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::Help
                 // Purely relies on Keeper whitelist (S-6).
                 require!(true, "EventDriven executed by trusted keeper");
             }
+            common::types::Trigger::QuantumSealedHash { .. } => {
+                // Ripeness is evaluated during execution by the SHA-256 validation.
+            }
         }
     }
 }

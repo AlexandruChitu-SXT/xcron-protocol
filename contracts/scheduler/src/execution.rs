@@ -50,7 +50,7 @@ pub trait ExecutionModule:
         // Q-1: Quantum-Sealed Hash Reveal Authorization
         if let common::types::Trigger::QuantumSealedHash { expected_hash } = &task.trigger {
             let secret = quantum_secret.into_option().unwrap_or_else(|| sc_panic!("Missing Quantum Secret Premove"));
-            let computed_hash = self.crypto().sha256(&secret);
+            let computed_hash = self.crypto().sha256(secret.as_managed_buffer());
             require!(
                 computed_hash.as_managed_buffer() == expected_hash.as_managed_buffer(),
                 "Q-1: Quantum Hash Seal broken: Invalid Secret Reveal"

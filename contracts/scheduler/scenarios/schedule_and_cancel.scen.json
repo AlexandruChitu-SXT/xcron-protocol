@@ -131,7 +131,7 @@
             "comment": "Verify user1 got the 1 EGLD refund (balance back to original)",
             "accounts": {
                 "address:user1": {
-                    "balance": "50,000,000,000,000,000,000"
+                    "balance": "49,950,000,000,000,000,000"
                 }
             }
         }

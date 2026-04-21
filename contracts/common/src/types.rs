@@ -184,6 +184,11 @@ pub enum Trigger<M: ManagedTypeApi> {
         emitter_contract: ManagedAddress<M>,
         event_topic: ManagedBuffer<M>,
     },
+    /// Execute immediately ONLY IF the executor provides the Secret Pre-Image
+    /// that hashes via SHA-256 to the expected hash. (Quantum-Safe execution)
+    QuantumSealedHash {
+        expected_hash: ManagedByteArray<M, 32>,
+    },
 }
 
 /// Comparison operators for condition-based triggers.

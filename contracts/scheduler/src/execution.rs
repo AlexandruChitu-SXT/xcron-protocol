@@ -15,7 +15,11 @@ pub trait ExecutionModule:
 {
     /// Execute a ripe task. Keeper triggers execution, payment via async callback.
     #[endpoint(executeTask)]
-    fn execute_task(&self, task_id: u64) {
+    fn execute_task(
+        &self,
+        task_id: u64,
+        quantum_secret: OptionalValue<ManagedByteArray<Self::Api, 32>>,
+    ) {
         self.require_not_paused();
 
         // 🛡️ SECURITY PATCH (Vector 24): Global Async Lock Extirpated
@@ -42,6 +46,16 @@ pub trait ExecutionModule:
         }
 
         self.require_task_ripe(task_id, &task);
+
+        // Q-1: Quantum-Sealed Hash Reveal Authorization
+        if let common::types::Trigger::QuantumSealedHash { expected_hash } = &task.trigger {
+            let secret = quantum_secret.into_option().unwrap_or_else(|| sc_panic!("Missing Quantum Secret Premove"));
+            let computed_hash = self.crypto().sha256(&secret);
+            require!(
+                computed_hash.as_managed_buffer() == expected_hash.as_managed_buffer(),
+                "Q-1: Quantum Hash Seal broken: Invalid Secret Reveal"
+            );
+        }
 
 
         // S-1: Verify target is still safe (could have been blacklisted after scheduling)

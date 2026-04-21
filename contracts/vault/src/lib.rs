@@ -127,7 +127,6 @@ pub trait VaultContract:
     /// Withdraw EGLD from the vault. Initiates undelegation.
     #[endpoint(withdraw)]
     fn withdraw(&self, amount: BigUint) {
-        self.require_not_paused();
 
         let caller = self.blockchain().get_caller();
         require!(amount > 0u64, ERR_ZERO_WITHDRAW);
@@ -145,6 +144,7 @@ pub trait VaultContract:
 
         // V-22 FIX: Record pending unbond to prevent permanent loss
         self.pending_withdrawals(&caller).update(|p| *p += &amount);
+        self.total_pending_withdrawals().update(|p| *p += &amount);
 
         // Interaction: async undelegate
         let delegation_addr = self.delegation_contract().get();
@@ -176,6 +176,13 @@ pub trait VaultContract:
             let pending = self.pending_withdrawals(&caller).get();
             if pending >= amount {
                 self.pending_withdrawals(&caller).set(&(&pending - &amount));
+                
+                let total_pending = self.total_pending_withdrawals().get();
+                if total_pending >= amount {
+                    self.total_pending_withdrawals().set(&(&total_pending - &amount));
+                } else {
+                    self.total_pending_withdrawals().clear();
+                }
             }
         }
     }
@@ -187,7 +194,6 @@ pub trait VaultContract:
     /// Fetches unbonded funds from the staking provider after 10 epochs.
     #[endpoint(claimUnbonded)]
     fn claim_unbonded(&self) {
-        self.require_not_paused();
         let delegation_addr = self.delegation_contract().get();
         // Fire and forget to retrieve unbonded EGLD into Vault
         let _ = self.tx()
@@ -200,7 +206,6 @@ pub trait VaultContract:
     /// User pulls their unbonded funds from the Vault.
     #[endpoint(withdrawUnbonded)]
     fn withdraw_unbonded(&self) {
-        self.require_not_paused();
         let caller = self.blockchain().get_caller();
         let amount_due = self.pending_withdrawals(&caller).get();
         require!(amount_due > 0u64, "No pending withdrawals");
@@ -209,6 +214,15 @@ pub trait VaultContract:
         require!(sc_balance >= amount_due, "Unbonded funds not yet available from provider");
 
         self.pending_withdrawals(&caller).clear();
+        
+        // Decrement total liabilities robustly
+        let total_pending = self.total_pending_withdrawals().get();
+        if total_pending >= amount_due {
+            self.total_pending_withdrawals().set(&(&total_pending - &amount_due));
+        } else {
+            self.total_pending_withdrawals().clear();
+        }
+        
         self.send().direct_egld(&caller, &amount_due);
     }
 
@@ -426,11 +440,20 @@ pub trait VaultContract:
     }
 
     /// V-21 FIX: Recover Vault trapped yield (Yield Trap bypass)
+    /// SECURED: Mathematically prevents owner from extracting user pending_withdrawals.
     #[endpoint(rescueYield)]
     #[only_owner]
     fn rescue_yield(&self, amount: BigUint) {
         let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
-        require!(sc_balance >= amount, "Insufficient liquid balance");
+        let total_pending = self.total_pending_withdrawals().get();
+        
+        let safe_liquid = if sc_balance > total_pending {
+            &sc_balance - &total_pending
+        } else {
+            BigUint::zero()
+        };
+        
+        require!(safe_liquid >= amount, "Amount exceeds safe liquid (protocol-owned) balance");
         let caller = self.blockchain().get_caller();
         self.send().direct_egld(&caller, &amount);
     }
@@ -522,6 +545,9 @@ pub trait VaultContract:
     // V-22 FIX
     #[storage_mapper("pending_withdrawals")]
     fn pending_withdrawals(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
+
+    #[storage_mapper("total_pending_withdrawals")]
+    fn total_pending_withdrawals(&self) -> SingleValueMapper<BigUint>;
 
     // -- Addresses --
     #[storage_mapper("delegation_contract")]

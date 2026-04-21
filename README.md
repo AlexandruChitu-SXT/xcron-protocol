@@ -4,6 +4,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Testnet](https://img.shields.io/badge/MultiversX-Testnet-00e5ff)](https://testnet-explorer.multiversx.com)
 
+<p align="center">
+  <img src="quantum_seal.png" width="300" alt="XCron Quantum Seal" />
+</p>
+
+# 🛡️ Powered by Quantum-Sealed Hash Execution (Off-Chain ML-KEM + On-Chain SHA-256)
+
 **Agentic Automation Protocol on MultiversX**
 
 XCron is a trustless coordination layer for autonomous agents on MultiversX. Users and AI agents schedule on-chain actions — DeFi harvests, token swaps, governance votes, price-triggered trades — and a decentralized keeper network executes them on time, earning rewards for reliable service. Built for Supernova's sub-second finality.

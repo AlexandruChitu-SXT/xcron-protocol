@@ -6,6 +6,7 @@ mod tui;
 pub mod mempool_sniper;
 pub mod ws_sniper;
 pub mod pcit;
+pub mod quantum_shield;
 pub mod event_engine;
 
 use wallet::KeeperWallet;

@@ -24,7 +24,9 @@ clap = { version = "4.5.3", features = ["derive"] }
 num-bigint = "0.4.6"
 sha2 = "0.10.8"
 tokio-tungstenite = { version = "0.21.0", features = ["native-tls"] }
-
+ml-kem = "0.3.0-rc.2"
+ml-dsa = "0.1.0-rc.8"
+rand_core = { version = "0.6", features = ["getrandom"] }
 [[bin]]
 name = "vector1_deadlock"
 path = "src/bin/vector1_pbft_deadlock.rs"

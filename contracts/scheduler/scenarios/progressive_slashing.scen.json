@@ -40,7 +40,7 @@
                 "contractCode": "mxsc:../../keeper-registry/output/keeper-registry.mxsc.json",
                 "arguments": [
                     "1,000,000,000,000,000,000",
-                    "500",
+                    "3000",
                     "43200",
                     "address:treasury"
                 ],

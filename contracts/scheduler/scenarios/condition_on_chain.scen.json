@@ -60,7 +60,7 @@
                     "address:keeper_registry",
                     "address:rewards",
                     "100,000,000,000,000,000",
-                    "500"
+                    "3000"
                 ],
                 "gasLimit": "50,000,000",
                 "gasPrice": "0"

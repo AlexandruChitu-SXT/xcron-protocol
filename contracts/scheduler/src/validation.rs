@@ -88,24 +88,25 @@ pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::Help
         }
     }
 
-    /// Verify a task's trigger condition is met (task is "ripe").
-    fn require_task_ripe(&self, _task_id: u64, task: &common::types::Task<Self::Api>) {
-        let current_time = self.get_safe_block_timestamp();
+    /// Verify a quantum task's trigger condition is met (task is "ripe").
+    fn require_task_ripe_quantum(&self, task_payload: &common::types::Task<Self::Api>) {
+        let current_time_ms = self.get_timestamp_ms();
 
         // H-3: TTL expiry check — prevent execution of stale tasks
-        if task.ttl_seconds > 0 {
+        // Convert ttl_seconds to milliseconds for the comparison
+        if task_payload.ttl_seconds > 0 {
             require!(
-                current_time <= task.created_at + task.ttl_seconds,
+                current_time_ms <= task_payload.created_at + (task_payload.ttl_seconds * 1000),
                 "Task expired (TTL exceeded)"
             );
         }
 
-        match &task.trigger {
+        match &task_payload.trigger {
             common::types::Trigger::TimeOnce { target_time } => {
-                require!(current_time >= *target_time, "Task not yet ripe");
+                require!(current_time_ms >= *target_time, "Task not yet ripe");
             }
             common::types::Trigger::TimeRecurring { start_time, .. } => {
-                require!(current_time >= *start_time, "Task not yet ripe");
+                require!(current_time_ms >= *start_time, "Task not yet ripe");
             }
             common::types::Trigger::StateDriven {
                 oracle_contract,
@@ -115,8 +116,6 @@ pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::Help
                 threshold,
             } => {
                 // SDK 0.63+: Execute oracle query using raw tx builder.
-                // Builds a cross-contract call to the oracle, passes args,
-                // and decodes the result as BigUint.
                 let raw_result = self
                     .tx()
                     .to(oracle_contract)
@@ -140,13 +139,8 @@ pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::Help
 
                 require!(condition_met, "Oracle condition not met");
             }
-            common::types::Trigger::EventDriven {
-                emitter_contract: _,
-                event_topic: _,
-            } => {
-                // For EventDriven, the task is considered ripe because the trusted Keeper 
-                // evaluates the off-chain WebSocket event before actively triggering the execution.
-                // Purely relies on Keeper whitelist (S-6).
+            common::types::Trigger::EventDriven { .. } => {
+                // EventDriven relies on the Keeper's off-chain WebSocket evaluation.
                 require!(true, "EventDriven executed by trusted keeper");
             }
             common::types::Trigger::QuantumSealedHash { .. } => {

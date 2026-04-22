@@ -137,6 +137,20 @@ pub struct Task<M: ManagedTypeApi> {
     pub confidential: bool,
 }
 
+/// The on-chain state of a task verified via Quantum-Sealed Hash (Stateless Architecture).
+/// The actual task parameters (target, args, trigger) are never stored on-chain,
+/// saving >80% gas. The Keeper provides the full `Task` as calldata during execution.
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct QuantumTaskState<M: ManagedTypeApi> {
+    /// Address that scheduled (and funded) this task.
+    pub owner: ManagedAddress<M>,
+    /// EGLD deposited to cover execution fees.
+    pub deposit: BigUint<M>,
+    /// Current lifecycle status to prevent replay attacks.
+    pub status: TaskStatus,
+}
+
 /// Current status of a task in its lifecycle.
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Debug)]

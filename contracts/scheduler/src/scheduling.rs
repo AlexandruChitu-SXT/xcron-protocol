@@ -13,79 +13,56 @@ pub trait SchedulingModule:
     + crate::clone_keys::CloneKeysModule
     + common::pausable::PausableModule
 {
-    /// Schedule a new automation task.
+    /// Schedule a Quantum Task (Stateless Architecture)
     ///
     /// Payment: EGLD deposit covering gas budget + protocol fee.
-    /// For Clone-Keys: pass deposit amount as `requested_deposit` (EGLD is pre-deposited).
-    /// For normal wallets: send EGLD with the transaction (requested_deposit is ignored).
+    /// The full task payload is passed in calldata, hashed, emitted as an event (for Data Availability),
+    /// and ONLY the 32-byte Quantum Seal and deposit are stored in the State Trie.
     #[payable("EGLD")]
-    #[endpoint(scheduleTask)]
-    fn schedule_task(
+    #[endpoint(scheduleQuantumTask)]
+    fn schedule_quantum_task(
         &self,
-        target_contract: ManagedAddress,
-        target_endpoint: ManagedBuffer,
-        target_args: ManagedVec<ManagedBuffer>,
-        trigger: common::types::Trigger<Self::Api>,
-        max_gas: u64,
-        max_retries: u8,
-        ttl_seconds: u64,
-        require_xwap_safe: bool,
-        confidential: bool,
+        task_payload: common::types::Task<Self::Api>,
         requested_deposit: OptionalValue<BigUint>,
-    ) -> u64 {
+    ) -> ManagedByteArray<Self::Api, 32> {
         self.require_not_paused();
 
-        // Resolve caller: if Clone-Key, get main wallet; otherwise use caller directly
+        // Resolve caller
         let raw_caller = self.blockchain().get_caller();
         let (effective_owner, is_clone_key) = self.resolve_caller();
         let caller = effective_owner;
 
-        // Determine deposit: Clone-Key uses pre-deposited funds, normal wallet uses payment
+        // Determine deposit
         let deposit = if is_clone_key {
             let req = match requested_deposit {
                 OptionalValue::Some(val) => val,
                 OptionalValue::None => sc_panic!("Clone-Key must specify requested_deposit"),
             };
-            // Charge the clone key's spend limit
             self.charge_clone_key(&raw_caller, &req);
             req
         } else {
             self.call_value().egld().clone_value()
         };
 
-        // Checks
+        // Enforce minimum deposit
         require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
-        require!(
-            max_gas >= common::constants::MIN_GAS_LIMIT,
-            "max_gas too low"
-        );
-        require!(
-            max_gas <= common::constants::MAX_GAS_LIMIT,
-            "max_gas too high (Gas Trap protection)"
-        );
-        require!(
-            ttl_seconds >= common::constants::MIN_TTL_SECONDS,
-            "TTL too short"
-        );
-
-        // S-1: Full target safety validation
-        self.require_safe_target(&target_contract, &target_endpoint);
-
-        // S-13: Endpoint name validation
-        require!(
-            !target_endpoint.is_empty()
-                && target_endpoint.len() <= common::constants::MAX_ENDPOINT_NAME_BYTES,
-            "S-13: Invalid endpoint name length (1-64 bytes)"
-        );
-
-        // S-8: Deposit cap
+        
+        // S-8: Deposit cap protection
         self.require_deposit_within_cap(&deposit);
 
-        // S-9: Rate limiting — max 100 active tasks per address
+        // Calculate the Quantum Seal (SHA-256 Hash of the serialized payload)
+        // This is the ONLY thing we will store.
+        let mut encoded_payload = ManagedBuffer::new();
+        let _ = task_payload.top_encode(&mut encoded_payload);
+        let task_hash = self.crypto().sha256(&encoded_payload);
+        
+        // Ensure this exact task hasn't been scheduled and left pending already
+        require!(self.quantum_tasks(&task_hash).is_empty(), "Task hash already exists");
+
+        // Rate limiting — max tasks per address (using hash sets now)
         let caller_active = self.owner_tasks(&caller).len();
         require!(caller_active < 100, "S-9: Too many active tasks (max 100)");
 
-        // S-11: Per-round rate limiting — prevent spam bursts
         let current_round = self.blockchain().get_block_round();
         let tasks_this_round = self.tasks_per_round(&caller, current_round).get();
         let max_per_round = self.max_tasks_per_round().get();
@@ -95,171 +72,73 @@ pub trait SchedulingModule:
                 "S-11: Too many tasks this round (anti-spam)"
             );
         }
-        self.tasks_per_round(&caller, current_round)
-            .set(tasks_this_round + 1);
+        self.tasks_per_round(&caller, current_round).set(tasks_this_round + 1);
 
-        // S-12: Argument size validation
-        require!(
-            target_args.len() <= common::constants::MAX_TASK_ARGS,
-            "S-12: Too many arguments (max 10)"
-        );
-        for arg in target_args.iter() {
-            require!(
-                arg.len() <= common::constants::MAX_ARG_SIZE_BYTES,
-                "S-12: Argument too large (max 4096 bytes)"
-            );
-        }
-
-        // Effects
-        let task_id = self.task_nonce().get() + 1;
-        self.task_nonce().set(task_id);
-
-        let current_time = self.get_safe_block_timestamp();
-
-        let task = common::types::Task {
-            id: task_id,
+        // Store ONLY the Quantum State (Stateless)
+        let state = common::types::QuantumTaskState {
             owner: caller.clone(),
-            target_contract,
-            target_endpoint,
-            target_args,
-            trigger: trigger.clone(),
-            max_gas,
-            deposit,
-            max_retries,
-            retry_count: 0,
-            ttl_seconds,
-            created_at: current_time,
+            deposit: deposit.clone(),
             status: common::types::TaskStatus::Pending,
-            assigned_keeper: None,
-            completed_at: 0,
-            post_task_id: None,
-            require_xwap_safe,
-            confidential,
         };
+        self.quantum_tasks(&task_hash).set(&state);
+        self.owner_tasks(&caller).insert(task_hash.clone());
 
-        self.tasks(task_id).set(&task);
-        self.owner_tasks(&task.owner).insert(task_id);
+        // We DO NOT store the task. We emit it for the off-chain Keepers to index.
+        // Data Availability is guaranteed by the Event Log.
+        let current_time_ms = self.get_timestamp_ms();
+        
+        // WARNING: Time boundaries MUST be managed in MILLISECONDS.
+        // The Keeper off-chain must interpret task_payload.ttl_ms and target_time strictly in MILLISECONDS.
+        self.task_scheduled_event_quantum(&task_hash, &caller, &task_payload.target_contract, current_time_ms);
 
-        // Index for keeper discovery
-        self.index_task(task_id, &trigger);
-
-        // Emit event
-        self.task_scheduled_event(task_id, &task.owner, &task.target_contract, current_time);
-        task_id
+        task_hash
     }
 
-    /// Cancel a pending task and refund the deposit to the owner.
-    #[endpoint(cancelTask)]
-    fn cancel_task(&self, task_id: u64) {
+    /// Cancel a pending quantum task and refund the deposit to the owner.
+    #[endpoint(cancelQuantumTask)]
+    fn cancel_quantum_task(&self, task_hash: ManagedByteArray<Self::Api, 32>) {
         self.require_not_paused();
-        let task = self.tasks(task_id).get();
+        
+        require!(!self.quantum_tasks(&task_hash).is_empty(), "Task hash not found");
+        let task_state = self.quantum_tasks(&task_hash).get();
         let raw_caller = self.blockchain().get_caller();
         let (effective_owner, _is_clone_key) = self.resolve_caller();
 
         // Checks: allow task owner OR the resolved clone-key owner to cancel
         require!(
-            task.owner == raw_caller || task.owner == effective_owner,
+            task_state.owner == raw_caller || task_state.owner == effective_owner,
             "Not task owner"
         );
         require!(
-            task.status == common::types::TaskStatus::Pending,
+            task_state.status == common::types::TaskStatus::Pending,
             "Can only cancel Pending tasks"
         );
 
         // Effects (STATE PRUNING / ANTI-BLOAT)
-        // Destruimos la tarea fisicamente de la memoria para mantener el coste de almacenamiento en cero.
-        // El historial quedara en nuestro indexador of-chain (Sauron).
-        self.tasks(task_id).clear();
-        self.remove_from_indices(task_id, &task);
-        self.owner_tasks(&task.owner).swap_remove(&task_id);
+        self.quantum_tasks(&task_hash).clear();
+        self.owner_tasks(&task_state.owner).swap_remove(&task_hash);
+        // Time indexing is handled off-chain now, no need to remove from indices
 
         // Interactions — ANTI-SPAM FEE
-        // Si el usuario cancela, el protocolo retiene el porcentaje fijado para evitar que atacantes
-        // infien la base de datos gratuitamente como paso en Supernova (State Bloat Escrow).
-        let penalty_fee = &task.deposit * self.protocol_fee_bps().get() as u64 / 10000u64;
-        let refund = if task.deposit > penalty_fee {
-            &task.deposit - &penalty_fee
+        let penalty_fee = &task_state.deposit * self.protocol_fee_bps().get() as u64 / 10000u64;
+        let refund = if task_state.deposit > penalty_fee {
+            &task_state.deposit - &penalty_fee
         } else {
             BigUint::zero()
         };
 
         if refund > BigUint::zero() {
-            self.send().direct_egld(&task.owner, &refund);
+            self.send().direct_egld(&task_state.owner, &refund);
         }
         
         if penalty_fee > BigUint::zero() {
             self.accrued_protocol_fees().update(|v| *v += &penalty_fee);
         }
 
-        self.task_cancelled_event(task_id);
+        self.task_cancelled_event_quantum(&task_hash);
     }
 
-    /// Set metadata for a task (hybrid oracle conditions).
-    #[endpoint(setTaskMetadata)]
-    fn set_task_metadata(&self, task_id: u64, metadata: ManagedBuffer) {
-        let task = self.tasks(task_id).get();
-        let caller = self.blockchain().get_caller();
-
-        require!(task.owner == caller, "Not task owner");
-        require!(
-            task.status == common::types::TaskStatus::Pending,
-            "Can only set metadata on Pending tasks"
-        );
-        require!(metadata.len() <= 512, "Metadata too large (max 512 bytes)");
-
-        self.task_metadata(task_id).set(&metadata);
-    }
-
-    /// Link two tasks: when `task_id` completes successfully, `post_task_id` is activated.
-    ///
-    /// Both tasks must belong to the same owner and be in Pending status.
-    /// Maximum chain depth: 5 (prevents gas-bomb chains).
-    #[endpoint(setPostTask)]
-    fn set_post_task(&self, task_id: u64, post_task_id: u64) {
-        self.require_not_paused();
-
-        require!(task_id != post_task_id, "Cannot chain a task to itself");
-
-        let mut task = self.tasks(task_id).get();
-        let post_task = self.tasks(post_task_id).get();
-        let (effective_owner, _is_clone_key) = self.resolve_caller();
-        let raw_caller = self.blockchain().get_caller();
-
-        // Both tasks must belong to the caller
-        require!(
-            task.owner == raw_caller || task.owner == effective_owner,
-            "Not owner of source task"
-        );
-        require!(
-            post_task.owner == task.owner,
-            "Post-task must belong to same owner"
-        );
-
-        // Both must be Pending
-        require!(
-            task.status == common::types::TaskStatus::Pending,
-            "Source task must be Pending"
-        );
-        require!(
-            post_task.status == common::types::TaskStatus::Pending,
-            "Post-task must be Pending"
-        );
-
-        // Prevent circular chains — walk the chain, max depth 5
-        let max_chain_depth: u64 = 5;
-        let mut current_id = post_task_id;
-        for _ in 0..max_chain_depth {
-            let t = self.tasks(current_id).get();
-            match t.post_task_id {
-                Some(next_id) => {
-                    require!(next_id != task_id, "Circular chain detected");
-                    current_id = next_id;
-                }
-                None => break,
-            }
-        }
-
-        task.post_task_id = Some(post_task_id);
-        self.tasks(task_id).set(&task);
-    }
+    // ── Legacy `set_task_metadata` and `set_post_task` have been removed ──
+    // In the Quantum Stateless architecture, chaining and metadata are encoded 
+    // entirely within the off-chain payload and handled by the Rust Keeper.
 }

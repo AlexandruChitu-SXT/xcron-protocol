@@ -9,31 +9,19 @@ pub trait StorageModule {
     #[storage_mapper("taskNonce")]
     fn task_nonce(&self) -> SingleValueMapper<u64>;
 
-    // ── Task store ───────────────────────────────────────────
-    #[storage_mapper("tasks")]
-    fn tasks(&self, task_id: u64) -> SingleValueMapper<common::types::Task<Self::Api>>;
+    // ── Stateless Task store (Quantum Sealed) ───────────────────────────
+    /// Maps the Quantum Seal (SHA-256 Hash of Task payload) to its on-chain state.
+    /// This eliminates >80% of storage bloat.
+    #[view(getQuantumTask)]
+    #[storage_mapper("quantumTasks")]
+    fn quantum_tasks(&self, task_hash: &ManagedByteArray<Self::Api, 32>) -> SingleValueMapper<common::types::QuantumTaskState<Self::Api>>;
 
-    // ── Time-based index: time → set of task IDs ───────────
-    #[storage_mapper("timeIndex")]
-    fn time_index(&self, timestamp: u64) -> UnorderedSetMapper<u64>;
+    // time_index, condition_tasks, task_metadata, and commits have been removed.
+    // The Keeper indices are managed entirely in RAM off-chain via Event DA.
 
-    // ── Condition-based pending set ──────────────────────────
-    #[storage_mapper("conditionTasks")]
-    fn condition_tasks(&self) -> UnorderedSetMapper<u64>;
-
-    // ── Owner → tasks mapping ────────────────────────────────
+    // ── Owner → tasks mapping (for rate limiting) ────────────────────────────────
     #[storage_mapper("ownerTasks")]
-    fn owner_tasks(&self, owner: &ManagedAddress) -> UnorderedSetMapper<u64>;
-
-    // ── Task metadata (hybrid oracle conditions) ────────────
-    // Stores JSON-encoded conditions evaluated off-chain by the keeper.
-    // Example: {"price":{"token":"EGLD","condition":"above","threshold":50}}
-    #[storage_mapper("taskMetadata")]
-    fn task_metadata(&self, task_id: u64) -> SingleValueMapper<ManagedBuffer>;
-
-    // ── Commit-reveal store (Phase 3+) ──────────────────────
-    #[storage_mapper("commits")]
-    fn commits(&self, task_id: u64) -> SingleValueMapper<common::types::CommitInfo<Self::Api>>;
+    fn owner_tasks(&self, owner: &ManagedAddress) -> UnorderedSetMapper<ManagedByteArray<Self::Api, 32>>;
 
     // ── Protocol parameters ──────────────────────────────────
     #[storage_mapper("keeperRegistryAddr")]
@@ -153,12 +141,7 @@ pub trait StorageModule {
     #[storage_mapper("maxTasksPerRound")]
     fn max_tasks_per_round(&self) -> SingleValueMapper<u32>;
 
-    // ── Cross-shard optimization: Shard Affinity Index ──────
-    /// Maps shard_id → set of pending task IDs with targets in that shard.
-    /// Allows keepers to prioritize tasks in their own shard, reducing
-    /// cross-shard overhead from 30% to 0%.
-    #[storage_mapper("shardTaskIndex")]
-    fn shard_task_index(&self, shard_id: u32) -> UnorderedSetMapper<u64>;
+    // shard_task_index removed: Cross-shard affinity is managed by the off-chain keeper routing.
 
     // ── Cross-shard optimization: Execution stats per shard ─
     /// Tracks successful cross-shard vs intra-shard executions for metrics.

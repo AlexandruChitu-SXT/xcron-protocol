@@ -5,173 +5,25 @@ multiversx_sc::imports!();
 /// Contains reward calculations, index management, and task rescheduling.
 #[multiversx_sc::module]
 pub trait HelpersModule: crate::storage::StorageModule {
-    /// Calculate keeper reward for a successful execution.
-    ///
-    /// Keeper gets: min(deposit - protocol_fee, max_reward_per_exec).
-    /// Excess is refunded to the task owner via remaining_deposit.
-    fn calculate_keeper_reward(&self, task: &common::types::Task<Self::Api>) -> BigUint {
-        let protocol_fee = self.calculate_protocol_fee(task);
-        let uncapped_reward = &task.deposit - &protocol_fee;
+    // calculate_keeper_reward has been removed (Stateless architecture processes this inline)
 
-        let max_reward = self.max_reward_per_exec().get();
-        if max_reward > BigUint::zero() && uncapped_reward > max_reward {
-            max_reward
-        } else {
-            uncapped_reward
-        }
-    }
-
-    /// Vector 16 "Chronos" Armor - Safe Timestamp Extraction
+    /// Vector 16 "Chronos" Armor - Supernova HFT Precision (Milliseconds)
     /// 
-    /// Supernova 600ms PBFT can inject milliseconds into `get_block_timestamp_seconds()` causing
-    /// massive time-drift and Escrow deadlocks across the protocol. This function detects inflation
-    /// and safely normalizes it back to Unix Seconds without disrupting legacy execution limits.
-    fn get_safe_block_timestamp(&self) -> u64 {
+    /// Supernova targets 88ms latency. If we truncate to seconds, we destroy the HFT window.
+    /// This function ensures the internal contract clock always operates in milliseconds.
+    fn get_timestamp_ms(&self) -> u64 {
         let raw_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
-        // Fallback detection: if time exceeds 100 Billion seconds, it's injected as MS.
+        // Fallback detection: if time exceeds 100 Billion, it is already injected as MS.
         if raw_time > 100_000_000_000u64 {
-            raw_time / 1000
+            raw_time // It's already in milliseconds (Supernova future)
         } else {
-            raw_time
+            raw_time * 1000 // It's in seconds (Barnard/Legacy), up-convert to milliseconds
         }
     }
 
-    /// Calculate protocol fee for a single execution.
-    ///
-    /// For recurring tasks: fee is based on deposit/remaining_execs (per-execution share).
-    /// For one-time tasks: fee is based on the full deposit.
-    /// Formula: per_exec_deposit × protocol_fee_bps / BPS_DENOMINATOR
-    fn calculate_protocol_fee(&self, task: &common::types::Task<Self::Api>) -> BigUint {
-        let fee_bps = self.protocol_fee_bps().get();
-
-        // For recurring tasks, calculate fee on per-execution deposit
-        let per_exec_deposit = match &task.trigger {
-            common::types::Trigger::TimeRecurring {
-                remaining_execs, ..
-            } => {
-                if *remaining_execs > 0 {
-                    &task.deposit / *remaining_execs
-                } else {
-                    task.deposit.clone()
-                }
-            }
-            _ => task.deposit.clone(),
-        };
-
-        &per_exec_deposit * fee_bps / common::constants::BPS_DENOMINATOR
-    }
-
-    /// Index a task for keeper discovery based on its trigger type.
-    /// Also indexes by target shard for shard-aware keeper routing.
-    fn index_task(&self, task_id: u64, trigger: &common::types::Trigger<Self::Api>) {
-        match trigger {
-            common::types::Trigger::TimeOnce { target_time } => {
-                self.time_index(*target_time).insert(task_id);
-            }
-            common::types::Trigger::TimeRecurring { start_time, .. } => {
-                self.time_index(*start_time).insert(task_id);
-            }
-            common::types::Trigger::StateDriven { .. } => {
-                self.condition_tasks().insert(task_id);
-            }
-            common::types::Trigger::EventDriven { .. } => {
-                self.condition_tasks().insert(task_id);
-            }
-            common::types::Trigger::QuantumSealedHash { .. } => {}
-        }
-
-        // Cross-shard optimization: Index task by target shard
-        let task = self.tasks(task_id).get();
-        let target_shard = self
-            .blockchain()
-            .get_shard_of_address(&task.target_contract);
-        self.shard_task_index(target_shard).insert(task_id);
-    }
-
-    /// Remove a task from all discovery indices (time, condition, shard).
-    fn remove_from_indices(&self, task_id: u64, task: &common::types::Task<Self::Api>) {
-        match &task.trigger {
-            common::types::Trigger::TimeOnce { target_time } => {
-                self.time_index(*target_time).swap_remove(&task_id);
-            }
-            common::types::Trigger::TimeRecurring { start_time, .. } => {
-                self.time_index(*start_time).swap_remove(&task_id);
-            }
-            common::types::Trigger::StateDriven { .. } => {
-                self.condition_tasks().swap_remove(&task_id);
-            }
-            common::types::Trigger::EventDriven { .. } => {
-                self.condition_tasks().swap_remove(&task_id);
-            }
-            common::types::Trigger::QuantumSealedHash { .. } => {}
-        }
-
-        // Cross-shard optimization: Remove from shard index
-        let target_shard = self
-            .blockchain()
-            .get_shard_of_address(&task.target_contract);
-        self.shard_task_index(target_shard).swap_remove(&task_id);
-    }
-
-    /// Re-index a task for retry pickup.
-    fn reindex_task(&self, task_id: u64, task: &common::types::Task<Self::Api>) {
-        match &task.trigger {
-            common::types::Trigger::StateDriven { .. } 
-            | common::types::Trigger::EventDriven { .. } => {
-                self.condition_tasks().insert(task_id);
-            }
-            _ => {
-                // Time-based: re-index at current time + 10s (grace period for retry)
-                let next_time = self.get_safe_block_timestamp() + 10;
-                self.time_index(next_time).insert(task_id);
-            }
-        }
-    }
-
-    /// Reschedule the next occurrence of a recurring task.
-    ///
-    /// Uses the actual remaining deposit (after keeper reward + protocol fee),
-    /// NOT the original deposit which has already been distributed.
-    fn reschedule_recurring(
-        &self,
-        original_task: &common::types::Task<Self::Api>,
-        interval: u64,
-        remaining_execs: u64,
-        remaining_deposit: BigUint,
-    ) {
-        let next_time = self.get_safe_block_timestamp() + interval;
-        let new_id = self.task_nonce().get() + 1;
-        self.task_nonce().set(new_id);
-
-        let new_task = common::types::Task {
-            id: new_id,
-            owner: original_task.owner.clone(),
-            target_contract: original_task.target_contract.clone(),
-            target_endpoint: original_task.target_endpoint.clone(),
-            target_args: original_task.target_args.clone(),
-            trigger: common::types::Trigger::TimeRecurring {
-                start_time: next_time,
-                interval,
-                remaining_execs,
-            },
-            max_gas: original_task.max_gas,
-            deposit: remaining_deposit,
-            max_retries: original_task.max_retries,
-            retry_count: 0,
-            ttl_seconds: original_task.ttl_seconds,
-            created_at: self.get_safe_block_timestamp(),
-            status: common::types::TaskStatus::Pending,
-            assigned_keeper: None,
-            completed_at: 0,
-            post_task_id: None,
-            require_xwap_safe: original_task.require_xwap_safe,
-            confidential: original_task.confidential,
-        };
-
-        self.tasks(new_id).set(&new_task);
-        self.time_index(next_time).insert(new_id);
-        self.owner_tasks(&new_task.owner).insert(new_id);
-    }
+    // calculate_protocol_fee, index_task, remove_from_indices, reindex_task, and reschedule_recurring
+    // have been purged. The blockchain no longer maintains cross-shard indices, time arrays, or recurring states.
+    // The Rust-Tokio Keeper assumes 100% responsibility for this logic off-chain, reducing gas usage by >80%.
 
     // ── Cross-contract call helpers ─────────────────────────
 

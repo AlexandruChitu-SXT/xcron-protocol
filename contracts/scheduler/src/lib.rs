@@ -26,7 +26,7 @@ multiversx_sc::imports!();
 
 pub mod admin;
 pub mod clone_keys;
-pub mod commit_reveal;
+    // pub mod commit_reveal; // Archived: Replaced by Quantum Hash Seal
 pub mod config;
 pub mod events;
 pub mod execution;
@@ -48,7 +48,7 @@ pub trait SchedulerContract:
     + intents::IntentsModule
     + scheduling::SchedulingModule
     + execution::ExecutionModule
-    + commit_reveal::CommitRevealModule
+    // + commit_reveal::CommitRevealModule // Archived: Replaced by Quantum Hash Seal
     + clone_keys::CloneKeysModule
     + admin::AdminModule
     + common::pausable::PausableModule

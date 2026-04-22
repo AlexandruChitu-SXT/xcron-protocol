@@ -6,62 +6,56 @@ multiversx_sc::imports!();
 /// by indexers, explorers, and the keeper bot.
 #[multiversx_sc::module]
 pub trait EventsModule {
-    /// Emitted when a new task is scheduled.
-    #[event("taskScheduled")]
-    fn task_scheduled_event(
+    /// Emitted when a new Quantum Task is scheduled.
+    /// In a stateless architecture, this event guarantees Data Availability (DA).
+    /// The keeper indexes this off-chain payload.
+    #[event("taskScheduledQuantum")]
+    fn task_scheduled_event_quantum(
         &self,
-        #[indexed] task_id: u64,
+        #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>,
         #[indexed] owner: &ManagedAddress,
         #[indexed] target: &ManagedAddress,
-        timestamp: u64,
+        timestamp_ms: u64,
     );
 
-    /// Emitted when a task owner cancels their pending task.
-    #[event("taskCancelled")]
-    fn task_cancelled_event(&self, #[indexed] task_id: u64);
+    /// Emitted when a task owner cancels their pending quantum task.
+    #[event("taskCancelledQuantum")]
+    fn task_cancelled_event_quantum(&self, #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>);
 
-    /// Emitted when a task expires due to TTL or is recovered from stuck state.
-    #[event("taskExpired")]
-    fn task_expired_event(&self, #[indexed] task_id: u64);
+    /// Emitted when a quantum task expires due to TTL or is recovered from stuck state.
+    #[event("taskExpiredQuantum")]
+    fn task_expired_event_quantum(&self, #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>);
 
-    /// Emitted after async callback resolves a task execution.
-    #[event("taskExecuted")]
-    fn task_executed_event(
+    /// Emitted after async callback resolves a quantum task execution.
+    #[event("taskExecutedQuantum")]
+    fn task_executed_event_quantum(
         &self,
-        #[indexed] task_id: u64,
+        #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>,
         #[indexed] keeper: &ManagedAddress,
         success: bool,
     );
 
-    /// Emitted when a keeper submits a commit hash (anti-MEV phase 1).
-    #[event("commitSubmitted")]
-    fn commit_event(&self, #[indexed] task_id: u64, #[indexed] keeper: &ManagedAddress);
-
-    /// Emitted when a commit expires or is slashed.
-    #[event("commitVoided")]
-    fn commit_voided_event(&self, #[indexed] task_id: u64, #[indexed] keeper: &ManagedAddress);
-
-    /// Emitted when a keeper is paid for successful execution.
-    #[event("keeperPaid")]
-    fn keeper_paid_event(
+    /// Emitted when a keeper is paid for successful quantum execution.
+    #[event("keeperPaidQuantum")]
+    fn keeper_paid_event_quantum(
         &self,
-        #[indexed] task_id: u64,
+        #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>,
         #[indexed] keeper: &ManagedAddress,
         amount: &BigUint,
     );
 
-    /// Emitted when a task owner receives a refund (failure or remaining deposit).
-    #[event("userRefunded")]
-    fn user_refunded_event(
+    /// Emitted when a task owner receives a refund (failure or remaining deposit) for a quantum task.
+    #[event("userRefundedQuantum")]
+    fn user_refunded_event_quantum(
         &self,
-        #[indexed] task_id: u64,
+        #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>,
         #[indexed] owner: &ManagedAddress,
         amount: &BigUint,
     );
 
-    /// Emitted when protocol fee is forwarded to the Rewards contract.
-    #[event("protocolFeePaid")]
-    fn protocol_fee_paid_event(&self, #[indexed] task_id: u64, amount: &BigUint);
+    /// Emitted when protocol fee is forwarded to the Rewards contract for a quantum task.
+    #[event("protocolFeePaidQuantum")]
+    fn protocol_fee_paid_event_quantum(&self, #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>, amount: &BigUint);
 
     // ═══════════════════════════════════════════════════════════════════
     //  INTENT EVENTS (XCron V2 Vanguard)

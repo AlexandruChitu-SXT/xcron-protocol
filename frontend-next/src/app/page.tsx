@@ -10,6 +10,10 @@ import { ProtocolRadar } from '@/components/ProtocolRadar';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { TypewriterTitle } from '@/components/TypewriterTitle';
 import { TransparentLogo } from '@/components/TransparentLogo';
+import AiChat from '@/components/AiChat';
+import ScheduleTask from './schedule/page';
+import MyTasks from './tasks/page';
+import ProtocolStats from './stats/page';
 
 interface ProtocolStats {
   totalTasks: number;
@@ -110,6 +114,7 @@ export default function Dashboard() {
   const successRate = totalExecs > 0 ? Math.round((stats.totalSuccessful / totalExecs) * 100) : 0;
 
   return (
+    <>
     <div className="w-full">
       {/* Hero Title — above logo, centered */}
       <div className="app-container">
@@ -145,44 +150,14 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Protocol Stats — Row 1: Core Metrics */}
-        <div className="stats-grid">
-          <div className="stat-card" style={{ borderColor: 'rgba(59,130,246,0.25)' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" /><line x1="12" y1="2" x2="12" y2="22" /><line x1="2" y1="8.5" x2="22" y2="8.5" /></svg>
-            <div className="stat-label" style={{ color: 'rgb(59,130,246)' }}>Total Tasks</div>
-            <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.totalTasks} />}</div>
-            <div className="stat-sub">Scheduled on protocol</div>
-          </div>
-          <div className="stat-card" style={{ borderColor: 'rgba(232,146,124,0.25)' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(232,146,124,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /><line x1="12" y1="1" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="1" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="23" y2="12" /></svg>
-            <div className="stat-label" style={{ color: 'rgb(232,146,124)' }}>Active Keepers</div>
-            <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.activeKeepers} />}</div>
-            <div className="stat-sub">Executing tasks</div>
-          </div>
-          <div className="stat-card" style={{ borderColor: 'rgba(251,191,36,0.2)' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 14, right: 14 }}><polygon points="12,2 20,12 12,22 4,12" /></svg>
-            <div className="stat-label" style={{ color: 'rgb(251,191,36)' }}>Min Deposit</div>
-            <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : formatEgld(stats.minDeposit, 2)}</div>
-            <div className="stat-sub">EGLD per task</div>
-          </div>
-          <div className="stat-card" style={{ borderColor: 'rgba(244,114,182,0.2)' }}>
-            <svg width="20" height="20" viewBox="0 0 24 26" fill="none" stroke="rgba(244,114,182,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><path d="M12 2L3 7v6c0 5.25 3.85 10.15 9 11.35C17.15 23.15 21 18.25 21 13V7L12 2z" /></svg>
-            <div className="stat-label" style={{ color: 'rgb(244,114,182)' }}>Protocol Fee</div>
-            <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <><AnimatedCounter value={stats.protocolFeeBps / 100} />%</>}</div>
-            <div className="stat-sub">Per execution</div>
-          </div>
-          <div className="stat-card" style={{ borderColor: 'rgba(34,197,94,0.2)' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(34,197,94,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><polyline points="20,6 9,17 4,12" /></svg>
-            <div className="stat-label" style={{ color: 'rgb(34,197,94)' }}>Successful</div>
-            <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.totalSuccessful} />}</div>
-            <div className="stat-sub">Executions</div>
-          </div>
-          <div className="stat-card" style={{ borderColor: 'rgba(239,68,68,0.2)' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.6)" strokeWidth="1.5" style={{ position: 'absolute', top: 12, right: 12 }}><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-            <div className="stat-label" style={{ color: 'rgb(239,68,68)' }}>Failed</div>
-            <div className="stat-value">{loading ? <span className="skeleton skeleton-stat" /> : <AnimatedCounter value={stats.totalFailed} />}</div>
-            <div className="stat-sub">Executions</div>
-          </div>
+        {/* Comando Central de IA (Reemplazando los widgets) */}
+        <div className="w-full max-w-4xl mx-auto my-8 relative z-20">
+            <div className="bg-[#050505] border border-white/10 rounded-full shadow-[0_0_40px_rgba(34,211,238,0.15)] overflow-hidden flex items-center p-2 backdrop-blur-xl">
+                <AiChat />
+            </div>
+            <p className="text-center text-white/40 text-xs mt-3 uppercase tracking-widest font-mono">
+                Ask XCron AI to automate your on-chain actions
+            </p>
         </div>
 
         {/* Row 2: Protocol Health Stats */}
@@ -296,14 +271,14 @@ export default function Dashboard() {
             ].map(a => (
               <div key={a.name} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                padding: '10px 6px', background: `${a.color}08`, border: `1px solid ${a.color}20`,
+                padding: '10px 6px', background: 'transparent', border: '1px solid transparent',
                 borderRadius: 'var(--radius-md)', textAlign: 'center',
               }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${a.color}18`, color: a.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', color: a.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {a.icon}
                 </div>
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
-                <span style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: a.color, padding: '1px 6px', borderRadius: 4, background: `${a.color}12` }}>{a.badge}</span>
+                <span style={{ fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: a.color, padding: '1px 6px', borderRadius: 4, background: 'transparent' }}>{a.badge}</span>
               </div>
             ))}
           </div>
@@ -311,8 +286,8 @@ export default function Dashboard() {
 
         {/* Who Benefits — compact */}
         <div className="grid grid-cols-1 md:grid-cols-2 mt-4 gap-3">
-          <div className="card benefit-card" style={{ padding: 14 }}>
-            <div className="benefit-badge" style={{ background: 'rgba(139,92,246,0.15)', color: 'rgb(139,92,246)' }}>For Users</div>
+          <div className="card benefit-card border-transparent bg-transparent" style={{ padding: 14 }}>
+            <div className="benefit-badge" style={{ background: 'transparent', color: 'rgb(139,92,246)' }}>For Users</div>
             <h3 style={{ color: 'var(--text-primary)', marginBottom: 4, fontSize: '0.92rem' }}>Save Time, Earn More</h3>
             <ul className="benefit-list" style={{ fontSize: '0.8rem' }}>
               <li>Auto-compound staking & farm rewards</li>
@@ -325,7 +300,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="card benefit-card" style={{ padding: 14, borderColor: 'rgba(16,185,129,0.2)' }}>
+          <div className="card benefit-card border-transparent bg-transparent" style={{ padding: 14 }}>
             <div className="benefit-badge" style={{ background: 'rgba(16,185,129,0.15)', color: 'rgb(16,185,129)' }}>Earn With XCron</div>
             <h3 style={{ color: 'var(--text-primary)', marginBottom: 4, fontSize: '0.92rem' }}>Run a Keeper Node</h3>
             <ul className="benefit-list" style={{ fontSize: '0.8rem' }}>
@@ -335,14 +310,49 @@ export default function Dashboard() {
               <li>Ideal for validators & operators</li>
             </ul>
             <Link href="/keeper" className="block mt-2">
-              <button className="btn w-full p-2 text-sm" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: 'rgb(34,197,94)' }}>
+              <button className="btn w-full p-2 text-sm" style={{ background: 'transparent', border: '1px solid transparent', color: 'rgb(34,197,94)' }}>
                 Learn More →
               </button>
             </Link>
           </div>
         </div>
 
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-16 pb-16 max-w-7xl mx-auto px-4 md:px-8">
+        <div id="schedule" className="scroll-mt-24 pt-8 relative">
+          <ScheduleTask />
+        </div>
+
+        <div id="tasks" className="scroll-mt-24 pt-8 relative">
+          <MyTasks />
+        </div>
+
+        <div id="stats" className="scroll-mt-24 pt-8 relative">
+          <ProtocolStats />
+        </div>
+
+        <div id="security" className="scroll-mt-24 pt-8 relative">
+          <div className="w-full max-w-6xl mx-auto px-4 md:px-0">
+             <TypewriterTitle as="h2" text="Protocol Advances & Security" speed={50} className="text-3xl font-black tracking-tight mb-8" />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="rounded-2xl border border-transparent p-8 bg-transparent">
+                   <h3 className="text-xl font-bold text-cyan-400 mb-4">Unbreakable Execution Guarantee</h3>
+                   <p className="text-white/80 mb-4 leading-relaxed">
+                     We've rebuilt the underlying execution engine to guarantee that your scheduled tasks run exactly when they should, without fail. By eliminating deep-level memory corruptions, your automated DeFi strategies are protected from network-halting events.
+                   </p>
+                </div>
+                <div className="rounded-2xl border border-transparent p-8 bg-transparent">
+                   <h3 className="text-xl font-bold text-purple-400 mb-4">Quantum-Sealed Hash Mechanism</h3>
+                   <p className="text-white/80 mb-4 leading-relaxed">
+                     Your transactions are cryptographically sealed before execution. What does this mean for you? It means absolutely zero front-running. No MEV bots can intercept your trades, and Keepers are mathematically forced to execute honestly or lose their stake.
+                   </p>
+                </div>
+             </div>
+          </div>
       </div>
     </div>
+    </>
   );
 }

@@ -24,16 +24,13 @@ export function SidebarPremium() {
     const { wallet, connect, disconnect, setShowConnectModal } = useWallet();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-    const routes = [
-        { href: "/", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/schedule", label: "Schedule Task", icon: ListTodo },
-        { href: "/tasks", label: "My Tasks", icon: BrainCircuit },
-        { href: "/explore", label: "Explore Tasks", icon: Search },
+    const routes: { href: string; label: string; icon: any; strict?: boolean }[] = [
+        { href: "#dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { href: "#schedule", label: "Schedule Task", icon: ListTodo },
+        { href: "#tasks", label: "My Tasks", icon: BrainCircuit },
         { href: "/clone-keys", label: "Clone-Keys", icon: KeyRound },
-        { href: "/keeper", label: "Keeper Node", icon: Network },
-        { href: "/stats", label: "Protocol Stats", icon: Activity },
-
-        { href: "/admin", label: "Admin Panel", icon: Terminal, strict: true },
+        { href: "#stats", label: "Protocol Stats", icon: Activity },
+        { href: "#security", label: "Security & Advances", icon: Network },
     ];
 
     const isAdmin = wallet.address === "erd1zz5n2x5mms5y7es2ksm9675edx6m8yzz7p2ntst6tzr6t2gugk0suu7lmy";
@@ -96,40 +93,32 @@ export function SidebarPremium() {
                         const isActive = pathname === route.href;
 
                         return (
-                            <Link
+                            <a
                                 key={route.href}
                                 href={route.href}
-                                className={`
-                                    relative flex items-center gap-4 px-5 py-3.5 rounded-[20px] font-medium transition-all duration-300 group
-                                    ${isActive
-                                        ? "bg-gradient-to-b from-[#1a1a1a] to-[#0d0d0d] text-white"
-                                        : "text-[#7a7a7a] hover:text-[#ececec] hover:bg-white/[0.02]"
+                                onClick={(e) => {
+                                    if (route.href.startsWith('#')) {
+                                        e.preventDefault();
+                                        const element = document.querySelector(route.href);
+                                        if (element) {
+                                            element.scrollIntoView({ behavior: 'smooth' });
+                                        }
+                                        if (isMobileOpen) setIsMobileOpen(false);
+                                    } else {
+                                        if (isMobileOpen) setIsMobileOpen(false);
                                     }
+                                }}
+                                className={`
+                                    relative flex items-center gap-4 px-5 py-3.5 rounded-[20px] font-medium transition-all duration-300 group text-[#7a7a7a] hover:text-[#ececec] hover:bg-white/[0.02]
                                 `}
                             >
-                                {/* Premium Gold/Neon border effect for active item */}
-                                {isActive && (
-                                    <>
-                                        <div className="absolute inset-0 rounded-[20px] border border-[#d4af37]/40 shadow-[inset_0_0_15px_rgba(212,175,55,0.1)] pointer-events-none" />
-                                        <div className="absolute -inset-[1px] rounded-[20px] bg-gradient-to-b from-[#d4af37]/30 to-transparent opacity-30 blur-sm pointer-events-none" />
-                                        <div className="absolute left-[1px] top-1/2 -translate-y-1/2 w-[3px] h-8 bg-gradient-to-b from-transparent via-[#d4af37] to-transparent rounded-r-md shadow-[0_0_10px_#d4af37]" />
-                                    </>
-                                )}
-
-                                <div className={`
-                                    flex items-center justify-center w-8 h-8 rounded-lg transition-colors
-                                    ${isActive ? 'bg-[#1a1a1a] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_2px_5px_rgba(0,0,0,0.5)]' : ''}
-                                `}>
-                                    <route.icon
-                                        strokeWidth={isActive ? 2.5 : 2}
-                                        className={`w-5 h-5 transition-colors ${isActive ? "text-[#d4af37]" : "text-[#555] group-hover:text-[#888]"
-                                            }`}
-                                    />
+                                <div className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors`}>
+                                    <route.icon strokeWidth={2} className={`w-5 h-5 transition-colors text-[#555] group-hover:text-[#888]`} />
                                 </div>
-                                <span className={isActive ? "text-[15px] font-semibold tracking-wide" : "text-[15px] tracking-wide"}>
+                                <span className={"text-[15px] tracking-wide"}>
                                     {route.label}
                                 </span>
-                            </Link>
+                            </a>
                         );
                     })}
                 </div>

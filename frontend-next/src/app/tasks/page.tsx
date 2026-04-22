@@ -176,7 +176,13 @@ export default function MyTasks() {
                 <TypewriterTitle as="h1" text="My Tasks" speed={70} className="text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 drop-shadow-[0_2px_15px_rgba(34,211,238,0.25)] relative z-10" />
                 <p className="mt-5 text-white/50 mb-8">Connect wallet to view your automation tasks.</p>
                 <button
-                    className="btn btn-connect px-8 py-3.5 text-base"
+                    className="px-8 py-3.5 text-base rounded-2xl font-bold transition-all hover:-translate-y-0.5"
+                    style={{
+                        background: 'rgba(192, 132, 252, 0.05)',
+                        border: '1px solid rgba(192, 132, 252, 0.2)',
+                        color: 'rgb(192, 132, 252)',
+                        boxShadow: '0 0 15px rgba(192, 132, 252, 0.15)'
+                    }}
                     onClick={() => setShowConnectModal(true)}
                 >
                     Connect Wallet
@@ -240,7 +246,7 @@ export default function MyTasks() {
                     <p className="text-sm">Schedule your first automation task to see it here.</p>
                 </div>
             ) : (
-                <div className="rounded-xl border border-cyan-500/20 overflow-hidden">
+                <div className="rounded-xl border border-transparent overflow-hidden">
                     {/* List Header */}
                     <div className="flex items-center justify-between px-5 py-3 bg-cyan-500/5 border-b border-cyan-500/15">
                         <div className="flex items-center gap-3">

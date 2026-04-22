@@ -5,7 +5,6 @@ import { useContractQuery, bufferToNumber, formatEgld, bufferToBigInt } from '@/
 import { CONTRACTS, NETWORK } from '@/config';
 import { TypewriterTitle } from '@/components/TypewriterTitle';
 import { ProtocolRadar } from '@/components/ProtocolRadar';
-import { NetworkTelemetry } from '@/components/NetworkTelemetry';
 
 interface ProtocolData {
     totalTasks: number;
@@ -140,7 +139,7 @@ export default function ProtocolStats() {
                     value={data?.totalTasks ?? 0}
                     icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="9" y1="4" x2="9" y2="10" /></svg>}
                     colorClass="text-cyan-400 group-hover:border-cyan-400/50"
-                    bgClass="bg-cyan-500/10 border-cyan-500/20"
+                    bgClass="bg-transparent border-transparent"
                     loading={loading}
                 />
                 <StatCard
@@ -148,7 +147,7 @@ export default function ProtocolStats() {
                     value={totalExecs}
                     icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" /></svg>}
                     colorClass="text-orange-400 group-hover:border-orange-400/50"
-                    bgClass="bg-orange-500/10 border-orange-500/20"
+                    bgClass="bg-transparent border-transparent"
                     loading={loading}
                 />
                 <StatCard
@@ -156,7 +155,7 @@ export default function ProtocolStats() {
                     value={`${successRate}%`}
                     icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M12 2L3 7v6c0 5.25 3.85 10.15 9 11.35C17.15 23.15 21 18.25 21 13V7L12 2z" /><polyline points="9,12 11,14 15,10" /></svg>}
                     colorClass={`${successRate >= 90 ? 'text-green-400 group-hover:border-green-400/50' : successRate >= 50 ? 'text-yellow-400 group-hover:border-yellow-400/50' : 'text-red-400 group-hover:border-red-400/50'}`}
-                    bgClass={`${successRate >= 90 ? 'bg-green-500/10 border-green-500/20' : successRate >= 50 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-red-500/10 border-red-500/20'}`}
+                    bgClass="bg-transparent border-transparent"
                     loading={loading}
                 />
                 <StatCard
@@ -164,20 +163,16 @@ export default function ProtocolStats() {
                     value={data?.activeKeepers ?? 0}
                     icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="3" /><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" /></svg>}
                     colorClass="text-purple-400 group-hover:border-purple-400/50"
-                    bgClass="bg-purple-500/10 border-purple-500/20"
+                    bgClass="bg-transparent border-transparent"
                     loading={loading}
                 />
             </div>
 
-            {/* Network Telemetry Topology Map */}
-            <div className="mb-8">
-                <NetworkTelemetry activeKeepers={data?.activeKeepers ?? 0} />
-            </div>
 
             {/* Detailed Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 {/* Execution Breakdown */}
-                <div className="rounded-2xl border border-white/10 p-6 shadow-xl">
+                <div className="p-2 md:p-4">
                     <h3 className="text-white font-bold tracking-wide uppercase text-xs mb-6 opacity-80">Execution Breakdown</h3>
                     <div className="flex flex-col gap-5">
                         <MetricRow label="Successful" value={data?.totalExecuted ?? 0} colorClass="bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)] text-green-400" total={totalExecs} />
@@ -187,34 +182,34 @@ export default function ProtocolStats() {
                 </div>
 
                 {/* Protocol Economics */}
-                <div className="rounded-2xl border border-white/10 p-6 shadow-xl flex flex-col">
+                <div className="p-2 md:p-4 flex flex-col">
                     <h3 className="text-white font-bold tracking-wide uppercase text-xs mb-6 opacity-80">Protocol Economics</h3>
                     <div className="flex flex-col gap-4 flex-1 justify-center">
-                        <div className="flex justify-between items-center py-1">
-                            <span className="text-white/60 text-sm">Protocol Balance</span>
-                            <span className="font-bold text-white tracking-wide">{data ? formatEgld(data.protocolBalance) : '...'} EGLD</span>
+                        <div className="flex flex-wrap justify-between items-center py-1 gap-2">
+                            <span className="text-white/60 text-sm whitespace-nowrap">Protocol Balance</span>
+                            <span className="font-bold text-white tracking-wide whitespace-nowrap">{data ? formatEgld(data.protocolBalance) : '...'} EGLD</span>
                         </div>
-                        <div className="flex justify-between items-center py-1">
-                            <span className="text-white/60 text-sm">Min Deposit</span>
-                            <span className="font-bold text-white tracking-wide">{data ? formatEgld(data.minDeposit) : '...'} EGLD</span>
+                        <div className="flex flex-wrap justify-between items-center py-1 gap-2">
+                            <span className="text-white/60 text-sm whitespace-nowrap">Min Deposit</span>
+                            <span className="font-bold text-white tracking-wide whitespace-nowrap">{data ? formatEgld(data.minDeposit) : '...'} EGLD</span>
                         </div>
-                        <div className="flex justify-between items-center py-1">
-                            <span className="text-white/60 text-sm">Protocol Fee</span>
-                            <span className="font-bold text-white tracking-wide">{data ? `${(data.protocolFeeBps / 100).toFixed(0)}%` : '...'}</span>
+                        <div className="flex flex-wrap justify-between items-center py-1 gap-2">
+                            <span className="text-white/60 text-sm whitespace-nowrap">Protocol Fee</span>
+                            <span className="font-bold text-white tracking-wide whitespace-nowrap">{data ? `${(data.protocolFeeBps / 100).toFixed(0)}%` : '...'}</span>
                         </div>
-                        <div className="flex justify-between items-center py-1">
-                            <span className="text-white/60 text-sm">Keeper Share</span>
-                            <span className="font-bold text-green-400 tracking-wide">{data ? `${100 - data.protocolFeeBps / 100}%` : '...'}</span>
+                        <div className="flex flex-wrap justify-between items-center py-1 gap-2">
+                            <span className="text-white/60 text-sm whitespace-nowrap">Keeper Share</span>
+                            <span className="font-bold text-green-400 tracking-wide whitespace-nowrap">{data ? `${100 - data.protocolFeeBps / 100}%` : '...'}</span>
                         </div>
-                        <div className="flex justify-between items-center py-1">
-                            <span className="text-white/60 text-sm">Network</span>
-                            <span className="font-bold text-cyan-400 uppercase tracking-widest text-xs">{NETWORK.name}</span>
+                        <div className="flex flex-wrap justify-between items-center py-1 gap-2">
+                            <span className="text-white/60 text-sm whitespace-nowrap">Network</span>
+                            <span className="font-bold text-cyan-400 uppercase tracking-widest text-xs whitespace-nowrap">{NETWORK.name}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Protocol Health Score */}
-                <div className="rounded-2xl border border-white/10 p-6 shadow-xl">
+                <div className="p-2 md:p-4">
                     <h3 className="text-white font-bold tracking-wide uppercase text-xs mb-6 opacity-80">Protocol Health</h3>
                     <div className="flex flex-col items-center justify-center h-[calc(100%-2.5rem)] gap-5">
                         <div className={`w-28 h-28 rounded-full flex items-center justify-center p-1 relative ${successRate >= 90 ? 'bg-gradient-to-tr from-green-500 to-green-300' : successRate >= 50 ? 'bg-gradient-to-tr from-yellow-500 to-yellow-300' : 'bg-gradient-to-tr from-red-500 to-red-300'}`}>
@@ -240,114 +235,12 @@ export default function ProtocolStats() {
             </div>
 
             {/* Network & Radar */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="w-full mb-8">
                 {/* Protocol Radar */}
-                <div className="lg:col-span-2 rounded-2xl border border-white/10 p-6 shadow-xl flex flex-col items-center justify-center">
-                    <h3 className="text-white w-full font-bold tracking-wide uppercase text-xs mb-2 opacity-80">Protocol Performance</h3>
+                <div className="w-full max-w-2xl mx-auto p-4 flex flex-col items-center justify-center">
                     <div className="w-full flex-1 min-h-[300px] flex items-center justify-center -mt-4">
                         <ProtocolRadar />
                     </div>
-                </div>
-
-                {/* Network & Keepers */}
-                <div className="flex flex-col gap-6">
-                    {/* Network Live */}
-                    <div className="rounded-2xl border border-white/10 p-6 shadow-xl flex-1 border-t-2 border-t-cyan-500/50">
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse" />
-                            <h3 className="text-cyan-400 font-bold tracking-wide uppercase text-xs">Network Live</h3>
-                        </div>
-                        <div className="grid grid-cols-2 gap-y-5 gap-x-4">
-                            <div><div className="text-white/50 text-[10px] uppercase tracking-wider mb-1">Block</div><div className="text-sm font-mono text-white/90">{netStats.block > 0 ? netStats.block.toLocaleString() : '...'}</div></div>
-                            <div><div className="text-white/50 text-[10px] uppercase tracking-wider mb-1">Epoch</div><div className="text-sm font-mono text-white/90">{netStats.epoch > 0 ? netStats.epoch.toLocaleString() : '...'}</div></div>
-                            <div><div className="text-white/50 text-[10px] uppercase tracking-wider mb-1">Shard</div><div className="text-sm font-mono text-white/90">{netStats.shard}</div></div>
-                            <div><div className="text-white/50 text-[10px] uppercase tracking-wider mb-1">Rnd/Epch</div><div className="text-sm font-mono text-white/90">{netStats.roundsPerEpoch > 0 ? netStats.roundsPerEpoch.toLocaleString() : '...'}</div></div>
-                        </div>
-                    </div>
-                    {/* Top Keepers */}
-                    <div className="rounded-2xl border border-white/10 p-6 shadow-xl flex-1 border-t-2 border-t-orange-500/50">
-                        <h3 className="text-orange-400 font-bold tracking-wide uppercase text-xs mb-4">Top Keepers</h3>
-                        {keeperStats.length === 0 ? (
-                            <div className="text-xs text-white/40 mt-4">No executions yet</div>
-                        ) : (
-                            <div className="flex flex-col gap-3 mt-2">
-                                {keeperStats.map((k, i) => (
-                                    <div key={k.address} className={`flex items-center justify-between p-2.5 rounded-lg ${i === 0 ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-white/5'}`}>
-                                        <div className="flex items-center gap-2.5">
-                                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${i === 0 ? 'bg-orange-500 text-white shadow-[0_0_8px_rgba(249,115,22,0.5)]' : 'bg-white/10 text-white/50'}`}>
-                                                {i + 1}
-                                            </span>
-                                            <span className="font-mono text-[10px] text-white/70">
-                                                {k.address.slice(0, 8)}...{k.address.slice(-4)}
-                                            </span>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-orange-400">{k.execs} tx</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-                {/* Deployed Contracts */}
-                <div className="rounded-2xl border border-white/10 p-6 shadow-xl">
-                    <h3 className="text-white font-bold tracking-wide uppercase text-xs mb-6 opacity-80">Deployed Contracts</h3>
-                    <div className="flex flex-col gap-2">
-                        <ContractRow label="Scheduler" address={CONTRACTS.scheduler} />
-                        <ContractRow label="Keeper Registry" address={CONTRACTS.keeperRegistry} />
-                        <ContractRow label="Rewards Pool" address={CONTRACTS.rewards} />
-                    </div>
-                </div>
-
-                {/* Recent Executions */}
-                <div className="rounded-2xl border border-white/10 p-6 shadow-xl flex flex-col h-[340px] overflow-hidden">
-                    <h3 className="text-white font-bold tracking-wide uppercase text-xs mb-4 opacity-80 shrink-0">Recent Executions</h3>
-
-                    {recentExecs.length === 0 ? (
-                        <div className="flex-1 flex items-center justify-center text-white/40 text-sm">
-                            No executions recorded yet
-                        </div>
-                    ) : (
-                        <div className="flex-1 overflow-auto pr-2 custom-scrollbar">
-                            <table className="w-full text-sm">
-                                <thead className="sticky top-0 bg-[#0a0f19] z-10">
-                                    <tr className="border-b border-white/10">
-                                        <th className="text-left font-bold text-white/50 text-[10px] uppercase tracking-wider py-2">Task</th>
-                                        <th className="text-left font-bold text-white/50 text-[10px] uppercase tracking-wider py-2">Keeper</th>
-                                        <th className="text-left font-bold text-white/50 text-[10px] uppercase tracking-wider py-2">Time</th>
-                                        <th className="text-left font-bold text-white/50 text-[10px] uppercase tracking-wider py-2">TX</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {recentExecs.map((exec, i) => (
-                                        <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                            <td className="py-2.5 text-white/90">{exec.taskId}</td>
-                                            <td className="py-2.5">
-                                                <span className="font-mono text-xs text-cyan-400">
-                                                    {exec.keeper.slice(0, 10)}...{exec.keeper.slice(-6)}
-                                                </span>
-                                            </td>
-                                            <td className="py-2.5 text-white/60 text-xs">
-                                                {new Date(exec.timestamp * 1000).toLocaleString()}
-                                            </td>
-                                            <td className="py-2.5">
-                                                <a
-                                                    href={`${NETWORK.explorerUrl}/transactions/${exec.txHash}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-cyan-400 hover:text-cyan-300 transition-colors font-mono text-xs flex items-center gap-1"
-                                                >
-                                                    {exec.txHash.slice(0, 8)}... <span className="text-[10px]">↗</span>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -394,9 +287,9 @@ function MetricRow({ label, value, colorClass, total }: { label: string; value: 
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-1.5">
-                <span className="text-sm text-white/60">{label}</span>
-                <span className={`text-sm font-bold ${bgParts[bgParts.length - 1]}`}>
+            <div className="flex flex-wrap justify-between items-center mb-1.5 gap-2">
+                <span className="text-sm text-white/60 whitespace-nowrap">{label}</span>
+                <span className={`text-sm font-bold whitespace-nowrap ${bgParts[bgParts.length - 1]}`}>
                     {value} <span className="text-white/40 font-normal ml-1">({pct}%)</span>
                 </span>
             </div>

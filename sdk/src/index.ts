@@ -56,3 +56,8 @@ export type {
     ProtocolStats,
     Network,
 } from "./types";
+export * from './client';
+export * from './types';
+export * from './eliza-plugin';
+export * from './xse';
+export * from './vault';

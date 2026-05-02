@@ -58,6 +58,20 @@ pub trait EventsModule {
     fn protocol_fee_paid_event_quantum(&self, #[indexed] task_hash: &ManagedByteArray<Self::Api, 32>, amount: &BigUint);
 
     // ═══════════════════════════════════════════════════════════════════
+    //  XSE PROTOCOL (SOVEREIGN ENCLAVES) EVENTS
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// Emitted when an XSE execution is triggered. 
+    /// The off-chain AWS Nitro Enclave listens to this event, captures the encrypted payload,
+    /// decrypts it inside the secure memory, and executes the Web2 API call.
+    #[event("xsePayloadTriggered")]
+    fn xse_payload_triggered_event(
+        &self,
+        #[indexed] caller: &ManagedAddress,
+        encrypted_payload_hex: &ManagedBuffer,
+    );
+
+    // ═══════════════════════════════════════════════════════════════════
     //  INTENT EVENTS (XCron V2 Vanguard)
     // ═══════════════════════════════════════════════════════════════════
 

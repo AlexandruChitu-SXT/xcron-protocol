@@ -264,29 +264,26 @@ pub trait ExecutionModule:
 
     /// Recover tasks stuck in Executing state. Only callable by owner.
     #[endpoint(recoverStuckQuantumTask)]
-    fn recover_stuck_quantum_task(&self, task_hash: ManagedByteArray<Self::Api, 32>) {
-        require!(!self.quantum_tasks(&task_hash).is_empty(), "Task not found");
-        let quantum_state = self.quantum_tasks(&task_hash).get();
+    fn recover_stuck_quantum_task(&self, _task_hash: ManagedByteArray<Self::Api, 32>) {
+        // 🛡️ SECURITY PATCH (Battle of Nodes): Asynchronous Callback Griefing
+        // Deshabilitado: Permite a un atacante recuperar el depósito mientras la ejecución
+        // asíncrona está en vuelo, provocando que el callback falle y robando ejecución a los Keepers.
+        sc_panic!("Security: recoverStuckQuantumTask is disabled to prevent async callback griefing.");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  XSE PROTOCOL (SOVEREIGN ENCLAVES)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// Endpoint targeted by the Scheduler for XSE tasks.
+    /// It receives the encrypted payload and emits it to the blockchain event log.
+    /// The off-chain Nitro Enclave captures this event and performs the Web2 execution.
+    #[endpoint(triggerXseEnclave)]
+    fn trigger_xse_enclave(&self, encrypted_payload_hex: ManagedBuffer) {
+        let caller = self.blockchain().get_caller();
         
-        let raw_caller = self.blockchain().get_caller();
-        let (effective_owner, _) = self.resolve_caller();
-        require!(
-            quantum_state.owner == raw_caller || quantum_state.owner == effective_owner,
-            "Not task owner"
-        );
-        require!(
-            quantum_state.status == common::types::TaskStatus::Executing,
-            "Task not in Executing state"
-        );
-
-        // We assume 1 hour has passed off-chain. In stateless, the Keeper just drops it.
-        // We allow the owner to reclaim the deposit directly.
-        self.quantum_tasks(&task_hash).clear();
-        self.owner_tasks(&quantum_state.owner).swap_remove(&task_hash);
-
-        self.total_failed_execs().update(|v| *v += 1);
-        self.send().direct_egld(&quantum_state.owner, &quantum_state.deposit);
-        self.task_expired_event_quantum(&task_hash);
+        // Emit the event for the off-chain enclave listener
+        self.xse_payload_triggered_event(&caller, &encrypted_payload_hex);
     }
 }
  

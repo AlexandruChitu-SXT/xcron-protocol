@@ -82,7 +82,7 @@
                 "from": "address:user1",
                 "to": "sc:scheduler",
                 "egldValue": "1,000,000,000,000,000,000",
-                "function": "scheduleTask",
+                "function": "scheduleQuantumTask",
                 "arguments": [
                     "sc:target_contract",
                     "str:ping",

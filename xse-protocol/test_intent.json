@@ -1,0 +1,21 @@
+{
+  "intent_type": "portfolio_trade_batch",
+  "venue": "binance",
+  "mode": "dry_run",
+  "source_asset": "USDT",
+  "orders": [
+    {
+      "side": "BUY",
+      "asset": "EGLD/USDT",
+      "max_quote_amount": 100.0,
+      "order_type": "MARKET"
+    }
+  ],
+  "constraints": {
+    "max_slippage_pct": 1.0,
+    "expires_at": "2030-05-01T12:00:00Z",
+    "allowed_assets": ["EGLD/USDT", "BTC/USDT"],
+    "allow_withdrawals": false
+  },
+  "client_reference_id": "quantum_test_001"
+}

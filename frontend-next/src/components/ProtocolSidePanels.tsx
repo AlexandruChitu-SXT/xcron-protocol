@@ -256,7 +256,7 @@ export function RightSidePanel() {
         async function fetchTopKeepers() {
             try {
                 const res = await fetch(
-                    `${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=50&status=success&function=executeTask`
+                    `${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=50&status=success&function=executeQuantumTask`
                 );
                 const txs = await res.json();
                 // Count executions per sender

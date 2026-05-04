@@ -27,8 +27,13 @@ pub async fn start_websocket_sniper(
 
     println!("⚡ [HFT Global Poller] Quad-Core Engine Activated!");
     
-    // Shared state to avoid duplicate triggers across shards
-    let global_seen_hashes = Arc::new(Mutex::new(HashSet::with_capacity(50_000)));
+    // Shared state to avoid duplicate triggers across shards (current, mid, old)
+    // 🛡️ SECURITY PATCH: 3-Phase Buffer (Zero Gap Memory)
+    let global_seen_hashes = Arc::new(Mutex::new((
+        HashSet::with_capacity(25_000), 
+        HashSet::with_capacity(25_000), 
+        HashSet::with_capacity(25_000)
+    )));
 
     for (node_name, pool_url) in nodes {
         let sender_clone = tx_sender.clone();
@@ -70,12 +75,14 @@ pub async fn start_websocket_sniper(
                                             // Filtro de duplicados (Lock ultra rápido para coordinar Shards)
                                             {
                                                 let mut lock = hashes_clone.lock().await;
-                                                if lock.contains(hash) {
+                                                if lock.0.contains(hash) || lock.1.contains(hash) || lock.2.contains(hash) {
                                                     continue;
                                                 }
-                                                lock.insert(hash.to_string());
-                                                if lock.len() > 45_000 {
-                                                    lock.clear(); // Limpiamos para evitar OOM
+                                                lock.0.insert(hash.to_string());
+                                                if lock.0.len() > 20_000 {
+                                                    // 🛡️ SECURITY PATCH: Rotación en 3 fases sin re-disparo (Zero GAP)
+                                                    lock.2 = std::mem::take(&mut lock.1);
+                                                    lock.1 = std::mem::take(&mut lock.0);
                                                 }
                                             }
 

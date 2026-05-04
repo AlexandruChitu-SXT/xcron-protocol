@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "XSE Execution Receipt",
+  "description": "Verifiable receipt returned by the XSE Enclave upon execution of an Intent. Used by the calling client for strict reconciliation.",
+  "type": "object",
+  "required": [
+    "client_reference_id",
+    "status",
+    "venue",
+    "mode",
+    "orders",
+    "timestamp",
+    "proof"
+  ],
+  "properties": {
+    "client_reference_id": {
+      "type": "string",
+      "description": "Matches the client_reference_id from the Execution Intent."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["SUCCESS", "PARTIAL_FILL", "FAILED", "REJECTED_BY_CONSTRAINTS", "EXPIRED"],
+      "description": "The final status of the execution intent."
+    },
+    "venue": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["dry_run", "testnet", "restricted_live"]
+    },
+    "orders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "asset",
+          "side",
+          "requested_quote_amount",
+          "executed_quote_amount",
+          "executed_base_amount",
+          "average_price",
+          "venue_order_id"
+        ],
+        "properties": {
+          "asset": { "type": "string" },
+          "side": { "type": "string", "enum": ["BUY", "SELL"] },
+          "requested_quote_amount": { "type": "number" },
+          "executed_quote_amount": { "type": "number" },
+          "executed_base_amount": { "type": "number" },
+          "average_price": { "type": "number" },
+          "fees": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "asset": { "type": "string" },
+                "amount": { "type": "number" }
+              }
+            }
+          },
+          "venue_order_id": {
+            "type": "string",
+            "description": "The real ID returned by the CEX (Binance, etc.), or simulated-id if in dry_run."
+          }
+        }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "proof": {
+      "type": "object",
+      "description": "Cryptographic proof linking the execution to the isolated Enclave.",
+      "required": ["executor_id", "attestation_hash", "receipt_hash"],
+      "properties": {
+        "executor_id": {
+          "type": "string",
+          "description": "Identifier of the specific AWS Nitro Enclave instance."
+        },
+        "attestation_hash": {
+          "type": "string",
+          "description": "Hash of the PCR registers proving the exact code running in the Enclave."
+        },
+        "receipt_hash": {
+          "type": "string",
+          "description": "Hash of this entire receipt, signed by the Enclave's internal private key."
+        }
+      }
+    }
+  }
+}

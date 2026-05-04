@@ -112,6 +112,16 @@ pub trait XcronAgentShield:
             "Only AI Agent can propose"
         );
 
+        // 🛡️ SECURITY PATCH (Battle of Nodes): Prevent Limit Bypass via 0-amount raw token transfers
+        require!(
+            func_name != ManagedBuffer::from(b"ESDTTransfer") &&
+            func_name != ManagedBuffer::from(b"ESDTNFTTransfer") &&
+            func_name != ManagedBuffer::from(b"MultiESDTNFTTransfer") &&
+            func_name != ManagedBuffer::from(b"approve") &&
+            func_name != ManagedBuffer::from(b"setLocalRoles"),
+            "Agent Shield: Raw token transfers and approvals are strictly prohibited"
+        );
+
         // Limit Check: Validate Daily Limits
         require!(
             !self.shield_daily_limit(&token_id).is_empty(),

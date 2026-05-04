@@ -1,0 +1,23 @@
+{
+  "client_reference_id": "quantum_test_001",
+  "status": "COMPLETED",
+  "venue": "binance",
+  "mode": "dry_run",
+  "orders": [
+    {
+      "asset": "EGLD/USDT",
+      "side": "BUY",
+      "requested_quote_amount": 100.0,
+      "executed_quote_amount": 100.0,
+      "executed_base_amount": 2.0,
+      "average_price": 50.0,
+      "venue_order_id": "sim_1153926429"
+    }
+  ],
+  "timestamp": "1777882744",
+  "proof": {
+    "executor_id": "XSE_NODE_01",
+    "attestation_hash": "aws_nitro_attestation_base64_v1",
+    "receipt_hash": "sha256_hash_of_receipt"
+  }
+}

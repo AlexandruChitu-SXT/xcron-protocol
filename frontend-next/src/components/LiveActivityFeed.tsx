@@ -37,8 +37,8 @@ function shortenAddr(a: string): string {
 }
 
 const FN_META: Record<string, { label: string; color: string }> = {
-    scheduleTask: { label: 'SCHEDULED', color: 'var(--accent-light)' },
-    executeTask: { label: 'EXECUTED', color: 'var(--success)' },
+    scheduleQuantumTask: { label: 'SCHEDULED', color: 'var(--accent-light)' },
+    executeQuantumTask: { label: 'EXECUTED', color: 'var(--success)' },
     cancelTask: { label: 'CANCELLED', color: 'var(--error)' },
     registerKeeper: { label: 'KEEPER REG', color: 'var(--accent)' },
     claimRewards: { label: 'CLAIMED', color: 'var(--warning)' },
@@ -79,7 +79,7 @@ export function LiveActivityFeed() {
             const sTx = await sRes.json();
             const rTx = await rRes.json();
 
-            const allowedFunctions = ['scheduleTask', 'executeTask', 'cancelTask', 'registerKeeper', 'claimRewards', 'requestUnstake', 'withdrawStake'];
+            const allowedFunctions = ['scheduleQuantumTask', 'executeQuantumTask', 'cancelTask', 'registerKeeper', 'claimRewards', 'requestUnstake', 'withdrawStake'];
 
             const all = [...sTx, ...rTx]
                 .filter((tx: any) => tx.function && allowedFunctions.includes(tx.function))

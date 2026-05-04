@@ -34,6 +34,14 @@ pub trait SchedulingModule:
 
         // Determine deposit
         let deposit = if is_clone_key {
+            // 🛡️ CRITICAL SECURITY PATCH: Prevent EGLD loss.
+            // Clone Keys use pre-funded spend limits. If they attach raw EGLD to this call,
+            // it would be silently absorbed by the contract and locked forever.
+            require!(
+                self.call_value().egld().clone_value() == BigUint::zero(),
+                "Clone-Keys cannot attach raw EGLD. Use requested_deposit instead."
+            );
+
             let req = match requested_deposit {
                 OptionalValue::Some(val) => val,
                 OptionalValue::None => sc_panic!("Clone-Key must specify requested_deposit"),
@@ -138,7 +146,46 @@ pub trait SchedulingModule:
         self.task_cancelled_event_quantum(&task_hash);
     }
 
-    // ── Legacy `set_task_metadata` and `set_post_task` have been removed ──
-    // In the Quantum Stateless architecture, chaining and metadata are encoded 
-    // entirely within the off-chain payload and handled by the Rust Keeper.
+    /// Endpoint to schedule Sovereign Enclave API tasks (Zero-Knowledge Routing).
+    /// Instead of storing execution hooks, this emits an event carrying an encrypted payload.
+    /// The XSE Hardware Enclave intercepts the event and executes it via Web2 APIs.
+    #[payable("EGLD")]
+    #[endpoint(scheduleSovereignTask)]
+    fn schedule_sovereign_task(
+        &self,
+        encrypted_payload_hex: ManagedBuffer,
+        requested_deposit: OptionalValue<BigUint>,
+    ) {
+        self.require_not_paused();
+
+        // Resolve caller
+        let raw_caller = self.blockchain().get_caller();
+        let (effective_owner, is_clone_key) = self.resolve_caller();
+        let caller = effective_owner;
+
+        // Determine deposit (same security logic as Quantum Tasks)
+        let deposit = if is_clone_key {
+            require!(
+                self.call_value().egld().clone_value() == BigUint::zero(),
+                "Clone-Keys cannot attach raw EGLD. Use requested_deposit instead."
+            );
+
+            let req = match requested_deposit {
+                OptionalValue::Some(val) => val,
+                OptionalValue::None => sc_panic!("Clone-Key must specify requested_deposit"),
+            };
+            self.charge_clone_key(&raw_caller, &req);
+            req
+        } else {
+            self.call_value().egld().clone_value()
+        };
+
+        // Enforce minimum deposit
+        require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
+        
+        self.require_deposit_within_cap(&deposit);
+
+        // Emit the event so the XSE Enclave can capture it immediately
+        self.xse_payload_triggered_event(&caller, &encrypted_payload_hex);
+    }
 }

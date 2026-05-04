@@ -1,0 +1,20 @@
+[package]
+name = "xse-protocol"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0.214", features = ["derive"] }
+serde_json = "1.0.133"
+tokio = { version = "1.41.0", features = ["full"] }
+rsa = "0.9.6"
+rand = "0.8.5"
+reqwest = { version = "0.12.9", features = ["json"] }
+hmac = "0.12.1"
+sha2 = "0.10.8"
+hex = "0.4.3"
+base64 = "0.22.1"
+ed25519-dalek = "2.1.1"
+zeroize = { version = "1.8.1", features = ["zeroize_derive"] }
+clap = { version = "4.5.4", features = ["derive"] }
+chrono = "0.4.38"

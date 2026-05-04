@@ -5,6 +5,7 @@ use base64::{Engine as _, engine::general_purpose};
 use bech32::{self, ToBase32, Variant};
 use hex;
 use serde::Deserialize;
+use zeroize::Zeroize;
 
 #[derive(Deserialize)]
 struct HydraWalletJson {
@@ -22,25 +23,26 @@ pub struct KeeperWallet {
 
 impl KeeperWallet {
     pub fn load_pem(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let pem_content = fs::read_to_string(path)?;
+        let mut pem_content = fs::read_to_string(path)?;
         
         // Ofuscamos la cadena para que los escáneres de seguridad ingenuos no den falsos positivos en CI
         let re_str = concat!("(?s)-----BEGIN PRIVATE ", "KEY.*?-----\\n(.*?)\\n-----END PRIVATE ", "KEY");
         let re = Regex::new(re_str)?;
         let caps = re.captures(&pem_content).ok_or("No PEM content found")?;
-        let b64_key = caps.get(1).unwrap().as_str().replace("\n", "");
+        let mut b64_key = caps.get(1).unwrap().as_str().replace("\n", "");
         
         // Decode base64
-        let decoded_bytes = general_purpose::STANDARD.decode(&b64_key)?;
+        let mut decoded_bytes = general_purpose::STANDARD.decode(&b64_key)?;
         
-        let key_bytes = if decoded_bytes.len() == 64 || decoded_bytes.len() == 32 {
+        let mut key_bytes = if decoded_bytes.len() == 64 || decoded_bytes.len() == 32 {
             // It's raw binary from sdk-wallet
-            decoded_bytes
+            decoded_bytes.clone()
         } else {
             // Try to parse it as UTF-8 hex string (older format)
-            let decoded_hex_str = String::from_utf8(decoded_bytes.clone())?;
-            let decoded_hex_str = decoded_hex_str.trim();
-            hex::decode(decoded_hex_str)?
+            let mut decoded_hex_str = String::from_utf8(decoded_bytes.clone())?;
+            let trimmed = decoded_hex_str.trim().to_string();
+            decoded_hex_str.zeroize();
+            hex::decode(trimmed)?
         };
         
         if key_bytes.len() != 64 && key_bytes.len() != 32 {
@@ -59,6 +61,13 @@ impl KeeperWallet {
         // Encode the public key to Bech32 (erd1...)
         let base32_data = pub_key_bytes.to_base32();
         let bech32_address = bech32::encode("erd", base32_data, Variant::Bech32)?;
+        
+        // 🛡️ SECURE RAM WIPE (Previene Memory Scraping si hackean el VPS)
+        pem_content.zeroize();
+        b64_key.zeroize();
+        decoded_bytes.zeroize();
+        key_bytes.zeroize();
+        seed.zeroize();
         
         Ok(Self {
             signing_key,
@@ -80,7 +89,7 @@ impl KeeperWallet {
             // Dalek SigningKey needs only the 32 byte seed (first 64 hex chars).
             let seed_hex = if hex_key.len() >= 64 { &hex_key[0..64] } else { hex_key };
             
-            let seed_bytes = hex::decode(seed_hex)?;
+            let mut seed_bytes = hex::decode(seed_hex)?;
             if seed_bytes.len() != 32 {
                 return Err(format!("Invalid seed length in JSON for address: {}", address).into());
             }
@@ -88,6 +97,10 @@ impl KeeperWallet {
             seed.copy_from_slice(&seed_bytes);
             
             let signing_key = SigningKey::from_bytes(&seed);
+            
+            // 🛡️ SECURE RAM WIPE
+            seed_bytes.zeroize();
+            seed.zeroize();
             
             keepers.push(Self {
                 signing_key,

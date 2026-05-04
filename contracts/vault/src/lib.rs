@@ -297,11 +297,19 @@ pub trait VaultContract:
         let dex_addr = self.dex_pair_contract().get();
         let swap_amount_config = self.swap_amount_per_execution().get();
         let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        let total_pending = self.total_pending_withdrawals().get();
         
-        let swap_amount = if swap_amount_config > BigUint::zero() && swap_amount_config < sc_balance {
+        // V-23 FIX: Protect in-transit user funds from being swapped
+        let safe_liquid = if sc_balance > total_pending {
+            &sc_balance - &total_pending
+        } else {
+            BigUint::zero()
+        };
+        
+        let swap_amount = if swap_amount_config > BigUint::zero() && swap_amount_config < safe_liquid {
             swap_amount_config
         } else {
-            sc_balance
+            safe_liquid
         };
 
         if swap_amount > BigUint::zero() {
@@ -346,11 +354,20 @@ pub trait VaultContract:
         // This prevents one user's emergency swap from draining all users' funds.
         let swap_amount = self.swap_amount_per_execution().get();
         let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        let total_pending = self.total_pending_withdrawals().get();
+        
+        // V-23 FIX: Protect in-transit user funds from being emergency swapped
+        let safe_liquid = if sc_balance > total_pending {
+            &sc_balance - &total_pending
+        } else {
+            BigUint::zero()
+        };
+
         // Use the lesser of configured amount and actual balance
-        let amount = if swap_amount > BigUint::zero() && swap_amount < sc_balance {
+        let amount = if swap_amount > BigUint::zero() && swap_amount < safe_liquid {
             swap_amount
         } else {
-            sc_balance
+            safe_liquid
         };
 
         if amount > 0u64 {
@@ -391,6 +408,17 @@ pub trait VaultContract:
         let nft_addr = self.nft_contract().get();
         let mint_price = self.mint_price().get();
         let mint_endpoint = self.mint_endpoint_name().get();
+
+        // V-23 FIX: Protect in-transit user funds from being spent on mints
+        let sc_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0u64);
+        let total_pending = self.total_pending_withdrawals().get();
+        
+        let safe_liquid = if sc_balance > total_pending {
+            &sc_balance - &total_pending
+        } else {
+            BigUint::zero()
+        };
+        require!(safe_liquid >= mint_price, "V-23: Insufficient safe liquid funds for minting");
 
         self.tx()
             .to(&nft_addr)

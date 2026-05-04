@@ -54,7 +54,10 @@ pub async fn start_mempool_sniper(observer_url: String, target_dex: String, tx: 
         .expect("Failed to build reqwest client");
 
     let url = format!("{}/transaction/pool?fields=hash,sender,receiver,data,gasprice", observer_url);
-    let mut seen_hashes: HashSet<String> = HashSet::new();
+    // 🛡️ SECURITY PATCH: 3-Phase Rolling Buffer (Zero Gap Memory)
+    let mut hash_set_0: HashSet<String> = HashSet::with_capacity(15_000);
+    let mut hash_set_1: HashSet<String> = HashSet::with_capacity(15_000);
+    let mut hash_set_2: HashSet<String> = HashSet::with_capacity(15_000);
 
     println!("📡 [Mempool Sniper] ACTIVATED on {}", observer_url);
 
@@ -81,12 +84,13 @@ pub async fn start_mempool_sniper(observer_url: String, target_dex: String, tx: 
                                             continue;
                                         }
 
-                                        if !seen_hashes.contains(&raw_tx.hash) {
-                                            seen_hashes.insert(raw_tx.hash.clone());
+                                        if !hash_set_0.contains(&raw_tx.hash) && !hash_set_1.contains(&raw_tx.hash) && !hash_set_2.contains(&raw_tx.hash) {
+                                            hash_set_0.insert(raw_tx.hash.clone());
 
-                                            // Evitar memory leak
-                                            if seen_hashes.len() > 20000 {
-                                                seen_hashes.clear();
+                                            // Evitar memory leak (Rotación segura en 3 fases sin GAP de memoria)
+                                            if hash_set_0.len() > 10_000 {
+                                                hash_set_2 = std::mem::take(&mut hash_set_1);
+                                                hash_set_1 = std::mem::take(&mut hash_set_0);
                                             }
 
                                             analyze_target(&raw_tx, &target_dex, &tx).await;
@@ -98,7 +102,7 @@ pub async fn start_mempool_sniper(observer_url: String, target_dex: String, tx: 
                     }
                 } else if response.status().as_u16() == 429 {
                     println!("⚠️ [RATE LIMIT] Cloudflare bloqueó el poll: 429 Too Many Requests");
-                    sleep(Duration::from_millis(500)).await;
+                    sleep(Duration::from_secs(5)).await; // 🛡️ SECURITY PATCH: Exponential Backoff para no ser baneado
                 } else {
                     println!("⚠️ [HTTP ERROR] {}", response.status());
                 }

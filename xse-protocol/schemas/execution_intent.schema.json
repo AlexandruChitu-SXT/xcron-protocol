@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "XSE Execution Intent",
+  "description": "Strict JSON schema for bounded trade execution requests processed by the XCron Sovereign Enclave. Invalid requests must fail loudly.",
+  "type": "object",
+  "required": [
+    "intent_type",
+    "venue",
+    "mode",
+    "source_asset",
+    "orders",
+    "constraints",
+    "client_reference_id"
+  ],
+  "properties": {
+    "intent_type": {
+      "type": "string",
+      "enum": ["portfolio_trade_batch", "single_asset_swap", "dca_trigger"]
+    },
+    "venue": {
+      "type": "string",
+      "enum": ["binance", "kraken", "coinbase", "hyperliquid"]
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["dry_run", "testnet", "restricted_live"]
+    },
+    "source_asset": {
+      "type": "string",
+      "description": "The base asset used to fund the trades (e.g., USDT, USDC)"
+    },
+    "orders": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["side", "asset", "max_quote_amount", "order_type"],
+        "properties": {
+          "side": {
+            "type": "string",
+            "enum": ["BUY", "SELL"]
+          },
+          "asset": {
+            "type": "string",
+            "description": "The target asset to buy or sell (e.g., ETH, BTC)"
+          },
+          "max_quote_amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Maximum amount of the source_asset to spend"
+          },
+          "order_type": {
+            "type": "string",
+            "enum": ["MARKET", "LIMIT"]
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Hard limits for the execution engine. Any breach of these constraints aborts the entire batch.",
+      "required": ["max_slippage_pct", "expires_at", "allowed_assets", "allow_withdrawals"],
+      "properties": {
+        "max_slippage_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 strict expiration. Enclave will reject if current time > expires_at"
+        },
+        "allowed_assets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Whitelist of assets this intent is allowed to touch."
+        },
+        "allow_withdrawals": {
+          "type": "boolean",
+          "const": false,
+          "description": "Must be strictly false for trade intents. Prevents malicious API key extraction."
+        }
+      }
+    },
+    "client_reference_id": {
+      "type": "string",
+      "description": "Unique idempotent ID provided by the client (e.g., Fluxa) for reconciliation and replay protection."
+    }
+  }
+}

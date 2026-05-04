@@ -7,6 +7,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { useTxTracker } from '@/hooks/useTxTracker';
 import { CONTRACTS } from '@/config';
 import { TaskTelemetry } from '@/components/TaskTelemetry';
+import { serializeQuantumTaskHex } from '@/utils/quantumAbi';
 
 type TemplateType = 'quicktest' | 'compound' | 'dca' | 'stoploss' | 'claim' | 'nftmint' | 'custom' | 'smartintent';
 
@@ -283,19 +284,32 @@ function ScheduleForm() {
         try {
             const targetAddrHex = addressToHex(form.targetContract || '');
             const endpointHex = stringToHex(form.targetEndpoint || '');
-            const encodedArgsList = '00000000'; // No args in minimalist flow for now
 
             const currentTimestamp = Math.floor(Date.now() / 1000);
-            const triggerHex = '00' + hex64(currentTimestamp);
+            
+            // Randomly generate a taskId for frontend submission (or use API nonce in production)
+            const taskId = Math.floor(Math.random() * 100000000);
+            const ownerHex = wallet.address ? addressToHex(wallet.address) : "0000000000000000000000000000000000000000000000000000000000000000";
+            
+            // triggerData: 1 = TimeRecurring (if repeating) or 0 = TimeOnce. Here we do TimeOnce (0) with 8 bytes timestamp.
+            const triggerType = form.triggerType === 'recurring' ? 1 : 0;
+            const triggerDataHex = hex64(currentTimestamp) + (triggerType === 1 ? hex64(parseInt(form.interval || '604800')) : '');
 
-            const maxGasHex = hex64(parseInt(form.maxGas || '10000000'));
+            const maxGas = parseInt(form.maxGas || '10000000');
             const depositWei = BigInt(Math.floor(parseFloat(form.deposit || '0') * 1e18));
-            const maxRetriesHex = numToHex8(parseInt(form.maxRetries || '3'));
-            const ttlSeconds = parseInt(form.ttlRounds || '1000') * 6;
-            const ttlHex = hex64(ttlSeconds);
-            const requireXwapHex = '';
+            
+            const taskHex = serializeQuantumTaskHex(
+                taskId,
+                ownerHex,
+                targetAddrHex,
+                endpointHex,
+                [], // args
+                triggerType,
+                triggerDataHex,
+                maxGas
+            );
 
-            const data = `scheduleTask@${targetAddrHex}@${endpointHex}@${encodedArgsList}@${triggerHex}@${maxGasHex}@${maxRetriesHex}@${ttlHex}@${requireXwapHex}`;
+            const data = `scheduleQuantumTask@${taskHex}`;
 
             const result = await signAndSendTransaction({
                 receiver: CONTRACTS.scheduler,

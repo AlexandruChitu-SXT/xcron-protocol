@@ -58,7 +58,7 @@ export default function Dashboard() {
     } catch { /* ignore */ }
 
     try {
-      const res = await fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=50&status=success&function=executeTask`);
+      const res = await fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=50&status=success&function=executeQuantumTask`);
       const txs = await res.json();
       const counts: Record<string, number> = {};
       for (const tx of txs) { counts[tx.sender || ''] = (counts[tx.sender || ''] || 0) + 1; }

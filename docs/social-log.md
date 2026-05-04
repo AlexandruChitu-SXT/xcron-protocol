@@ -88,3 +88,17 @@ Registro de todo lo publicado. Para no repetir ni contradecir.
 - ❌ "Somos mejores que Chainlink" — resuelven problemas diferentes
 - ❌ Datos de mainnet — solo tenemos testnet
 - ❌ Números de usuarios — no hay usuarios reales aún
+
+---
+
+## 2026-03-20 (~12:56) — HFT y Stablecoins en Supernova
+
+**Tweet principal (@AlejandroChitu):**
+> Stablecoins that agents can use to automate tasks, payments & endless possibilities... in less time than a human blink. All powered by MultiversX's cutting-edge tech + ultra-low costs. 🌊🤖🦾
+> 
+> @XcronProtocol can wake up smart contracts and query on-chain data at breathtaking speeds by running custom bare-metal nodes that completely bypass Cloudflare limits.
+> 
+> The chronological math of Supernova's evolution proves it: ⏱️ At 600ms block times: We natively pull 10,000+ QPS. ⏱️ At 200ms block times: Our capacity scales perfectly to 30,000+ QPS. ⏱️ Pushing the future 88ms internal tests? We break past 68,000+ QPS with fully deterministic, cross-shard execution.
+> 
+> The gap between intent and execution is gone. Decentralized High-Frequency Trading (HFT) and sub-second cron-jobs are here. ⚡🔥
+> @MultiversX #Supernova

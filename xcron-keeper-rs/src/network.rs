@@ -179,5 +179,48 @@ impl MultiversXNetwork {
         // println!("🔥 DEVNET REJECTION ALL SHARDS: {}", last_error);
         Err(format!("Broadcast Failed on all shards: {}", last_error).into())
     }
+
+    /// Broadcasts a batch of transactions to the API via /transaction/send-multiple
+    /// This resolves the Web2 Proxy Bottleneck by sending up to 100 txs per HTTP request.
+    pub async fn broadcast_tx_batch(&self, txs: &[Transaction]) -> Result<usize, Box<dyn Error>> {
+        if txs.is_empty() { return Ok(0); }
+        let payload = serde_json::to_string(txs)?;
+        let mut last_error = String::from("No nodes available");
+
+        for base_url in &self.base_urls {
+            let url = format!("{}/transaction/send-multiple", base_url);
+            
+            let resp = match self.client.post(&url)
+                .header("Content-Type", "application/json")
+                .body(payload.clone())
+                .send()
+                .await {
+                    Ok(r) => r,
+                    Err(e) => {
+                        last_error = e.to_string();
+                        continue;
+                    }
+                };
+                
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            
+            if status == StatusCode::CREATED || status == StatusCode::OK {
+                // MultiversX returns {"data":{"numOfSentTxs": 100},"error":"","code":"successful"}
+                if body.contains("\"successful\"") {
+                    return Ok(txs.len());
+                } else {
+                    last_error = body;
+                }
+            } else if body.contains("different shard ID") {
+                last_error = "different shard ID".to_string();
+                continue;
+            } else {
+                last_error = body;
+            }
+        }
+
+        Err(format!("Batch Broadcast Failed: {}", last_error).into())
+    }
 }
 

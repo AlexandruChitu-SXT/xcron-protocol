@@ -26,10 +26,15 @@ pub trait IntentsModule:
     ) -> u64 {
         self.require_not_paused();
 
-        // Must receive exactly 1 ESDT token (the token_in)
-        let (token_in_ref, amount_in_ref) = self.call_value().single_fungible_esdt();
-        let token_in = token_in_ref.clone_value();
-        let amount_in = amount_in_ref.clone_value();
+        let egld_payment = self.call_value().egld().clone_value();
+        require!(egld_payment == solver_fee, "XCRON-PROTECT: EGLD adjunto debe coincidir exactamente con el solver_fee");
+
+        // Extraer el ESDT depositado
+        let transfers = self.call_value().all_esdt_transfers();
+        require!(transfers.len() == 1, "Must receive exactly 1 ESDT token");
+        let esdt_transfer = transfers.get(0);
+        let token_in = esdt_transfer.token_identifier.clone();
+        let amount_in = esdt_transfer.amount.clone();
         require!(amount_in > 0, "Amount in must be greater than 0");
         
         let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
@@ -80,6 +85,11 @@ pub trait IntentsModule:
             0,
             &intent.amount_in,
         );
+        
+        // BUG FIX: Refund the EGLD solver_fee to prevent memory leak
+        if intent.solver_fee > 0 {
+            self.send().direct_egld(&caller, &intent.solver_fee);
+        }
         
         // Note: Event logic can be expanded
     }
@@ -143,9 +153,14 @@ pub trait IntentsModule:
     ) -> u64 {
         self.require_not_paused();
 
-        let (token_in_ref, amount_in_ref) = self.call_value().single_fungible_esdt();
-        let token_in = token_in_ref.clone_value();
-        let amount_in = amount_in_ref.clone_value();
+        let egld_payment = self.call_value().egld().clone_value();
+        require!(egld_payment == keeper_fee, "XCRON-PROTECT: EGLD adjunto debe coincidir exactamente con el keeper_fee");
+
+        let transfers = self.call_value().all_esdt_transfers();
+        require!(transfers.len() == 1, "Must receive exactly 1 ESDT token");
+        let esdt_transfer = transfers.get(0);
+        let token_in = esdt_transfer.token_identifier.clone();
+        let amount_in = esdt_transfer.amount.clone();
         require!(amount_in > 0, "Amount in must be greater than 0");
         
         let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
@@ -171,6 +186,35 @@ pub trait IntentsModule:
         self.pre_cognitive_intent_by_id(intent_id).set(&intent);
         
         intent_id
+    }
+
+    /// Revokes a Pre-Cognitive Intent if it has not been executed yet, returning funds to the AI/Owner.
+    /// Closes a critical zero-day vulnerability where an AI's funds could be permanently locked
+    /// if the deadline passes and no keeper executes the Merkle leaf.
+    #[endpoint(cancelPreCognitiveIntent)]
+    fn cancel_pre_cognitive_intent(&self, intent_id: u64) {
+        let mut intent = self.pre_cognitive_intent_by_id(intent_id).get();
+        let caller = self.blockchain().get_caller();
+        
+        require!(intent.owner == caller, "Only owner can cancel");
+        require!(intent.status == PreCognitiveIntentStatus::Pending, "Intent not pending");
+
+        // Set status to Cancelled to prevent execution
+        intent.status = PreCognitiveIntentStatus::Cancelled;
+        self.pre_cognitive_intent_by_id(intent_id).set(&intent);
+
+        // Refund the deposited ESDT token
+        self.send().direct_esdt(
+            &caller,
+            &intent.token_in,
+            0,
+            &intent.amount_in,
+        );
+        
+        // Refund the EGLD keeper_fee
+        if intent.keeper_fee > 0 {
+            self.send().direct_egld(&caller, &intent.keeper_fee);
+        }
     }
 
     /// Executed by an XCron Keeper. Verifies the Merkle Proof against the AI's Pre-Cognitive Intent
@@ -253,10 +297,17 @@ pub trait IntentsModule:
         for sibling in proof.iter() {
             let mut combined = ManagedBuffer::new();
             
-            // Lexicographical ordering or simplest concat (must match off-chain standard)
-            // We use simple concat for this implementation: hash(current_hash || sibling)
-            let _ = current_hash.top_encode(&mut combined);
-            let _ = sibling.top_encode(&mut combined);
+            let current_bytes = current_hash.as_managed_buffer().to_boxed_bytes();
+            let sibling_bytes = sibling.as_managed_buffer().to_boxed_bytes();
+            
+            // BUG FIX: Lexicographical ordering to prevent Second Pre-Image Attacks (Merkle Forgery)
+            if current_bytes.as_slice() < sibling_bytes.as_slice() {
+                combined.append(current_hash.as_managed_buffer());
+                combined.append(sibling.as_managed_buffer());
+            } else {
+                combined.append(sibling.as_managed_buffer());
+                combined.append(current_hash.as_managed_buffer());
+            }
             
             current_hash = self.crypto().sha256(&combined).into();
         }

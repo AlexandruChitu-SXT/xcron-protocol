@@ -73,7 +73,7 @@ export default function ProtocolStats() {
 
             try {
                 const execRes = await fetch(
-                    `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success&size=10&order=desc`
+                    `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeQuantumTask&status=success&size=10&order=desc`
                 );
                 const txs = await execRes.json();
                 if (Array.isArray(txs)) {
@@ -103,7 +103,7 @@ export default function ProtocolStats() {
             } catch { /* ignore */ }
 
             try {
-                const resK = await fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=50&status=success&function=executeTask`);
+                const resK = await fetch(`${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=50&status=success&function=executeQuantumTask`);
                 const txsK = await resK.json();
                 const counts: Record<string, number> = {};
                 for (const tx of txsK) { counts[tx.sender || ''] = (counts[tx.sender || ''] || 0) + 1; }

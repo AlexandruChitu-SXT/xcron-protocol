@@ -154,19 +154,20 @@ pub trait ExecutionModule:
         q_state.status = common::types::TaskStatus::Executing;
         self.quantum_tasks(&task_hash).set(&q_state);
 
-        // Build clean args for target call
-        let mut clean_args = ManagedVec::new();
+        // Build args for target call preserving exact ABI structure.
+        // 🛡️ CRITICAL SECURITY PATCH: We MUST NOT drop empty arguments.
+        // In MultiversX ABI, an empty buffer represents `Option::None` or an empty string.
+        // Dropping it shifts all subsequent arguments to the left, corrupting the call.
+        let mut exact_args = ManagedVec::new();
         for arg in task_payload.target_args.into_iter() {
-            if !arg.is_empty() {
-                clean_args.push(arg);
-            }
+            exact_args.push(arg);
         }
 
         // Async call to target contract WITH stateless callback
         self.tx()
             .to(&task_payload.target_contract.clone())
             .raw_call(task_payload.target_endpoint.clone())
-            .arguments_raw(clean_args.into())
+            .arguments_raw(exact_args.into())
             .gas(task_payload.max_gas)
             .callback(self.callbacks().execution_callback(task_hash, task_payload.target_contract, keeper))
             .gas_for_callback(callback_gas)

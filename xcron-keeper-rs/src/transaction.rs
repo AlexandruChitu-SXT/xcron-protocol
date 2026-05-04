@@ -109,71 +109,91 @@ impl Transaction {
         Ok(())
     }
 
-    /// High-Speed transaction builder for PCIT Execution.
-    /// Constructs the exact MultiVersX ABI payload (`executePreCognitiveLeaf@<intent>@...`)
-    pub fn build_pcit_execution_tx(
+    /// High-Speed transaction builder for Quantum Task Execution.
+    /// Constructs the exact MultiVersX ABI payload (`executeQuantumTask@<serialized_task>@[quantum_secret]`)
+    pub fn build_quantum_execution_tx(
         nonce: u64,
         sender: &str,
         scheduler_address: &str,
-        intent_id: u64,
-        proof_hashes: &[[u8; 32]],
-        target_contract: &[u8; 32],
-        target_endpoint: &str,
-        target_args: &[Vec<u8>],
-        expected_token_out: &str,
-        min_return: &num_bigint::BigUint,
+        serialized_task_hex: &str,
+        quantum_secret_hex: Option<&str>,
         chain_id: &str,
     ) -> Self {
-        let mut data = String::from("executePreCognitiveLeaf");
+        let mut data = format!("executeQuantumTask@{}", serialized_task_hex);
         
-        // 1. intent_id (u64 -> 8 bytes hex)
-        data.push_str(&format!("@{:016x}", intent_id));
-        
-        // 2. merkle_proof (ManagedVec<[u8;32]>)
-        // Format: u32 length + concatenated 32-byte hashes
-        let mut proof_arg = format!("{:08x}", proof_hashes.len() as u32);
-        for hash in proof_hashes {
-            proof_arg.push_str(&hex::encode(hash));
-        }
-        data.push_str(&format!("@{}", proof_arg));
-        
-        // 3. target_contract (32 bytes)
-        data.push_str(&format!("@{}", hex::encode(target_contract)));
-        
-        // 4. target_endpoint (string bytes)
-        data.push_str(&format!("@{}", hex::encode(target_endpoint.as_bytes())));
-        
-        // 5. target_args (ManagedVec<ManagedBuffer>)
-        // Format: u32 length + (u32 item_len + item_bytes)*
-        let mut args_arg = format!("{:08x}", target_args.len() as u32);
-        for arg in target_args {
-            args_arg.push_str(&format!("{:08x}", arg.len() as u32));
-            args_arg.push_str(&hex::encode(arg));
-        }
-        data.push_str(&format!("@{}", args_arg));
-        
-        // 6. expected_token_out
-        data.push_str(&format!("@{}", hex::encode(expected_token_out.as_bytes())));
-        
-        // 7. min_return (BigUint)
-        let min_ret_hex = if min_return > &num_bigint::BigUint::from(0u32) {
-            hex::encode(min_return.to_bytes_be())
+        if let Some(secret) = quantum_secret_hex {
+            data.push_str(&format!("@01{}", secret)); // 01 = Option::Some
         } else {
-            String::new()
-        };
-        data.push_str(&format!("@{}", min_ret_hex));
+            data.push_str("@00"); // 00 = Option::None
+        }
 
         Transaction::new(
             nonce,
-            "0", // Execution costs 0 EGLD (Keeper only pays gas)
+            "0", // Execution costs 0 EGLD
             scheduler_address,
             sender,
-            500_000_000, 
+            1_000_000_000, 
             30_000_000, 
             Some(data.as_bytes()),
             chain_id,
             1
         )
+    }
+
+    /// Serializes a Task payload manually according to MultiversX TopEncode Nested ABI.
+    pub fn serialize_quantum_task_hex(
+        task_id: u64,
+        owner_hex: &str, // 32 bytes hex
+        target_contract_hex: &str, // 32 bytes hex
+        endpoint_hex: &str, // variable bytes hex
+        args_hex: &[String], // array of hex strings
+        trigger_type: u8, // 0 = TimeOnce, etc
+        trigger_data_hex: &str,
+        max_gas: u64,
+    ) -> String {
+        let mut hex = String::new();
+        // 1. id (8 bytes)
+        hex.push_str(&format!("{:016x}", task_id));
+        // 2. owner (32 bytes)
+        hex.push_str(owner_hex);
+        // 3. target_contract (32 bytes)
+        hex.push_str(target_contract_hex);
+        // 4. target_endpoint (4 bytes len + data)
+        let endpoint_bytes_len = endpoint_hex.len() / 2;
+        hex.push_str(&format!("{:08x}{}", endpoint_bytes_len, endpoint_hex));
+        // 5. target_args (4 bytes len + array)
+        hex.push_str(&format!("{:08x}", args_hex.len()));
+        for arg in args_hex {
+            hex.push_str(&format!("{:08x}{}", arg.len() / 2, arg));
+        }
+        // 6. trigger (1 byte type + data)
+        hex.push_str(&format!("{:02x}{}", trigger_type, trigger_data_hex));
+        // 7. max_gas (8 bytes)
+        hex.push_str(&format!("{:016x}", max_gas));
+        // 8. deposit (BigUint -> 4 bytes len + data, here we assume 0 deposit for test)
+        hex.push_str("00000000"); 
+        // 9. max_retries (1 byte)
+        hex.push_str("00");
+        // 10. retry_count (1 byte)
+        hex.push_str("00");
+        // 11. ttl_seconds (8 bytes)
+        hex.push_str("0000000000000000");
+        // 12. created_at (8 bytes)
+        hex.push_str("0000000000000000");
+        // 13. status (1 byte enum, Pending = 00)
+        hex.push_str("00");
+        // 14. assigned_keeper (Option<Address>, 00 = None)
+        hex.push_str("00");
+        // 15. completed_at (8 bytes)
+        hex.push_str("0000000000000000");
+        // 16. post_task_id (Option<u64>, 00 = None)
+        hex.push_str("00");
+        // 17. require_xwap_safe (bool)
+        hex.push_str("00");
+        // 18. confidential (bool)
+        hex.push_str("00");
+
+        hex
     }
 }
 
@@ -184,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_tx_serialization_and_signing() {
-        let wallet = KeeperWallet::load_pem("../keeper/wallet.pem").unwrap();
+        let wallet = KeeperWallet::generate_throwaway();
         
         let mut tx = Transaction::new(
             42,

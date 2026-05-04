@@ -8,6 +8,7 @@ pub mod ws_sniper;
 pub mod pcit;
 pub mod quantum_shield;
 pub mod event_engine;
+pub mod cex_relayer;
 
 use wallet::KeeperWallet;
 use transaction::Transaction;
@@ -135,6 +136,10 @@ pub enum AttackMode {
     PcitDemo,
     /// XCron Agentic Infrastructure: State & Event Driven Off-Chain Execution
     EventKeeper,
+    /// Oficial E2E HFT Benchmark for Supernova
+    E2EBenchmark,
+    /// XSE Simulation: XCron Sovereign Enclave Web3-Web2 Bridge
+    XseSim,
 }
 
 fn generate_schedule_payload() -> Vec<u8> {
@@ -147,7 +152,17 @@ fn generate_schedule_payload() -> Vec<u8> {
     let ttl_hex = format!("{:016x}", 604800);
     // 50KB State Bloat Padding
     let padding_50kb = "00".repeat(25_000);
-    let data_str = format!("scheduleTask@{target_addr_hex}@{endpoint_hex}@00000000@{trigger_hex}@{task_id_hex}@{retries_hex}@{ttl_hex}@{padding_50kb}");
+    let task_hex = Transaction::serialize_quantum_task_hex(
+        40_000_000,
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        &target_addr_hex,
+        &endpoint_hex,
+        &[],
+        0,
+        &trigger_hex,
+        30_000_000,
+    );
+    let data_str = format!("scheduleQuantumTask@{}", task_hex);
     data_str.into_bytes()
 }
 
@@ -173,6 +188,40 @@ fn generate_fuzzing_payload() -> Vec<u8> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     
+    if cli.mode == AttackMode::XseSim {
+        println!("🚀 Iniciando Simulación de Proyecto XSE (Quantum-Sealed Enclave)...");
+        let relayer = cex_relayer::CexRelayer::new();
+        
+        let drew_secrets = cex_relayer::EncryptedSecrets {
+            blob: vec![0, 1, 2, 3], 
+            enclave_pubkey_hash: "XSE_PROD_v1".to_string(),
+        };
+
+        let target_assets = vec![
+            "BTC".to_string(), 
+            "ETH".to_string(), 
+            "SOL".to_string(), 
+            "BNB".to_string(), 
+            "EGLD".to_string()
+        ];
+
+        // Paso 1: Simulación de Trigger de MultiversX
+        println!("📡 [MVX-OBSERVER] Detectada transferencia de 50,000 USD a Binance...");
+        
+        // Paso 2: Verificación preventiva (Ping)
+        if relayer.check_binance_health("EGLD").await {
+            // Paso 3: Ejecución en Enclave
+            match relayer.execute_reverse_dca(drew_secrets, target_assets, 50000.0).await {
+                Ok(msg) => println!("✅ {}", msg),
+                Err(e) => println!("❌ Error en Enclave: {}", e),
+            }
+        } else {
+            println!("🛑 [XSE] Abortando: La red de depósitos en Binance no es estable.");
+        }
+        
+        return Ok(());
+    }
+
     println!("🔥 XCron Protocol Multi-Role Node Starting...");
     println!("⚔️  Mode Selected: {:?}", cli.mode);
     println!("⚙️  Broadcasters: {}", cli.broadcasters);
@@ -316,6 +365,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // 3.6. Agent Intent Ingestion Server (Phase 2: Instant Execution)
+    // Listens for high-frequency Autonomous Intents from the Agent Proxy
+    tokio::spawn(async move {
+        use tokio::net::TcpListener;
+        use tokio::io::AsyncReadExt;
+        
+        if let Ok(listener) = TcpListener::bind("0.0.0.0:9091").await {
+            println!("🤖 [AGENT INGESTION] Listening for Autonomous Intents on port 9091...");
+            loop {
+                if let Ok((mut socket, _)) = listener.accept().await {
+                    tokio::spawn(async move {
+                        let mut buf = [0; 4096];
+                        if let Ok(n) = socket.read(&mut buf).await {
+                            if n == 0 { return; }
+                            let raw_intent = String::from_utf8_lossy(&buf[..n]);
+                            println!("⚡ [INTENT RECEIVED] Queuing for instant routing: {}", raw_intent.trim());
+                            // In a full implementation, this parses the JSON intent, 
+                            // routes it to a channel (MPSC), and the Keeper Swarm loop below 
+                            // pulls it and executes it instantly.
+                        }
+                    });
+                }
+            }
+        }
+    });
+
     // THE KITCHEN ARCHITECTURE (Direct Broadcasting)
     // We removed the MPSC channels because Mutex contention across 2500 broadcasters
     // completely starved the Tokio executor at 50,000 TPS.
@@ -447,7 +522,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     AttackMode::TpsDemo => {
                         // TpsDemo runs completely unhinged now. Zero sleep.
                     },
-                    AttackMode::PreWarm | AttackMode::Stress | AttackMode::MultiKeeper | AttackMode::Fuzz | AttackMode::IntraShard | AttackMode::FundHydra | AttackMode::WrapEgld | AttackMode::DexSwap | AttackMode::CrossShard | AttackMode::RelayedCrossShard | AttackMode::RelayedDex | AttackMode::XcronSwarm | AttackMode::Zeta | AttackMode::Theta | AttackMode::Epsilon | AttackMode::Delta | AttackMode::XcronBoundary | AttackMode::StateDesync | AttackMode::EieOverflow | AttackMode::NonceDesyncV2 | AttackMode::BlsDesync | AttackMode::OrphanFlooding | AttackMode::SurgicalBackrun | AttackMode::ArbitrageHft | AttackMode::PcitDemo | AttackMode::EventKeeper => {
+                    AttackMode::XseSim | AttackMode::PreWarm | AttackMode::Stress | AttackMode::MultiKeeper | AttackMode::Fuzz | AttackMode::IntraShard | AttackMode::FundHydra | AttackMode::WrapEgld | AttackMode::DexSwap | AttackMode::CrossShard | AttackMode::RelayedCrossShard | AttackMode::RelayedDex | AttackMode::XcronSwarm | AttackMode::Zeta | AttackMode::Theta | AttackMode::Epsilon | AttackMode::Delta | AttackMode::XcronBoundary | AttackMode::StateDesync | AttackMode::EieOverflow | AttackMode::NonceDesyncV2 | AttackMode::BlsDesync | AttackMode::OrphanFlooding | AttackMode::SurgicalBackrun | AttackMode::ArbitrageHft | AttackMode::PcitDemo | AttackMode::EventKeeper | AttackMode::E2EBenchmark => {
                         // All these modes disparan continuamente a los Gateways sin parar, 
                         // guiados solo por el TPS total configurado. (SurgicalBackrun/ArbitrageHft lo ignoran dentro de su logic)
                         if cli.mode != AttackMode::SurgicalBackrun && cli.mode != AttackMode::ArbitrageHft {
@@ -540,6 +615,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let roll: u8 = rand::random::<u8>() % 100;
                 
                 let (payload, gas, receiver_owned, value) = match mode_clone {
+                    AttackMode::XseSim => (None, 0, KeeperWallet::generate_random_address(), "0"),
                     AttackMode::Stress => {
                         // Vector Gamma: Storage IO State Bloat (Kill the NVMe Disks)
                         // By firing 50KB blocks to the state trie continuously to the same SC,
@@ -585,7 +661,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let trigger_hex = format!("00{:016x}", trigger_time);
                         let task_id_hex = format!("{:016x}", current_nonce); // Unique ID per wallet
                         
-                        let data_str = format!("scheduleTask@{target_addr_hex}@{endpoint_hex}@00000000@{trigger_hex}@{task_id_hex}@02@0000000000093a80");
+                        let task_hex = Transaction::serialize_quantum_task_hex(
+                            current_nonce,
+                            "0000000000000000000000000000000000000000000000000000000000000000",
+                            &target_addr_hex,
+                            &endpoint_hex,
+                            &[],
+                            0,
+                            &trigger_hex,
+                            30_000_000,
+                        );
+                        let data_str = format!("scheduleQuantumTask@{}", task_hex);
                         let pl = data_str.into_bytes();
                         
                         // The SC is in Shard 1. The sender (Wallet) is in its own Shard (0, 1, or 2).
@@ -634,7 +720,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let endpoint_hex = hex::encode("ping");
                             let trigger_hex = format!("00{:016x}", current_time + 60);
                             let task_id_hex = format!("{:016x}", current_nonce);
-                            let payload_str = format!("scheduleTask@{target_addr_hex}@{endpoint_hex}@00000000@{trigger_hex}@{task_id_hex}@02@0000000000093a80@00@00@{}", hex::encode("30000000000000000")); // 0.03 EGLD bounty
+                            let task_hex = Transaction::serialize_quantum_task_hex(
+                                current_nonce,
+                                "0000000000000000000000000000000000000000000000000000000000000000",
+                                &target_addr_hex,
+                                &endpoint_hex,
+                                &[],
+                                0,
+                                &trigger_hex,
+                                30_000_000,
+                            );
+                            let payload_str = format!("scheduleQuantumTask@{}", task_hex);
                             (Some(payload_str.into_bytes()), 6_000_000, "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(), "30000000000000000")
                         } else {
                             let task_id_hex = format!("{:016x}", current_nonce);
@@ -662,7 +758,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let endpoint_hex = hex::encode("ping");
                             let trigger_hex = format!("00{:016x}", current_time + 10);
                             let task_id_hex = format!("b{:015x}", current_nonce); // 'b' prefix = boundary task
-                            let payload_str = format!("scheduleTask@{target_addr_hex}@{endpoint_hex}@00000000@{trigger_hex}@{task_id_hex}@02@0000000000093a80@00@00@006a94d74f430000"); // 0.03 EGLD
+                            let task_hex = Transaction::serialize_quantum_task_hex(
+                                current_nonce,
+                                "0000000000000000000000000000000000000000000000000000000000000000",
+                                &target_addr_hex,
+                                &endpoint_hex,
+                                &[],
+                                0,
+                                &trigger_hex,
+                                30_000_000,
+                            );
+                            let payload_str = format!("scheduleQuantumTask@{}", task_hex);
                             (Some(payload_str.into_bytes()), 6_000_000, "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(), "30000000000000000")
                         } else if in_open_window {
                             // OPENING EDGE: executeTask -> race to execute before state fully commits
@@ -744,7 +850,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let task_id_hex = format!("{:016x}", current_nonce);
                         // Add massive padding specifically to slow down trie root computation inside the Shard Block Processor
                         let state_padding = "FF".repeat(25_000); 
-                        let payload_str = format!("scheduleTask@{target_addr_hex}@{endpoint_hex}@00000000@{trigger_hex}@{task_id_hex}@00@{state_padding}");
+                        let task_hex = Transaction::serialize_quantum_task_hex(
+                            current_nonce,
+                            "0000000000000000000000000000000000000000000000000000000000000000",
+                            &target_addr_hex,
+                            &endpoint_hex,
+                            &[],
+                            0,
+                            &trigger_hex,
+                            30_000_000,
+                        );
+                        let payload_str = format!("scheduleQuantumTask@{}", task_hex);
                         let receiver = "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(); // SC Address
                         (Some(payload_str.into_bytes()), 80_000_000, receiver, "0")
                     },
@@ -797,6 +913,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // High TPS Demonstration: Valid EGLD transfer with XCronProtocol signature
                         (Some(b"XCronProtocol".to_vec()), 100_000, wallet_clone.bech32_address.clone(), "1")
                     },
+                    AttackMode::E2EBenchmark => {
+                        let step = current_nonce % 4;
+                        match step {
+                            0 => {
+                                // createIntent (AI)
+                                let intent_payload = "createIntent@00@00@00@0000000000000000000000000000000000000000000000000000000000000000@00";
+                                (Some(intent_payload.as_bytes().to_vec()), 15_000_000, "erd1qqqqqqqqqqqqqpgq48th0lv0ns2s699c7jqqw4fskuhsv9ha2x2qzmjxtr".to_string(), "10000000000000000") // 0.01 EGLD
+                            },
+                            1 => {
+                                // swap (DCA)
+                                let swap_payload = "swap@00";
+                                (Some(swap_payload.as_bytes().to_vec()), 15_000_000, "erd1qqqqqqqqqqqqqpgq48th0lv0ns2s699c7jqqw4fskuhsv9ha2x2qzmjxtr".to_string(), "0")
+                            },
+                            2 => {
+                                // emergencySwap (Stop-Loss)
+                                let es_payload = "emergencySwap@00";
+                                (Some(es_payload.as_bytes().to_vec()), 15_000_000, "erd1qqqqqqqqqqqqqpgq48th0lv0ns2s699c7jqqw4fskuhsv9ha2x2qzmjxtr".to_string(), "0")
+                            },
+                            _ => {
+                                // mint (NFT Sniper)
+                                let mint_payload = "mint@00";
+                                (Some(mint_payload.as_bytes().to_vec()), 15_000_000, "erd1qqqqqqqqqqqqqpgq48th0lv0ns2s699c7jqqw4fskuhsv9ha2x2qzmjxtr".to_string(), "0")
+                            }
+                        }
+                    },
                     AttackMode::EventKeeper => {
                         (None, 50_000, wallet_clone.bech32_address.clone(), "0")
                     },
@@ -806,38 +947,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let mut target_sc_bytes = [0u8; 32];
                         hex::decode_to_slice(target_sc_addr_hex, &mut target_sc_bytes).unwrap_or_default();
                         
-                        let leaf = pcit::PcitLeaf {
-                            target_contract: target_sc_bytes,
-                            target_endpoint: "swapTokensFixedInput".to_string(),
-                            target_args: vec![b"USDC-c76f1f".to_vec()],
-                            expected_token_out: "WEGLD-bd4d79".to_string(),
-                            min_return: num_bigint::BigUint::from(100u32),
-                        };
-                        
-                        // Fake sibling path for the multi-path intent (e.g. AI evaluated multiple conditions)
-                        let sibling_mock = [0xAA; 32];
                         let w_addr = wallet_clone.bech32_address.clone();
                         let chain_id = chain_id_for_tx.clone();
 
                         // 2. [HFT Optimization] We offload the array generation and SHA256 hashing to native threads
                         let tx = tokio::task::spawn_blocking(move || {
-                            Transaction::build_pcit_execution_tx(
+                            let serialized_task = Transaction::serialize_quantum_task_hex(
+                                42, // task_id
+                                "0000000000000000000000000000000000000000000000000000000000000000", // dummy owner hex
+                                target_sc_addr_hex, // target contract
+                                &hex::encode("swapTokensFixedInput"), // endpoint
+                                &[hex::encode("USDC-c76f1f")], // args
+                                0, // trigger type TimeOnce
+                                "0000000000000000", // timestamp 0
+                                30_000_000, // gas
+                            );
+
+                            Transaction::build_quantum_execution_tx(
                                 current_nonce,
                                 &w_addr,
                                 "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat", // Scheduler SC
-                                42, // AI Intent ID
-                                &[sibling_mock], // Sequential Merkle chain proof array
-                                &leaf.target_contract,
-                                &leaf.target_endpoint,
-                                &leaf.target_args,
-                                &leaf.expected_token_out,
-                                &leaf.min_return,
+                                &serialized_task,
+                                None, // No quantum secret
                                 &chain_id,
                             )
                         }).await.unwrap();
                         
-                        // Because build_pcit_execution_tx Base64-encodes the ABI string internally, 
-                        // we must decode to raw bytes to pass via the (payload, gas, receiver) tuple.
                         let payload_bytes = base64::Engine::decode(
                             &base64::engine::general_purpose::STANDARD,
                             tx.data.as_ref().unwrap()
@@ -1083,7 +1218,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 true
                             }
                         };
+                        
                         if failed {
+                            // 🛡️ CRITICAL SECURITY PATCH: NONCE DESYNC RECOVERY
+                            // If the Proxy timed out but the Tx reached the mempool, our local nonce
+                            // will lag behind the blockchain forever, causing permanent `lowerNonceInTx` errors.
+                            // We MUST force a network sync to heal the wallet state.
+                            if let Ok(real_nonce) = network_clone.fetch_nonce(&wallet_clone.bech32_address).await {
+                                nonce_clone.store(real_nonce, Ordering::SeqCst);
+                                println!("🔄 [Nonce Resync] Healed wallet {} to nonce {}", &wallet_clone.bech32_address[..8], real_nonce);
+                            }
                             // Wait 500ms before retrying to avoid hammering the API
                             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                         }

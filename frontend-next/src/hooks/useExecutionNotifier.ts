@@ -20,7 +20,7 @@ export function useExecutionNotifier() {
         const checkExecutions = async () => {
             try {
                 const res = await fetch(
-                    `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success&size=5&order=desc`
+                    `${NETWORK.apiUrl}/transactions?receiver=${CONTRACTS.scheduler}&function=executeQuantumTask&status=success&size=5&order=desc`
                 );
                 const txs = await res.json();
                 if (!Array.isArray(txs) || txs.length === 0) return;

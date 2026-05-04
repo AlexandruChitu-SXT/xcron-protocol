@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { CONTRACTS, NETWORK, GAS_SCHEDULE_TASK, GAS_CANCEL_TASK, EXPLORER_TX } from '../config';
+import { Address } from '@multiversx/sdk-core';
+import { serializeQuantumTaskHex } from '../utils/quantumAbi';
 
 /* ═══════════════════════════════════════════════════════════════
    XCron AI — Security Hardened Chat Interface
@@ -1177,10 +1179,29 @@ RULES:
             const value = BigInt(Math.floor(parseFloat(s.amount!) * 1e18)).toString();
             const endpointHex = Array.from(new TextEncoder().encode(actionData.endpoint)).map(b => b.toString(16).padStart(2, '0')).join('');
             const targetHex = Array.from(new TextEncoder().encode(actionData.address)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const ownerHex = Address.newFromBech32(wallet.address).toHex();
+            
+            // Randomly generate a taskId for frontend submission (or use API nonce in production)
+            const taskId = Math.floor(Math.random() * 100000000);
+            
+            // For recurring tasks, triggerType = 1 (TimeRecurring), triggerData = time (8 bytes) + interval (8 bytes)
+            const currentTimestamp = Math.floor(Date.now() / 1000);
+            const triggerDataHex = currentTimestamp.toString(16).padStart(16, '0') + intervalData.seconds.toString(16).padStart(16, '0');
+
+            const taskHex = serializeQuantumTaskHex(
+                taskId,
+                ownerHex,
+                targetHex,
+                endpointHex,
+                [], // args
+                1,  // TimeRecurring
+                triggerDataHex,
+                15000000 // maxGas
+            );
 
             const txHash = await signAndSendTransaction({
                 receiver: CONTRACTS.scheduler,
-                data: `scheduleTask@${targetHex}@${endpointHex}@${numToHex(intervalData.seconds)}@${numToHex(15000000)}@${numToHex(3600)}`,
+                data: `scheduleQuantumTask@${taskHex}`,
                 value, gasLimit: GAS_SCHEDULE_TASK,
             });
             if (txHash) {
@@ -1544,36 +1565,26 @@ RULES:
     };
 
     return (
-        <>
-            {/* ── Floating Cron Button ── */}
-            <button
-                className="cron-fab"
-                onClick={() => setIsOpen(!isOpen)}
-                aria-label="Chat with XCron AI"
-            >
-                {isOpen ? '✕' : '🤖'}
-            </button>
-
-            {/* ── Chat Panel ── */}
-            {isOpen && (
-                <div className="cron-chat">
-                    {/* Header */}
-                    <div className="cron-header">
-                        <div className="cron-header-info">
-                            <span className="cron-header-icon">🤖</span>
+        <div className="w-full flex flex-col bg-black/40 rounded-[32px] border border-white/10 shadow-[0_0_50px_rgba(34,211,238,0.15)] overflow-hidden backdrop-blur-xl">
+            {/* ── Chat Messages (only visible if interacted) ── */}
+            {messages.length > 0 && (
+                <div className="max-h-[400px] overflow-y-auto p-6 flex flex-col gap-4 custom-scrollbar">
+                    {/* Header inline */}
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-2">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">🤖</span>
                             <div>
-                                <div className="cron-header-name">XCron AI</div>
-                                <div className="cron-header-sub">
-                                    {wallet.connected
-                                        ? <><span className="cron-online" />Connected</>
-                                        : <span className="cron-connect-link" onClick={() => setShowConnectModal(true)}>Connect wallet →</span>
+                                <div className="text-white font-bold tracking-wide">XCron AI Agent</div>
+                                <div className="text-xs text-white/50 flex items-center gap-2">
+                                    {wallet.connected 
+                                        ? <><span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span> Connected</>
+                                        : <button className="text-cyan-400 hover:text-cyan-300 transition-colors" onClick={() => setShowConnectModal(true)}>Connect wallet →</button>
                                     }
                                 </div>
                             </div>
                         </div>
-                        {/* TTS toggle */}
                         <button
-                            className={`cron-tts-btn ${ttsEnabled ? 'active' : ''}`}
+                            className={`p-2 rounded-full transition-colors ${ttsEnabled ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                             onClick={() => setTtsEnabled(!ttsEnabled)}
                             title={ttsEnabled ? 'Disable voice replies' : 'Enable voice replies'}
                         >
@@ -1581,127 +1592,130 @@ RULES:
                         </button>
                     </div>
 
-                    {/* Messages */}
-                    <div className="cron-messages">
-                        {messages.map(msg => (
-                            <div key={msg.id} className={`cron-msg cron-msg-${msg.role}`}>
-                                <div className="cron-bubble">
-                                    {getDisplayText(msg).split('\n').map((line, i, arr) => (
-                                        <span key={i}>
-                                            {line.startsWith('•') ? (
-                                                <span className="cron-bullet">{line}</span>
-                                            ) : line}
-                                            {i < arr.length - 1 && <br />}
-                                        </span>
-                                    ))}
-                                    {msg.id === streamingMsgId && (
-                                        <span className="cron-cursor" />
-                                    )}
-                                </div>
+                    {messages.map(msg => (
+                        <div key={msg.id} className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'self-end items-end' : 'self-start items-start'}`}>
+                            <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
+                                msg.role === 'user' 
+                                    ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white rounded-br-sm'
+                                    : 'bg-white/5 border border-white/10 text-white/90 rounded-bl-sm'
+                            }`}>
+                                {getDisplayText(msg).split('\n').map((line, i, arr) => (
+                                    <span key={i}>
+                                        {line.startsWith('•') ? <span className="text-cyan-300 font-bold mr-1">{line}</span> : line}
+                                        {i < arr.length - 1 && <br />}
+                                    </span>
+                                ))}
+                                {msg.id === streamingMsgId && <span className="inline-block w-1 h-3 bg-cyan-400 ml-1 animate-pulse" />}
+                            </div>
 
-                                {/* Action Card with live status */}
-                                {msg.action && (
-                                    <div className="cron-action-card" style={{ borderColor: msg.action.color + '44' }}>
-                                        <div className="cron-action-header">I executed this Action:</div>
-                                        <div className="cron-action-body">
-                                            <span className="cron-action-icon">{msg.action.icon}</span>
-                                            <div>
-                                                <div className="cron-action-desc">{msg.action.description}</div>
-                                                {msg.action.details.map((d, i) => (
-                                                    <div key={i} className="cron-action-detail">• {d.label}: {d.value}</div>
-                                                ))}
-                                            </div>
+                            {/* Action Card with live status */}
+                            {msg.action && (
+                                <div className="mt-2 p-4 rounded-xl border bg-black/60 w-full" style={{ borderColor: msg.action.color + '44' }}>
+                                    <div className="text-xs text-white/40 mb-2 uppercase tracking-wider">I executed this Action:</div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">{msg.action.icon}</span>
+                                        <div>
+                                            <div className="text-white font-bold">{msg.action.description}</div>
+                                            {msg.action.details.map((d, i) => (
+                                                <div key={i} className="text-xs text-white/60 mt-1">• {d.label}: <span className="text-white">{d.value}</span></div>
+                                            ))}
                                         </div>
-                                        <div className={`cron-action-status cron-action-${msg.action.status}`}>
+                                    </div>
+                                    <div className={`mt-3 pt-3 border-t border-white/10 text-xs font-mono font-bold flex items-center justify-between`}>
+                                        <span className={
+                                            msg.action.status === 'success' ? 'text-green-400' :
+                                            msg.action.status === 'failed' ? 'text-red-400' :
+                                            msg.action.status === 'pending' ? 'text-yellow-400 animate-pulse' :
+                                            msg.action.status === 'confirmed' ? 'text-cyan-400' : 'text-purple-400'
+                                        }>
                                             {msg.action.status === 'success' && '✓ Successfully processed'}
                                             {msg.action.status === 'confirmed' && '⟳ Confirmed — awaiting execution...'}
-                                            {msg.action.status === 'pending' && (
-                                                <>⏳ Pending on-chain...
-                                                    <span className="cron-status-spinner" />
-                                                </>
-                                            )}
+                                            {msg.action.status === 'pending' && '⏳ Pending on-chain...'}
                                             {msg.action.status === 'signing' && '🖊️ Awaiting signature...'}
                                             {msg.action.status === 'failed' && '✗ Transaction failed'}
-                                        </div>
+                                        </span>
                                         {msg.action.txHash && (
-                                            <a
-                                                className="cron-action-explorer"
-                                                href={EXPLORER_TX(msg.action.txHash)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                View on Explorer →
-                                            </a>
+                                            <a className="text-cyan-400 hover:text-cyan-300 underline" href={EXPLORER_TX(msg.action.txHash)} target="_blank" rel="noopener noreferrer">View Tx ↗</a>
                                         )}
                                     </div>
-                                )}
-
-                                {/* Quick Action Chips */}
-                                {msg.quickActions && !msg.isStreaming && msg.role === 'bot' && (
-                                    <div className="cron-quick-actions">
-                                        {msg.quickActions.map((qa, i) => (
-                                            <button
-                                                key={i}
-                                                className="cron-chip"
-                                                onClick={() => handleQuickAction(qa)}
-                                            >
-                                                {qa.icon && <span className="cron-chip-icon">{qa.icon}</span>}
-                                                {qa.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                        {isThinking && (
-                            <div className="cron-msg cron-msg-bot">
-                                <div className="cron-bubble cron-dots">
-                                    <span /><span /><span />
                                 </div>
-                            </div>
-                        )}
-                        <div ref={messagesEndRef} />
-                    </div>
+                            )}
 
-                    {/* Input */}
-                    <div className={`cron-input-bar ${isListening ? 'cron-listening' : ''}`}>
-                        {isListening && (
-                            <div className="cron-voice-indicator">
-                                <span className="cron-voice-dot" />
-                                Listening...
+                            {/* Quick Action Chips */}
+                            {msg.quickActions && !msg.isStreaming && msg.role === 'bot' && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    {msg.quickActions.map((qa, i) => (
+                                        <button
+                                            key={i}
+                                            className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-medium hover:bg-cyan-500/20 transition-colors flex items-center gap-1.5"
+                                            onClick={() => handleQuickAction(qa)}
+                                        >
+                                            {qa.icon && <span>{qa.icon}</span>}
+                                            {qa.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    {isThinking && (
+                        <div className="flex self-start p-4 rounded-2xl bg-white/5 border border-white/10 rounded-bl-sm">
+                            <div className="flex gap-1.5 items-center">
+                                <span className="w-2 h-2 rounded-full bg-cyan-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <span className="w-2 h-2 rounded-full bg-cyan-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <span className="w-2 h-2 rounded-full bg-cyan-400/50 animate-bounce" style={{ animationDelay: '300ms' }} />
                             </div>
-                        )}
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            maxLength={SECURITY.MAX_INPUT_LENGTH}
-                            placeholder={isTranscribing ? 'Transcribing...' : isListening ? '🔴 Recording... tap 🎤 to stop' : (wallet.connected ? 'Type or tap 🎤 to talk...' : 'Connect wallet to start')}
-                            value={input}
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            disabled={isThinking || isListening || isTranscribing}
-                        />
-                        {voiceSupported && (
-                            <button
-                                className={`cron-mic-btn ${isListening ? 'cron-mic-active' : ''}`}
-                                onClick={handleVoiceToggle}
-                                disabled={isThinking || isTranscribing}
-                                title={isListening ? 'Stop recording' : 'Voice input'}
-                            >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                                    <line x1="12" y1="19" x2="12" y2="23" />
-                                    <line x1="8" y1="23" x2="16" y2="23" />
-                                </svg>
-                            </button>
-                        )}
-                        <button onClick={handleSend} disabled={!input.trim() || isThinking}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>
-                        </button>
-                    </div>
+                        </div>
+                    )}
+                    <div ref={messagesEndRef} />
                 </div>
             )}
-        </>
+
+            {/* ── Input Bar (The Pill) ── */}
+            <div className={`flex items-center p-2 bg-black/60 ${messages.length > 0 ? 'border-t border-white/10' : ''}`}>
+                {isListening && (
+                    <div className="absolute -top-8 left-4 text-xs font-bold text-red-400 animate-pulse flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span> Listening...
+                    </div>
+                )}
+                <div className="pl-4 pr-2 text-xl opacity-50">⚡</div>
+                <input
+                    ref={inputRef}
+                    className="flex-1 bg-transparent border-none text-white focus:outline-none px-2 py-3 text-sm md:text-base placeholder:text-white/30"
+                    type="text"
+                    maxLength={SECURITY.MAX_INPUT_LENGTH}
+                    placeholder={isTranscribing ? 'Transcribing...' : isListening ? '🔴 Recording... tap 🎤 to stop' : (wallet.connected ? 'Ask XCron AI to automate your on-chain actions...' : 'Connect wallet to start')}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isThinking || isListening || isTranscribing}
+                />
+                
+                <div className="flex items-center gap-1 pr-1">
+                    {voiceSupported && (
+                        <button
+                            className={`p-3 rounded-full transition-colors ${isListening ? 'bg-red-500/20 text-red-400' : 'bg-transparent text-white/40 hover:bg-white/10 hover:text-white'}`}
+                            onClick={handleVoiceToggle}
+                            disabled={isThinking || isTranscribing}
+                            title={isListening ? 'Stop recording' : 'Voice input'}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
+                                <line x1="8" y1="23" x2="16" y2="23" />
+                            </svg>
+                        </button>
+                    )}
+                    <button 
+                        className="p-3 rounded-full bg-cyan-500 text-black hover:bg-cyan-400 transition-colors disabled:opacity-30 disabled:hover:bg-cyan-500"
+                        onClick={handleSend} 
+                        disabled={!input.trim() || isThinking}
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 }

@@ -101,7 +101,7 @@
             "tx": {
                 "from": "address:clone1",
                 "to": "sc:scheduler",
-                "function": "scheduleTask",
+                "function": "scheduleQuantumTask",
                 "arguments": [
                     "address:target_contract",
                     "str:myFunction",

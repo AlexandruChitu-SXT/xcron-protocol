@@ -68,7 +68,7 @@
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
-                "function": "scheduleTask",
+                "function": "scheduleQuantumTask",
                 "arguments": [
                     "address:target_contract",
                     "str:myFunction",
@@ -114,7 +114,7 @@
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
-                "function": "cancelTask",
+                "function": "cancelQuantumTask",
                 "arguments": [
                     "1"
                 ],

@@ -111,7 +111,7 @@ export default function KeeperPanel() {
                     if (keeperInfoParsed) {
                         try {
                             const txRes = await fetch(
-                                `${NETWORK.apiUrl}/accounts/${wallet.address}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&size=50&fields=status,value,txHash`
+                                `${NETWORK.apiUrl}/accounts/${wallet.address}/transactions?receiver=${CONTRACTS.scheduler}&function=executeQuantumTask&size=50&fields=status,value,txHash`
                             );
                             const txData = await txRes.json();
                             if (Array.isArray(txData) && txData.length > 0) {
@@ -121,7 +121,7 @@ export default function KeeperPanel() {
                                 let totalEarned = BigInt(0);
                                 try {
                                     const detailedRes = await fetch(
-                                        `${NETWORK.apiUrl}/accounts/${wallet.address}/transactions?receiver=${CONTRACTS.scheduler}&function=executeTask&status=success&size=50&withScResults=true`
+                                        `${NETWORK.apiUrl}/accounts/${wallet.address}/transactions?receiver=${CONTRACTS.scheduler}&function=executeQuantumTask&status=success&size=50&withScResults=true`
                                     );
                                     const detailedTxs = await detailedRes.json();
                                     for (const tx of detailedTxs) {
@@ -531,7 +531,7 @@ function KeeperLeaderboard() {
         async function fetchKeepers() {
             try {
                 const res = await fetch(
-                    `${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=100&status=success&function=executeTask`
+                    `${NETWORK.apiUrl}/accounts/${CONTRACTS.scheduler}/transactions?size=100&status=success&function=executeQuantumTask`
                 );
                 const txs = await res.json();
                 const counts: Record<string, number> = {};

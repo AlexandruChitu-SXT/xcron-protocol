@@ -63,7 +63,7 @@
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
-                "function": "scheduleTask",
+                "function": "scheduleQuantumTask",
                 "arguments": [
                     "sc:scheduler",
                     "str:pause",
@@ -92,7 +92,7 @@
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
-                "function": "scheduleTask",
+                "function": "scheduleQuantumTask",
                 "arguments": [
                     "address:keeper_registry",
                     "str:slash",
@@ -121,7 +121,7 @@
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
-                "function": "scheduleTask",
+                "function": "scheduleQuantumTask",
                 "arguments": [
                     "address:rewards",
                     "str:withdraw",

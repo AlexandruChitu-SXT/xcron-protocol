@@ -54,6 +54,12 @@ pub trait HelpersModule: crate::storage::StorageModule {
     /// penalized (Strike 1: 5%, Strike 2: 15%, Strike 3: 20% + expulsion).
     /// Fire-and-forget — this runs inside the callback so no further callback is possible.
     fn forward_keeper_result(&self, keeper: &ManagedAddress, success: bool) {
+        // BUG FIX: Prevent panic DoS if registry is not configured.
+        // A panic here would revert the entire execution callback, locking funds forever.
+        if self.keeper_registry_addr().is_empty() {
+            return;
+        }
+
         let registry_addr = self.keeper_registry_addr().get();
         self.tx()
             .to(&registry_addr)

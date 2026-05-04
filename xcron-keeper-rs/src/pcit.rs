@@ -62,8 +62,16 @@ impl PcitEngine {
         
         for sibling in siblings {
             let mut hasher = Sha256::new();
-            hasher.update(&current_hash);
-            hasher.update(sibling);
+            
+            // 🛡️ SECURITY MATCH: Sort lexicographically to match Smart Contract forgery protection
+            if current_hash <= *sibling {
+                hasher.update(&current_hash);
+                hasher.update(sibling);
+            } else {
+                hasher.update(sibling);
+                hasher.update(&current_hash);
+            }
+            
             current_hash = {
                 let mut out = [0; 32];
                 out.copy_from_slice(&hasher.finalize());

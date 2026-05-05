@@ -45,22 +45,22 @@ Our specialized **Rust-based Solver Network** (built on Tokio) competes to find 
 
 ## Architecture
 
-```
-┌──────────────┐     scheduleTask()     ┌──────────────────┐     async call     ┌──────────────┐
+```text
+┌──────────────┐    1. Submit Intent    ┌──────────────────┐     async call     ┌──────────────┐
 │   Frontend   │ ────────────────────►  │    Scheduler     │ ─────────────────► │   Target     │
 │  (React/TS)  │   deposit EGLD         │  Smart Contract  │   callback verify  │   Contract   │
 └──────────────┘                        └────────┬─────────┘                    └──────────────┘
                                                  │
                               ┌──────────────────┤
                               │                  │
-                     executeTask()          fees/rewards
+                     2. executeIntent()     fees/rewards
                               │                  │
                     ┌─────────▼────────┐  ┌──────▼───────────┐
-                    │   Keeper Bot     │  │     Rewards      │
-                    │   (TypeScript)   │  │  Smart Contract  │
+                    │ XSE Protocol TEE │  │     Rewards      │
+                    │  (Rust / Tokio)  │  │  Smart Contract  │
                     └─────────┬────────┘  └──────────────────┘
                               │
-                     register/slash
+                     3. FIPS-204 Auth
                               │
                     ┌─────────▼────────┐
                     │  KeeperRegistry  │

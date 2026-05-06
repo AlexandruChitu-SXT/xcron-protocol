@@ -266,7 +266,7 @@ pub trait ExecutionModule:
     /// Recover tasks stuck in Executing state. Only callable by owner.
     #[endpoint(recoverStuckQuantumTask)]
     fn recover_stuck_quantum_task(&self, _task_hash: ManagedByteArray<Self::Api, 32>) {
-        // 🛡️ SECURITY PATCH (Battle of Nodes): Asynchronous Callback Griefing
+        // 🛡️ SECURITY PATCH (Performance Benchmarks): Asynchronous Callback Griefing
         // Deshabilitado: Permite a un atacante recuperar el depósito mientras la ejecución
         // asíncrona está en vuelo, provocando que el callback falle y robando ejecución a los Keepers.
         sc_panic!("Security: recoverStuckQuantumTask is disabled to prevent async callback griefing.");

@@ -27,7 +27,7 @@ XCron acts as the definitive bridge between Intent and Execution. The protocol c
 XCron V2 ships with `xcron-mcp-server`, a globally accessible plugin that exposes blockchain scheduling directly to AI Agents. Through Clone-Keys (Burner Wallets with hard spending limits), AIs can autonomously fund and schedule on-chain actions safely.
 
 ## 4. Military-Grade Security
-Built by veterans of the MultiversX *Battle of Nodes*, XCron's security architecture is mathematically impenetrable against the most aggressive state attacks:
+Built by veterans of the MultiversX *Performance Benchmarks*, XCron's security architecture is mathematically impenetrable against the most aggressive state attacks:
 
 *   **State Pruning & Zero-Bloat:** Completed or failed tasks are physically `cleared` from the blockchain state database. An attacker attempting a "Storage Bomb" will find the contract storage remains at ~0 KB indefinitely.
 *   **Anti-Spam Flat Fees:** Every intent creation locks a strict, non-refundable creation fee. Rate-limiting attacks (scheduling millions of fake tasks and cancelling them) will instantly bankrupt the attacker.

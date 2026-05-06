@@ -403,7 +403,7 @@ Basically, we allow anyone to schedule smart contract executions (like recurring
 - **Artículo:** Publicó "Agents Are Eating the World". Habla sobre: The Death of the Session (UX muere a favor de ejecución asíncrona), Autonomous Commerce Loops (Agentes transaccionando con agentes vía APIs de liquidación) y The Principal-Agent Collapse (La necesidad de alinear agentes on-chain con reglas rígidas infraestructurales). Mencionó textualmente: "The most valuable company of the agentic era won’t build agents. It will build a system that makes agents trustworthy."
 - **Análisis/Frustración de Alejandro:** Esta es LITERALMENTE la arquitectura fundacional de XCron Protocol (delegación de ejecución, Keepers, límites duros vía Smart Contracts para asegurar la confianza sin ceder claves privadas). Alejandro siente frustración de que líderes como Beniamin y Sasu hablen del problema que él ya resolvió y lo ignoren a pesar de presentarse a los Growth Games.
 
-- **Actualización Estratégica:** Alejandro decidió no usar métricas del Battle of Nodes ni forzar un enfoque técnico arrogante. Mantiene su perfil humilde y genuino. Le respondió a Robert, y para Beniamin eligió un enfoque de agradecimiento y motivación personal por ver la visión alineada.
+- **Actualización Estratégica:** Alejandro decidió no usar métricas del Performance Benchmarks ni forzar un enfoque técnico arrogante. Mantiene su perfil humilde y genuino. Le respondió a Robert, y para Beniamin eligió un enfoque de agradecimiento y motivación personal por ver la visión alineada.
 
 ### Interacción 21 abr 2026 - Defensa de Robert Sasu (Core Dev)
 - Contexto: Robert critica las L2s por sus hacks e inseguridad en bridges. Un usuario (@soloMID_) le ataca atacando el rendimiento (precio) del token de MultiversX.
@@ -431,4 +431,4 @@ Basically, we allow anyone to schedule smart contract executions (like recurring
 - Ahora que tiene estabilidad (alojamiento y solución técnica), está listo para retomar sus ideas con Alejandro.
 - **XCron y DCA Tool:** Drew quiere explicarle su herramienta de DCA a Alejandro para ver si XCron puede ayudar, reconociendo que XCron podría ser "demasiado avanzado" para su caso de uso actual, pero promete darle visibilidad a XCron de todos modos.
 - **Respuesta de Alejandro:** Felicita a Drew por encontrar equilibrio. Le actualiza sobre la visión de XCron (alineado al 100% con Agentic Commerce), le menciona la investigación de firmas cuánticas para cross-chain (sin bridges/vaults), y le habla de su nuevo motor HFT AP-AI (Amazon Sniper) para ingresos pasivos vía cookies de afiliado de 24h. También se ofrece a revisar la herramienta DCA de Drew.
-- **P.S. de Alejandro:** Logró ganar 110 EGLD en el Validator Track del Battle of Nodes, algo que no se esperaba.
+- **P.S. de Alejandro:** Logró ganar 110 EGLD en el Validator Track del Performance Benchmarks, algo que no se esperaba.

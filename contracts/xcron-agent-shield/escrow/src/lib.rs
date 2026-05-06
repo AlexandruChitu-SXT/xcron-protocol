@@ -112,7 +112,7 @@ pub trait XcronAgentShield:
             "Only AI Agent can propose"
         );
 
-        // 🛡️ SECURITY PATCH (Battle of Nodes): Prevent Limit Bypass via 0-amount raw token transfers
+        // 🛡️ SECURITY PATCH (Performance Benchmarks): Prevent Limit Bypass via 0-amount raw token transfers
         require!(
             func_name != ManagedBuffer::from(b"ESDTTransfer") &&
             func_name != ManagedBuffer::from(b"ESDTNFTTransfer") &&

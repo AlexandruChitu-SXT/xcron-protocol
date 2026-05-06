@@ -160,7 +160,7 @@ pub trait OracleModule:
         let median = self.get_median_off_chain();
 
         if median== BigUint::zero() {
-            // 🛡️ SECURITY PATCH (Battle of Nodes): Fail-Safe in case of Oracle offline
+            // 🛡️ SECURITY PATCH (Performance Benchmarks): Fail-Safe in case of Oracle offline
             return (false, u64::MAX);
         }
 

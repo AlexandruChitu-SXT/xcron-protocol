@@ -9,6 +9,7 @@ pub mod pcit;
 pub mod quantum_shield;
 pub mod event_engine;
 pub mod cex_relayer;
+pub mod dispatcher;
 
 use wallet::KeeperWallet;
 use transaction::Transaction;
@@ -189,34 +190,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     
     if cli.mode == AttackMode::XseSim {
-        println!("🚀 Iniciando Simulación de Proyecto XSE (Quantum-Sealed Enclave)...");
-        let relayer = cex_relayer::CexRelayer::new();
+        use dispatcher::{ExecutionTask, SettlementDispatcher, AIAgentDispatcher};
         
-        let drew_secrets = cex_relayer::EncryptedSecrets {
-            blob: vec![0, 1, 2, 3], 
-            enclave_pubkey_hash: "XSE_PROD_v1".to_string(),
+        println!("==================================================");
+        println!("🚀 INICIANDO NUEVA ARQUITECTURA MODULAR (WEB3 + IA)");
+        println!("==================================================");
+        
+        // 1. Cargamos una cartera de pruebas (Seguridad criptográfica)
+        let wallet = KeeperWallet::generate_throwaway();
+        println!("🔐 Identidad Criptográfica Generada: {}", wallet.bech32_address);
+
+        // 2. Iniciamos el Repartidor Privado (Web2/IA)
+        let ai_dispatcher = AIAgentDispatcher::new("https://api.corporate-ai.com/v1/webhook");
+        
+        // 3. Generamos una Tarea Genérica ("El Plato" Agnóstico)
+        let task = ExecutionTask {
+            task_id: format!("task_ai_{}", rand::random::<u32>()),
+            payload_bytes: b"{\"action\":\"execute_dca\",\"asset\":\"BTC\",\"amount\":50000}".to_vec(),
+            receiver: "corporate_treasury_bot".to_string(),
+            value: "0".to_string(),
+            gas_limit: 0, // Las órdenes IA no cuestan Gas
         };
 
-        let target_assets = vec![
-            "BTC".to_string(), 
-            "ETH".to_string(), 
-            "SOL".to_string(), 
-            "BNB".to_string(), 
-            "EGLD".to_string()
-        ];
-
-        // Paso 1: Simulación de Trigger de MultiversX
-        println!("📡 [MVX-OBSERVER] Detectada transferencia de 50,000 USD a Binance...");
-        
-        // Paso 2: Verificación preventiva (Ping)
-        if relayer.check_binance_health("EGLD").await {
-            // Paso 3: Ejecución en Enclave
-            match relayer.execute_reverse_dca(drew_secrets, target_assets, 50000.0).await {
-                Ok(msg) => println!("✅ {}", msg),
-                Err(e) => println!("❌ Error en Enclave: {}", e),
-            }
-        } else {
-            println!("🛑 [XSE] Abortando: La red de depósitos en Binance no es estable.");
+        // 4. El Motor despacha la orden usando la tubería VIP
+        match ai_dispatcher.dispatch(task.clone(), &wallet, 1).await {
+            Ok(receipt) => {
+                println!("\n🧾 [RECIBO FINAL DEL PASA-PLATOS]");
+                println!("    Estado: {}", receipt.status);
+                println!("    Transacción VIP ID: {}", receipt.tx_hash_or_id);
+                println!("    Peaje EGLD Pagado (Gas): {:?}", receipt.gas_used);
+                println!("==================================================");
+            },
+            Err(e) => println!("❌ Error Crítico al despachar a IA: {}", e),
         }
         
         return Ok(());

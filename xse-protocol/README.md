@@ -1,45 +1,51 @@
-# 🛡️ XSE Protocol: Quantum-Sealed API Enclaves
+# 🛡️ XCron Sovereign Enclaves (XSE): The Agentic Execution Layer
 
-> [!WARNING]
-> **DEVELOPMENT STATUS: ARCHITECTURAL PROTOTYPE**
-> This repository is currently a **simulated execution prototype**. It is **NOT yet secure for real funds**. 
-> - **Implemented:** Strict JSON Schemas for Execution Intents & Receipts, MultiversX Relayer architecture.
-> - **Simulated:** Execution Enclaves, Dry-Run order flow.
-> - **Planned:** AWS Nitro Enclave integration, Binance Testnet support, MultiversX on-chain authorization rails.
+> [!NOTE]
+> **DEVELOPMENT STATUS: ARCHITECTURAL EXPANSION (WEB3 + WEB2/IA)**
+> The protocol has officially evolved from a blockchain-only task scheduler to a **Modular Sovereign Execution Layer**. The core Rust engine now serves both Web3 networks (MultiversX) and Private Corporate AI Agents with zero gas fees.
 
-**Zero-Knowledge API Routing for MultiversX**
+**Agnostic, High-Frequency Execution for the Agentic Economy**
 
-The **XCron Sovereign Enclaves (XSE)** protocol represents the next generation of trustless, cross-chain execution. It enables automated operations on centralized platforms (like Binance) directly from the MultiversX blockchain, without ever requiring user API keys to be held in custody by a centralized server or "bot".
+The **XCron Sovereign Enclaves (XSE)** protocol represents the next generation of trustless, cross-boundary execution. It provides a mathematically secure, high-frequency backend engine capable of orchestrating complex tasks for two distinct worlds without compromising security or speed.
 
 ---
 
-## 1. The Core Problem: Centralized Custody & Expensive Bridges
+## 1. The Core Problem: The Agentic Security Wall
 
-Currently, executing an automated Dollar-Cost Averaging (DCA) or any complex trading strategy from a blockchain to a Centralized Exchange (CEX) involves two fundamentally flawed paths:
+As Artificial Intelligence evolves into autonomous agents (AutoGPT, Devin, Corporate AI), a critical infrastructure gap has emerged for Enterprises: **Execution Security**.
 
-1.  **DeFi Bridges (The Expensive Path):** Requires routing assets through vulnerable Smart Contracts, paying swap slippage and high cross-chain fees. (E.g., Moving $50,000 via traditional bridges can cost ~$230-$300 USD and introduces severe honeypot risks).
-2.  **Centralized Bots (The Security Nightmare):** Requires users to hand over their unencrypted Exchange API Keys to a centralized VPS or server. If the server is breached, the user's entire exchange balance is compromised.
+1.  **Secret Management:** Where does an AI Agent store a company's API keys, bank credentials, or trading secrets? If the agent is compromised, the company is compromised.
+2.  **Trustless Execution:** How do you allow an AI Agent to execute dynamic commands without opening a backdoor into your corporate server?
+3.  **High-Frequency Orchestration:** How do you coordinate thousands of agents asynchronously with millisecond precision?
 
-## 2. The XSE Innovation: Zero-Knowledge API Routing
+## 2. The Solution: Modular Dual-Dispatcher Architecture
 
-**XSE Protocol** solves this by packaging military-grade **Trusted Execution Environment (TEE)** technology (such as AWS Nitro Enclaves) into an accessible relayer protocol. 
+XCron solves this by abstracting the high-frequency execution engine (The Core) from the delivery mechanism (The Dispatcher). The Rust engine processes tasks with extreme concurrency and routes them via the `SettlementDispatcher` trait:
 
-XSE acts as a **Trustless Execution Bridge**:
-- We **never** store unencrypted API Keys.
-- Users encrypt their API Keys on the client side using an RSA-4096 public key.
-- The cipher text is only decrypted *inside* the hardware-isolated Enclave during the milliseconds of execution, and destroyed immediately afterward.
+### A. The Web3 Dispatcher (`MultiversXDispatcher`)
+*   Designed for public blockchain protocols.
+*   Handles Native Gas calculations, `nonce` sequencing, and Smart Contract ABI encoding.
+*   Signs payloads with standard `ed25519` cryptography.
+*   **Result:** The fastest execution relayer on the MultiversX network.
 
-## 3. Economic Impact
+### B. The Corporate AI Dispatcher (`AIAgentDispatcher`)
+*   Designed for B2B AI Agents and private Web2 infrastructure.
+*   **Zero Gas:** Executes entirely off-chain via private HTTP endpoints. The enterprise client does not need to hold or buy cryptocurrency.
+*   **Military-Grade Security:** Payloads are encrypted via authenticated `ChaCha20Poly1305` before leaving the enclave.
+*   **Anti-Replay Protection:** Injects strict `UUID v4` Idempotency Keys to prevent hackers from replaying valid AI commands (e.g., executing a $50k purchase twice).
+*   **Result:** Absolute privacy, high-speed execution, and zero-trust orchestration for Enterprise AI.
 
-By bypassing traditional DeFi bridges and executing natively via CEX APIs:
-*   **Without XSE:** around $230-$300 USD in bridge fees, gas, and DEX slippage.
-*   **With XSE:** Native EGLD transfer fee (around $0.01) + Enclave Execution fee (around $0.10). 
-*   **Total Savings:** >99.9% reduction in cross-chain friction.
+## 3. The XSE Innovation: Hardware-Isolated Enclaves
+
+Whether executing a Smart Contract or an AI HTTP Request, XSE acts as a **Sovereign Execution Bridge**:
+- We **never** store unencrypted API Keys or Corporate Secrets.
+- Secrets are encrypted on the client side and only decrypted *inside* hardware-isolated TEEs (Trusted Execution Environments, like AWS Nitro) during the milliseconds of execution.
+- The volatile RAM is cryptographically wiped immediately afterward.
 
 ## 4. How to Use This Repository
 
 This repository contains the architecture, security audit, and the core Rust enclave worker code required to deploy and verify an XSE instance.
 
-- `ARCHITECTURE.md`: Detailed hybrid data flow.
-- `SECURITY.md`: Our transparent, "zero-bullshit" security audit of the TEE vectors.
-- `src/`: The Rust-based worker daemon designed for Enclave deployment.
+- `ARCHITECTURE.md`: Detailed hybrid data flow for Web3 and Web2 dispatchers.
+- `THREAT_MODEL.md`: Our transparent, "zero-bullshit" security audit of the TEE vectors and AI Dispatcher mitigations.
+- `src/`: The Rust-based worker daemon designed for multi-role deployment.

@@ -1,4 +1,4 @@
-# XCron Protocol
+# 🛡️ XCron Protocol: The Agentic Execution Layer
 
 [![CI](https://github.com/AlexandruChitu-SXT/xcron-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexandruChitu-SXT/xcron-protocol/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -8,30 +8,27 @@
   <img src="quantum_seal.png" width="300" alt="XCron Quantum Seal" />
 </p>
 
-# 🛡️ Powered by Quantum-Sealed Hash Execution (Off-Chain ML-KEM + On-Chain SHA-256)
+# 🧠 Brain-to-Muscle Orchestration on MultiversX
 
-**Agentic Automation Protocol on MultiversX**
+**Institutional-Grade Infrastructure for Autonomous Agents**
 
-XCron is a trustless coordination layer for autonomous agents on MultiversX. Users and AI agents schedule on-chain actions — DeFi harvests, token swaps, governance votes, price-triggered trades — and a decentralized keeper network executes them on time, earning rewards for reliable service. Built for Supernova's sub-second finality.
+XCron Protocol has evolved beyond basic task automation. It is now the foundational **Sovereign Execution Layer** that bridges the gap between Artificial Intelligence (The Brain) and high-frequency blockchain settlement (The Muscle). 
 
-> **Status:** Testnet Live · Supernova-Ready · 100% On-Chain Data
+We provide the secure, trustless substrate allowing Corporate AI Agents to execute complex financial intents on MultiversX with sub-300ms finality, entirely protected by Post-Quantum Cryptography and strict anti-hallucination firewalls.
+
+> **Status:** Mainnet Integration Phase · Supernova-Ready · Agentic Escrow Live
 >
-> 🌐 **Live Demo:** [xcron.io](https://xcron.io) · [mvxcron.com](https://mvxcron.com)
+> 🌐 **Portal:** [xcron.io](https://xcron.io) · **Terminal:** [mvxcron.com](https://mvxcron.com)
 
 ---
 
-## What It Does
+## ⚡ The Agentic Engine
 
-You tell XCron _what_ to execute and _when_. Autonomous keepers handle the rest.
+You provide the *Intent*. The XSE (XCron Sovereign Enclaves) Rust Engine handles the rest.
 
-- **"Claim my staking rewards every day"** → XCron does it automatically
-- **"Swap EGLD to USDC if price drops below $3.50"** → On-chain oracle price triggers
-- **"Auto-compound my DeFi position weekly"** → Set and forget
-- **AI agents schedule tasks via SDK** → Agentic commerce on MultiversX
-
-No servers needed. No cron jobs. Fully on-chain, trustless, and decentralized.
-
----
+- **Dual-LLM Frontend:** Users express natural language intents (e.g., *"Maximize my EGLD yield this week"*).
+- **Anti-Hallucination Proxy:** The `xcron-agent-proxy` cryptographically validates the AI intent, stripping invalid contracts and enforcing hard withdrawal limits.
+- **Sovereign Execution:** The local Rust engine acts autonomously, evaluating market conditions and settling transactions securely on-chain.
 
 ## 🌟 Vanguard V2: XCron Intents (Pillar A) - LIVE
 

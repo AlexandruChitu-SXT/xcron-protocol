@@ -78,7 +78,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
     const toastIdRef = useRef(0);
 
-    // 🛡️ XCRON-PROTECT: Vector 13 Fix - RAM Only PEM Storage
+    // 🛡️ XCRON-PROTECT: RAM Only PEM Storage
     // Storing a plaintext Private Key in sessionStorage is an XSS suicide.
     // Any compromised NPM package or XSS injection could steal the `.pem` file.
     // We force the key to exist ONLY in React's volatile memory.

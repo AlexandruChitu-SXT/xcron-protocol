@@ -9,10 +9,10 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedSecrets {
     pub blob: Vec<u8>,
-    pub enclave_attestation_signature: String, // 🛡️ Vector 11 Fix: Must be a cryptographic signature, not a string
+    pub enclave_attestation_signature: String, // 🛡️ SECURITY: Must be a cryptographic signature, not a simple string
 }
 
-/// 🛡️ XCRON-PROTECT: Vector 10 Fix - Volatile Memory Wiping
+/// 🛡️ XCRON-PROTECT: Volatile Memory Wiping
 /// API Keys MUST be securely wiped from RAM the microsecond they are dropped.
 /// Cold-Boot attacks or Memory Dumps could extract these keys otherwise.
 #[derive(Zeroize, ZeroizeOnDrop)]
@@ -80,7 +80,7 @@ impl CexRelayer {
     }
 
     async fn decrypt_secrets(&self, secrets: EncryptedSecrets) -> Result<PlaintextApiKeys, String> {
-        // 🛡️ XCRON-PROTECT: Vector 11 Fix - Cryptographic Attestation
+        // 🛡️ XCRON-PROTECT: Cryptographic Attestation
         // In a real TEE (like AWS Nitro), the enclave generates a cryptographic attestation document
         // signed by the hardware hypervisor. A simple string match "XSE_PROD_v1" is vulnerable to spoofing.
         if secrets.enclave_attestation_signature.len() < 64 {

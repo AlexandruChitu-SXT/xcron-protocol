@@ -135,6 +135,15 @@ async fn analyze_target(tx_data: &MempoolTransaction, target_dex: &str, tx: &mps
                 let parts: Vec<&str> = decoded_str.split('@').collect();
                 if parts.len() >= 3 {
                     let amount_hex = parts[2];
+                    
+                    // 🛡️ XCRON-PROTECT: Vector 20 Fix - Mempool Parsing Bomb (OOM)
+                    // An attacker could send a 1GB malicious hex string in the memo. 
+                    // `BigUint::parse_bytes` would try to allocate RAM for it and crash the Keeper (OOM).
+                    if amount_hex.len() > 64 {
+                        println!("🛡️ [SECURITY] Blocked malicious OOM payload (hex too large)");
+                        return;
+                    }
+
                     if let Some(amount_wei) = num_bigint::BigUint::parse_bytes(amount_hex.as_bytes(), 16) {
                         let threshold = num_bigint::BigUint::parse_bytes(b"4563918244F40000", 16).unwrap_or_default(); // 5 * 10^18 en Hex 
 

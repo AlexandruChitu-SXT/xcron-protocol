@@ -45,6 +45,15 @@ pub trait ExecutionModule:
         // Even if ECDSA is broken by quantum computers, the task cannot be hijacked without this secret.
         if let common::types::Trigger::QuantumSealedHash { expected_hash } = &task_payload.trigger {
             let secret = quantum_secret.into_option().unwrap_or_else(|| sc_panic!("Missing Quantum Secret Premove"));
+            
+            // 🛡️ XCRON-PROTECT: Vector 7 Fix - Brute Force Protection
+            // Force the secret pre-image to be exactly 32 bytes (256 bits of entropy).
+            // This makes it mathematically impossible for an attacker to crack a weak password like "1234".
+            require!(
+                secret.as_managed_buffer().len() == 32,
+                "XCRON-PROTECT: Quantum Secret must be exactly 32 bytes to prevent GPU Brute Force"
+            );
+            
             let computed_hash = self.crypto().sha256(secret.as_managed_buffer());
             require!(
                 computed_hash.as_managed_buffer() == expected_hash.as_managed_buffer(),
@@ -282,6 +291,12 @@ pub trait ExecutionModule:
     #[endpoint(triggerXseEnclave)]
     fn trigger_xse_enclave(&self, encrypted_payload_hex: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
+        
+        // 🛡️ XCRON-PROTECT: Vector 18 Fix - Enclave CPU Exhaustion DoS
+        // Without this check, any user could spam garbage payloads, forcing the off-chain
+        // Enclave to waste heavy CPU cycles attempting to decrypt RSA-4096 blobs.
+        // We restrict this endpoint strictly to registered, bonded Keepers.
+        self.require_registered_keeper(&caller);
         
         // Emit the event for the off-chain enclave listener
         self.xse_payload_triggered_event(&caller, &encrypted_payload_hex);

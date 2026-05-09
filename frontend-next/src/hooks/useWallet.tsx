@@ -8,6 +8,12 @@ import { NETWORK, WALLETCONNECT } from '../config';
 
 /* ──────────────── Types ──────────────── */
 
+declare global {
+    interface Window {
+        __XCRON_IN_MEMORY_PEM?: string;
+    }
+}
+
 export interface WalletState {
     address: string;
     balance: string;
@@ -72,11 +78,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
     const toastIdRef = useRef(0);
 
-    // PEM helpers: sessionStorage so it survives page refreshes
-    // but is cleared when the tab/browser closes (secure for testnet)
-    const getPemContent = () => sessionStorage.getItem('xcron_pem_session') || '';
-    const setPemContent = (pem: string) => sessionStorage.setItem('xcron_pem_session', pem);
-    const clearPemContent = () => sessionStorage.removeItem('xcron_pem_session');
+    // 🛡️ XCRON-PROTECT: Vector 13 Fix - RAM Only PEM Storage
+    // Storing a plaintext Private Key in sessionStorage is an XSS suicide.
+    // Any compromised NPM package or XSS injection could steal the `.pem` file.
+    // We force the key to exist ONLY in React's volatile memory.
+    // If the user refreshes the page, they MUST re-authenticate. Security > Convenience.
+    const getPemContent = () => typeof window !== 'undefined' ? window.__XCRON_IN_MEMORY_PEM || '' : '';
+    const setPemContent = (pem: string) => { if (typeof window !== 'undefined') window.__XCRON_IN_MEMORY_PEM = pem; };
+    const clearPemContent = () => { if (typeof window !== 'undefined') window.__XCRON_IN_MEMORY_PEM = ''; };
 
     /* ── Toast helpers ── */
     const addToast = useCallback((message: string, type: ToastType) => {

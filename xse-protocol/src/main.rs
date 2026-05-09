@@ -43,8 +43,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. VALIDATION & SECURITY CHECKS
     println!("🔎 [VALIDATOR] Validating intent constraints and quantum signatures...");
     // Simulate a valid quantum signature (ML-DSA FIPS-204) attached by the Keeper
-    let mock_quantum_sig = vec![0x01, 0x02, 0x03, 0x04];
-    match validate_intent(&intent, Some(&mock_quantum_sig)) {
+    // 🛡️ XCRON-PROTECT: Replaced mock signature with REAL FIPS-204 Keypair generation and signing
+    let (real_pk, real_sk) = pqcrypto_dilithium::dilithium2::keypair();
+    let payload_to_sign = format!("execute_task_{}", intent.client_reference_id).into_bytes();
+    
+    // Keeper signs the payload
+    let real_signature = pqcrypto_dilithium::dilithium2::detached_sign(&payload_to_sign, &real_sk);
+    let real_quantum_sig_bytes = pqcrypto_traits::sign::DetachedSignature::as_bytes(&real_signature).to_vec();
+    let real_pubkey_bytes = pqcrypto_traits::sign::PublicKey::as_bytes(&real_pk).to_vec();
+
+    match validate_intent(&intent, Some(&real_quantum_sig_bytes)) {
         Ok(_) => println!("✅ [VALIDATOR] Intent mathematically validated. Constraint limits verified."),
         Err(e) => {
             println!("❌ [VALIDATOR] {}", e);
@@ -53,11 +61,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // 3. POST-QUANTUM ON-CHAIN AUTHORIZATION (FIPS-204 / ML-DSA)
-    let mock_ml_dsa_pubkey = vec![0u8; 1312]; // ML-DSA-44 public key size
-    let payload_to_sign = format!("execute_task_{}", intent.client_reference_id).into_bytes();
-
     println!("🌌 [QUANTUM-SHIELD] Bypassing Ed25519. Verifying FIPS-204 ML-DSA Post-Quantum Signature...");
-    match verify_post_quantum_authorization(&payload_to_sign, &mock_quantum_sig, &mock_ml_dsa_pubkey) {
+    match verify_post_quantum_authorization(&payload_to_sign, &real_quantum_sig_bytes, &real_pubkey_bytes) {
         Ok(_) => println!("✅ [QUANTUM-SHIELD] FIPS-204 ML-DSA Signature valid. Execution authorized."),
         Err(e) => {
             println!("❌ [QUANTUM-SHIELD] {}", e);

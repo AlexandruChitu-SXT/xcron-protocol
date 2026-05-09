@@ -76,6 +76,29 @@ impl SettlementDispatcher for MultiversXDispatcher {
         tx.sign(&wallet.signing_key)?;
         let tx_hash = self.network.broadcast_tx(&tx).await?;
         
+        // 🛡️ XCRON-PROTECT: Vector 8 Fix - Supernova Finality Watcher (Sub-second Rollback Defense)
+        // Since Supernova provides ~88ms finality, we DO NOT need a heavy RocksDB database to track 12-second windows.
+        // We can confidently use an asynchronous RAM loop to verify finality before generating the Receipt.
+        let mut is_finalized = false;
+        for attempt in 1..=5 {
+            // Wait for Supernova consensus (100ms per ping)
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            
+            // Poll the status from the network
+            if let Ok(status) = self.network.fetch_tx_status(&tx_hash).await {
+                if status == "success" {
+                    is_finalized = true;
+                    break;
+                } else if status == "invalid" || status == "dropped" || status == "fail" {
+                    return Err(format!("Hyperblock rejected the transaction: {}", status).into());
+                }
+            }
+        }
+        
+        if !is_finalized {
+            return Err("Transaction broadcasted but Supernova finality could not be verified in time. Queued for retry.".into());
+        }
+        
         Ok(DispatchReceipt {
             status: "success".to_string(),
             tx_hash_or_id: tx_hash,
@@ -108,9 +131,22 @@ impl AIAgentDispatcher {
             .build()
             .expect("Fallo crítico al inicializar cliente HTTPS seguro");
 
-        // Llave pre-compartida (En producción esto viene del Enclave)
-        let shared_secret = b"xse_military_grade_encryption_32"; // 32 bytes exactos
-        let key = Key::from_slice(shared_secret);
+        // 🛡️ XCRON-PROTECT: Shared secret loaded from environment (NEVER hardcoded)
+        // Set via: export XSE_SHARED_SECRET=<64-char-hex-string>
+        // Or load from .secrets/xse_shared_secret.hex
+        let shared_secret_hex = std::env::var("XSE_SHARED_SECRET")
+            .or_else(|_| {
+                // Fallback: try loading from .secrets file
+                std::fs::read_to_string(".secrets/xse_shared_secret.hex")
+                    .map(|s| s.trim().to_string())
+            })
+            .expect("FATAL: XSE_SHARED_SECRET env var not set and .secrets/xse_shared_secret.hex not found. Cannot start without encryption key.");
+        
+        let secret_bytes = hex::decode(&shared_secret_hex)
+            .expect("FATAL: XSE_SHARED_SECRET must be a valid 64-character hex string (32 bytes)");
+        assert_eq!(secret_bytes.len(), 32, "FATAL: XSE_SHARED_SECRET must be exactly 32 bytes (64 hex chars)");
+        
+        let key = Key::from_slice(&secret_bytes);
         let cipher = ChaCha20Poly1305::new(key);
 
         Self {

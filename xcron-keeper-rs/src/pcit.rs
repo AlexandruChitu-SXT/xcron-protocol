@@ -24,6 +24,8 @@ impl PcitLeaf {
         
         // 3. Target Args (each iterated and raw byte appended)
         for arg in &self.target_args {
+            // 🛡️ XCRON-PROTECT: Boundary Collision Fix. MultiversX top_encode uses u32 BE length prefixes.
+            buf.extend_from_slice(&(arg.len() as u32).to_be_bytes());
             buf.extend_from_slice(arg);
         }
         

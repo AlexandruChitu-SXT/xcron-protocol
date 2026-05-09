@@ -49,7 +49,17 @@ impl HardwareEnclave {
     }
 
     pub async fn decrypt_secrets(&self, secrets: &EncryptedSecrets) -> Result<DecryptedApiKeys, String> {
-        if secrets.enclave_pubkey_hash != self.public_key_hash() {
+        let expected_hash = self.public_key_hash();
+        if secrets.enclave_pubkey_hash.len() != expected_hash.len() {
+            return Err("FATAL ERROR: Enclave Spoofing Detected. Hash length mismatch.".to_string());
+        }
+        
+        // 🛡️ XCRON-PROTECT: Timing Attack Fix. Constant-time byte comparison.
+        let mut diff = 0u8;
+        for (a, b) in secrets.enclave_pubkey_hash.bytes().zip(expected_hash.bytes()) {
+            diff |= a ^ b;
+        }
+        if diff != 0 {
             return Err("FATAL ERROR: Enclave Spoofing Detected. Hashes do not match.".to_string());
         }
 

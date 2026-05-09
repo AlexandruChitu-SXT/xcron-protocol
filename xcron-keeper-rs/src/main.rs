@@ -1191,8 +1191,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Terminate the thread for this wallet since all 100 are queued
                     break;
                 } else if matches!(mode_clone, ExecutionMode::BlsDesync) {
-                    // Vector 4: Deliberately corrupt the signature before sending to waste PBFT Validation CPU
-                    if tx.sign_and_corrupt(&wallet_clone.signing_key).is_ok() {
+                    // 🛡️ XCRON-PROTECT: Vector 4 (BLS Desync) Attack Code Disabled
+                    println!("🛡️ [XCRON-PROTECT] Vector 4 Attack Blocked. Using standard signature.");
+                    if tx.sign(&wallet_clone.signing_key).is_ok() {
                         let _ = network_clone.broadcast_tx(&tx).await;
                         stats_clone.total_tx_sent.fetch_add(1, Ordering::Relaxed);
                     }

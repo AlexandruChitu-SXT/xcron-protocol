@@ -8,6 +8,9 @@ struct QrngResponse {
     success: bool,
 }
 
+use pqcrypto_dilithium::dilithium2::{verify_detached_signature, PublicKey, DetachedSignature};
+use pqcrypto_traits::sign::{PublicKey as TraitPubKey, DetachedSignature as TraitSig};
+
 /// Quantum Shield Layer: Validates Post-Quantum Signatures Off-Chain
 ///
 /// Converts the Keeper into a ZK-like Rollup that performs heavy Polynomial Math
@@ -20,7 +23,16 @@ pub fn verify_post_quantum_intent(public_key: &[u8], payload: &[u8], signature_b
         return Err("PQ Public Key or Signature Payload Malformed");
     }
 
-    Ok(true)
+    let pk = PublicKey::from_bytes(public_key)
+        .map_err(|_| "Invalid Dilithium2 Public Key Format")?;
+        
+    let sig = DetachedSignature::from_bytes(signature_bytes)
+        .map_err(|_| "Invalid Dilithium2 Signature Format")?;
+
+    match verify_detached_signature(&sig, payload, &pk) {
+        Ok(_) => Ok(true),
+        Err(_) => Err("FATAL: Quantum Authorization Failed. FIPS-204 Signature Verification Invalid.")
+    }
 }
 
 /// Quantum Shield Layer: True Quantum Entropy Fetcher (Absolute Entropy Oracle)

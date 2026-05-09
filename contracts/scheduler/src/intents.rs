@@ -253,7 +253,11 @@ pub trait IntentsModule:
         let _ = target_contract.top_encode(&mut encoded_leaf);
         let _ = target_endpoint.top_encode(&mut encoded_leaf);
         for arg in target_args.iter() {
-            let _ = arg.top_encode(&mut encoded_leaf);
+            // 🛡️ XCRON-PROTECT: Boundary Collision Fix (Sync con pcit.rs)
+            // Se inyecta el tamaño exacto del argumento en 4 bytes para blindar el Merkle Tree.
+            let len_bytes = (arg.len() as u32).to_be_bytes();
+            encoded_leaf.append(&ManagedBuffer::from(&len_bytes[..]));
+            encoded_leaf.append(&arg);
         }
         let _ = expected_token_out.top_encode(&mut encoded_leaf);
         let _ = min_return.top_encode(&mut encoded_leaf);

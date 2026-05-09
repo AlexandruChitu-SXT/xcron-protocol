@@ -30,8 +30,9 @@ pub async fn start_event_engine(tasks: Vec<InternalTriggerMetadata>) {
         .build()
         .expect("Error initializing HTTP client for Event Engine");
 
-    // En un entorno de producción real, usaríamos Proxy o Observer local.
-    let api_base = "https://devnet-api.multiversx.com";
+    // 🛡️ XCRON-PROTECT: API base loaded from environment (never hardcoded to a single network)
+    let api_base = std::env::var("MULTIVERSX_API_URL")
+        .unwrap_or_else(|_| "https://testnet-api.multiversx.com".to_string());
 
     loop {
         for task in &tasks {

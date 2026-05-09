@@ -27,14 +27,24 @@ pub fn validate_intent(intent: &ExecutionIntent, quantum_signature: Option<&[u8]
         return Err(ValidationError::WithdrawalsEnabled);
     }
     
+    // 🛡️ XCRON-PROTECT: Vector 27 Fix - NaN/Infinity Math Bomb
+    // Rust f64 allows NaN and Infinity. Malicious payloads could inject NaN to bypass
+    // numerical checks or corrupt settlement math.
+    if !intent.constraints.max_slippage_pct.is_finite() {
+        return Err(ValidationError::ExcessiveSlippage(0.0));
+    }
+    
     // 🛡️ XCRON-PROTECT: Vector 22 Fix - MEV Sandwich Vulnerability
     // A 5.0% slippage on large corporate execution intents is a goldmine for MEV bots.
     // We strictly enforce a 1.0% maximum slippage for all institutional trades.
-    if intent.constraints.max_slippage_pct > 1.0 {
+    if intent.constraints.max_slippage_pct > 1.0 || intent.constraints.max_slippage_pct < 0.0 {
         return Err(ValidationError::ExcessiveSlippage(intent.constraints.max_slippage_pct));
     }
 
     for order in &intent.orders {
+        if !order.max_quote_amount.is_finite() || order.max_quote_amount <= 0.0 {
+            return Err(ValidationError::AssetNotAllowed("INVALID_AMOUNT_NAN_OR_ZERO".to_string()));
+        }
         if !intent.constraints.allowed_assets.contains(&order.asset) {
             return Err(ValidationError::AssetNotAllowed(order.asset.clone()));
         }

@@ -37,9 +37,15 @@ impl HardwareEnclave {
     }
 
     pub fn public_key_hash(&self) -> String {
-        // Return a hash of the public key to attest to the caller
+        use sha2::{Sha256, Digest};
+        use rsa::traits::PublicKeyParts;
+        let mut hasher = Sha256::new();
         // In real AWS Nitro, this is provided by the NSM attestation document
-        "XSE_PROD_v1_AWS_NITRO_HASH".to_string() 
+        // We simulate the NSM cryptographically by hashing the enclave's public key modulus
+        let pub_key = self.private_key.to_public_key();
+        hasher.update(pub_key.n().to_bytes_be());
+        let result = hasher.finalize();
+        hex::encode(result)
     }
 
     pub async fn decrypt_secrets(&self, secrets: &EncryptedSecrets) -> Result<DecryptedApiKeys, String> {
@@ -47,8 +53,11 @@ impl HardwareEnclave {
             return Err("FATAL ERROR: Enclave Spoofing Detected. Hashes do not match.".to_string());
         }
 
-        // Decrypt the RSA-4096 blob
-        let decrypted = self.private_key.decrypt(Pkcs1v15Encrypt, &secrets.blob)
+        // 🛡️ XCRON-PROTECT: Vector 26 Fix - Cryptographic Padding Mismatch (Bleichenbacher's Oracle)
+        // PKCS1v15 is vulnerable to padding oracle attacks. We upgraded the frontend to RSA-OAEP,
+        // so the Hardware Enclave must use the exact same OAEP + SHA256 padding for decryption.
+        let padding = rsa::Oaep::new::<sha2::Sha256>();
+        let decrypted = self.private_key.decrypt(padding, &secrets.blob)
             .map_err(|_| "Failed to decrypt secrets using enclave private key".to_string())?;
 
         let decrypted_string = String::from_utf8(decrypted)

@@ -171,4 +171,7 @@ pub trait StorageModule {
     #[storage_mapper("walletCloneKeys")]
     fn wallet_clone_keys(&self, main_wallet: &ManagedAddress)
         -> UnorderedSetMapper<ManagedAddress>;
+    #[view(getAcceptedPaymentTokens)]
+    #[storage_mapper("acceptedPaymentTokens")]
+    fn accepted_payment_tokens(&self, token_identifier: &TokenIdentifier) -> SingleValueMapper<bool>;
 }

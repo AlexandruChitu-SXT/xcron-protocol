@@ -58,6 +58,18 @@ pub trait ValidationModule: crate::storage::StorageModule + crate::helpers::Help
             "S-1: Dangerous endpoint blocked"
         );
         require!(ep_slice != b"setOwner", "S-1: Dangerous endpoint blocked");
+        
+        // 🛡️ XCRON-PROTECT: Vector 23 Fix - Privilege Escalation Bypass
+        // Attackers could use upgradeFromSource or claimDeveloperRewards to hijack
+        // target contracts or drain smart contract royalties.
+        require!(
+            ep_slice != b"upgradeFromSource",
+            "S-1: Dangerous endpoint blocked"
+        );
+        require!(
+            ep_slice != b"claimDeveloperRewards",
+            "S-1: Dangerous endpoint blocked"
+        );
         require!(
             ep_slice != b"ESDTTransfer",
             "S-1: Dangerous endpoint blocked"

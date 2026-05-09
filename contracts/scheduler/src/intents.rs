@@ -37,6 +37,13 @@ pub trait IntentsModule:
         let amount_in = esdt_transfer.amount.clone();
         require!(amount_in > 0, "Amount in must be greater than 0");
         
+        // 🛡️ XCRON-PROTECT: Vector 4 Fix - Block Poisoned Tokens (ESDT Callback Griefing)
+        // Prevent malicious tokens from executing arbitrary code upon receipt
+        require!(
+            self.accepted_payment_tokens(&token_in).get(), 
+            "XCRON-PROTECT: Token is not in the strict Whitelist. Poisoned Token Attack blocked."
+        );
+        
         let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         
         // PROTECCIÓN CONTRA BUG DE TIEMPO (Milisegundos en JS vs Segundos en Rust)

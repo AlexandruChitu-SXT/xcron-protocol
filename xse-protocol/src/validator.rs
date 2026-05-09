@@ -27,7 +27,10 @@ pub fn validate_intent(intent: &ExecutionIntent, quantum_signature: Option<&[u8]
         return Err(ValidationError::WithdrawalsEnabled);
     }
     
-    if intent.constraints.max_slippage_pct > 5.0 {
+    // 🛡️ XCRON-PROTECT: Vector 22 Fix - MEV Sandwich Vulnerability
+    // A 5.0% slippage on large corporate execution intents is a goldmine for MEV bots.
+    // We strictly enforce a 1.0% maximum slippage for all institutional trades.
+    if intent.constraints.max_slippage_pct > 1.0 {
         return Err(ValidationError::ExcessiveSlippage(intent.constraints.max_slippage_pct));
     }
 

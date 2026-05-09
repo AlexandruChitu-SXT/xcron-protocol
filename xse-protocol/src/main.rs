@@ -115,6 +115,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    let receipt_hash = {
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        let orders_json = serde_json::to_string(&executed_orders).unwrap_or_default();
+        hasher.update(orders_json.as_bytes());
+        hex::encode(hasher.finalize())
+    };
+
     let receipt = ExecutionReceipt {
         client_reference_id: intent.client_reference_id.clone(),
         status: "COMPLETED".to_string(),
@@ -124,8 +132,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs().to_string(),
         proof: Proof {
             executor_id: "XSE_NODE_01".to_string(),
-            attestation_hash: "aws_nitro_attestation_base64_v1".to_string(),
-            receipt_hash: "sha256_hash_of_receipt".to_string(),
+            attestation_hash: enclave.public_key_hash(),
+            receipt_hash,
         },
     };
 

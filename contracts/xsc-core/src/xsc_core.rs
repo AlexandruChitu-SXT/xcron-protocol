@@ -78,6 +78,7 @@ pub trait XscCore {
         self.require_not_paused();
         require!(leaf.len() == 32, "Invalid Leaf Length");
         require!(packed_proof.len() % 32 == 0, "Invalid Packed Proof Length");
+        require!(packed_proof.len() <= 1024, "Proof depth exceeds maximum limit"); // MAX 32 levels
 
         let current_root = self.merkle_root().get();
         let mut computed_hash = leaf;
@@ -101,6 +102,11 @@ pub trait XscCore {
 
     fn compute_parent_hash(&self, a: &ManagedBuffer, b: &ManagedBuffer) -> ManagedBuffer {
         let mut concat = ManagedBuffer::new();
+
+        // 🛡️ PARCHE RED TEAM: Domain Separation (Prefijo 0x01 para Nodos Internos)
+        // Previene Ataques de Segunda Preimagen (falsificación de hojas con nodos internos)
+        let prefix = [0x01u8];
+        concat.append_bytes(&prefix);
 
         if self.buf_compare(a, b) <= 0 {
             concat.append(a);

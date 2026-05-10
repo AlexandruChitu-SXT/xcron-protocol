@@ -58,6 +58,44 @@ pub trait SchedulingModule:
         // S-8: Deposit cap protection
         self.require_deposit_within_cap(&deposit);
 
+        // 🛡️ XCRON-PROTECT: Vector 24 Fix - Keeper Poisoning via Gas Exhaustion
+        // If max_gas > 400M, the added 30% cross-shard overhead will push the Keeper's tx
+        // above the Network Block Limit (600M), causing the RPC to reject it.
+        require!(
+            task_payload.max_gas <= 400_000_000u64,
+            "S-15: max_gas too high, leaves no room for cross-shard overhead"
+        );
+
+        // 🛡️ XCRON-PROTECT: Vector 25 Fix - Keeper Gas Drain via u64 Overflow
+        // If a user sets ttl_seconds = u64::MAX, the execution validation `ttl_seconds * 1000` 
+        // will panic. The Keeper pays the tx gas but the contract reverts before paying the reward.
+        // We cap TTL to 5 years (157,680,000 seconds) to prevent math overflows.
+        require!(
+            task_payload.ttl_seconds <= 157_680_000u64,
+            "S-16: ttl_seconds exceeds maximum allowed (5 years)"
+        );
+
+        // 🛡️ XCRON-PROTECT: Vector 26 Fix - Malformed Timestamp Injection
+        // Since `created_at` is user-provided (Stateless Architecture), an attacker could inject
+        // u64::MAX to trigger a math overflow panic during `require_task_ripe_quantum`.
+        require!(
+            task_payload.created_at <= 200_000_000_000_000u64, // Year 8300+
+            "S-17: created_at timestamp is malformed or maliciously inflated"
+        );
+
+        // 🛡️ XCRON-PROTECT: Vector 27 Fix - Trigger Timestamp Overflow Poisoning
+        // If target_time or start_time is near u64::MAX, the `ripe_time_ms + ROUND_ROBIN_GRACE` 
+        // math will overflow and panic during execution, draining the Keeper.
+        match &task_payload.trigger {
+            common::types::Trigger::TimeOnce { target_time } => {
+                require!(*target_time <= 200_000_000_000_000u64, "S-18: target_time too large");
+            }
+            common::types::Trigger::TimeRecurring { start_time, .. } => {
+                require!(*start_time <= 200_000_000_000_000u64, "S-18: start_time too large");
+            }
+            _ => {}
+        }
+
         // Calculate the Quantum Seal (SHA-256 Hash of the serialized payload)
         // This is the ONLY thing we will store.
         let mut encoded_payload = ManagedBuffer::new();

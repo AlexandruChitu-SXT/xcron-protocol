@@ -16,8 +16,8 @@ mxpy contract call $CONTRACT_ADDRESS \
     --pem $PEM --proxy $PROXY --chain $CHAIN --gas-limit 5000000 \
     --function updateRoot --arguments $ROOT_HASH --send
 
-echo "[WAIT] Sleeping 15s for finality..."
-sleep 15
+echo "[WAIT] Sleeping 2s for finality (Supernova UX)..."
+sleep 2
 
 # 2. Verify Proof (Using the Packed Proof optimization)
 echo "[2/2] Verifying Packed Proof for Agent 777..."

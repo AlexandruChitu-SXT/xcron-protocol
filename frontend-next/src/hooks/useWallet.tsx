@@ -253,7 +253,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 }
                 const result = await broadcastResp.json();
                 addToast(`✅ Transaction sent! ${result.txHash?.slice(0, 12)}...`, 'success');
-                setTimeout(() => refreshBalance(), 6000);
+                setTimeout(() => refreshBalance(), 1500);
                 return result.txHash || null;
             } catch (err: any) {
                 devError('PEM sign failed:', err);
@@ -300,8 +300,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 const result = await broadcastResp.json();
                 addToast(`Transaction sent! Hash: ${result.txHash?.slice(0, 12)}...`, 'success');
 
-                // Auto-refresh balance after ~6s
-                setTimeout(() => refreshBalance(), 6000);
+                // Auto-refresh balance after Supernova finality (1.5s)
+                setTimeout(() => refreshBalance(), 1500);
 
                 return result.txHash || null;
             } catch (err: any) {
@@ -361,7 +361,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 const result = await broadcastResp.json();
                 addToast(`Transaction sent! Hash: ${result.txHash?.slice(0, 12)}...`, 'success');
 
-                setTimeout(() => refreshBalance(), 6000);
+                setTimeout(() => refreshBalance(), 1500);
                 return result.txHash || null;
             } catch (err: any) {
                 devError('WalletConnect sign failed:', err);

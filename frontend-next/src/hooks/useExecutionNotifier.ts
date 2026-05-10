@@ -11,7 +11,7 @@ import { devWarn } from '../utils/devLog';
  */
 export function useExecutionNotifier() {
     const { wallet, addToast } = useWallet();
-    const lastSeenTimestamp = useRef<number>(Math.floor(Date.now() / 1000));
+    const seenTxHashes = useRef<Set<string>>(new Set());
     const isFirstPoll = useRef(true);
 
     useEffect(() => {
@@ -27,17 +27,21 @@ export function useExecutionNotifier() {
 
                 // On first poll, just set the baseline
                 if (isFirstPoll.current) {
-                    lastSeenTimestamp.current = txs[0].timestamp;
+                    txs.forEach((tx: any) => seenTxHashes.current.add(tx.txHash));
                     isFirstPoll.current = false;
                     return;
                 }
 
-                // Check for new executions
-                const newExecs = txs.filter((tx: any) => tx.timestamp > lastSeenTimestamp.current);
+                // Check for new executions (Supernova fix: timestamp collisions)
+                const newExecs = txs.filter((tx: any) => !seenTxHashes.current.has(tx.txHash));
                 if (newExecs.length > 0) {
-                    lastSeenTimestamp.current = newExecs[0].timestamp;
-
                     for (const tx of newExecs) {
+                        seenTxHashes.current.add(tx.txHash);
+                        // Prevent memory leak
+                        if (seenTxHashes.current.size > 50) {
+                            const arr = Array.from(seenTxHashes.current);
+                            seenTxHashes.current = new Set(arr.slice(arr.length - 50));
+                        }
                         let taskId = '?';
                         if (tx.data) {
                             try {
@@ -60,10 +64,10 @@ export function useExecutionNotifier() {
             }
         };
 
-        // Poll every 15 seconds
-        const intervalId = setInterval(checkExecutions, 15000);
-        // First check after 5 seconds (let the page load first)
-        const initialTimeout = setTimeout(checkExecutions, 5000);
+        // Poll every 2 seconds for Supernova sub-second finality UX
+        const intervalId = setInterval(checkExecutions, 2000);
+        // First check after 1 second
+        const initialTimeout = setTimeout(checkExecutions, 1000);
 
         return () => {
             clearInterval(intervalId);

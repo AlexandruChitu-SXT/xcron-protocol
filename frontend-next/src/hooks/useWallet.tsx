@@ -10,7 +10,7 @@ import { NETWORK, WALLETCONNECT } from '../config';
 
 declare global {
     interface Window {
-        __XCRON_IN_MEMORY_PEM?: string;
+        // Removed vulnerable global PEM storage
     }
 }
 
@@ -72,20 +72,21 @@ export const useWallet = () => useContext(WalletContext);
 
 /* ──────────────── Provider ──────────────── */
 
+// 🛡️ PARCHE RED TEAM: Private Closure PEM Storage
+// Previously, the PEM was stored in `window.__XCRON_IN_MEMORY_PEM`, making it 
+// globally accessible to any XSS payload or malicious Chrome Extension.
+// We now store it in a module-level private variable. It is completely invisible to `window`.
+let _inMemoryPem = '';
+
 export function WalletProvider({ children }: { children: ReactNode }) {
     const [wallet, setWallet] = useState<WalletState>(defaultWallet);
     const [showConnectModal, setShowConnectModal] = useState(false);
     const [toasts, setToasts] = useState<Toast[]>([]);
     const toastIdRef = useRef(0);
 
-    // 🛡️ XCRON-PROTECT: RAM Only PEM Storage
-    // Storing a plaintext Private Key in sessionStorage is an XSS suicide.
-    // Any compromised NPM package or XSS injection could steal the `.pem` file.
-    // We force the key to exist ONLY in React's volatile memory.
-    // If the user refreshes the page, they MUST re-authenticate. Security > Convenience.
-    const getPemContent = () => typeof window !== 'undefined' ? window.__XCRON_IN_MEMORY_PEM || '' : '';
-    const setPemContent = (pem: string) => { if (typeof window !== 'undefined') window.__XCRON_IN_MEMORY_PEM = pem; };
-    const clearPemContent = () => { if (typeof window !== 'undefined') window.__XCRON_IN_MEMORY_PEM = ''; };
+    const getPemContent = () => _inMemoryPem;
+    const setPemContent = (pem: string) => { _inMemoryPem = pem; };
+    const clearPemContent = () => { _inMemoryPem = ''; };
 
     /* ── Toast helpers ── */
     const addToast = useCallback((message: string, type: ToastType) => {

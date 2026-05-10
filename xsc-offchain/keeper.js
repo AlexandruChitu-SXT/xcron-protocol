@@ -1,48 +1,61 @@
+/**
+ * XCron State Compression (XSC) - Keeper Server v4
+ * 
+ * This server manages off-chain state for 10,000+ records and generates
+ * 'Packed Proofs' for the institutional-grade XSC Smart Contract.
+ */
+
 const { MerkleTree } = require('merkletreejs');
-const SHA256 = require('crypto-js/sha256');
+const crypto = require('crypto');
 
-console.log("==========================================");
-console.log("🧠 XSC (XCron State Compression) - Offchain Keeper");
-console.log("==========================================\n");
-
-// 1. Imagine we have 10,000 AI Agent transactions/receipts to mint as cNFTs
-const numReceipts = 10000;
-console.log(`[1] Simulating ${numReceipts} cNFTs (Micro-receipts for Agents)...`);
-
-// Create dummy data for 10,000 cNFTs
-let receipts = [];
-for (let i = 0; i < numReceipts; i++) {
-    receipts.push(`Receipt_For_Agent_${i}_Amount_0.001_EGLD`);
+// Standard SHA-256 Hashing (Post-Quantum Resistant)
+function sha256(data) {
+    return crypto.createHash('sha256').update(data).digest();
 }
 
-// 2. Hash each receipt. The Smart Contract uses SHA256, so we must use SHA256 off-chain.
-console.log(`[2] Hashing ${numReceipts} records...`);
-const leaves = receipts.map(x => SHA256(x));
+/**
+ * Simulates a batch of 10,000 receipts/cNFTs.
+ * In production, these come from the XCron Database/Indexer.
+ */
+function generateMockState(count) {
+    let receipts = [];
+    for (let i = 0; i < count; i++) {
+        receipts.push(`Receipt_For_Agent_${i}_Amount_0.001_EGLD`);
+    }
+    return receipts;
+}
 
-// 3. Build the Merkle Tree (The "ZIP file" of the blockchain)
-// We sort pairs lexicographically to match the Smart Contract logic `is_less_than`.
-console.log(`[3] Building the Merkle Tree (Compressing state)...`);
-const tree = new MerkleTree(leaves, SHA256, { sortPairs: true });
+async function runKeeper() {
+    console.log('--- XCron Keeper v4: State Compression Engine ---');
+    
+    // 1. Generate leaves from off-chain data
+    const receipts = generateMockState(10000);
+    const leaves = receipts.map(x => sha256(x));
+    console.log(`[INFO] Compressed ${receipts.length} records into Merkle Tree.`);
 
-// 4. Extract the Root (The 32-byte hash that is sent to the MultiversX Smart Contract)
-const root = tree.getRoot().toString('hex');
-console.log(`\n✅ COMPRESSION COMPLETE!`);
-console.log(`👉 This is the MERKLE ROOT to send to the MultiversX Smart Contract:`);
-console.log(`   0x${root}\n`);
+    // 2. Build Merkle Tree with Lexicographical Sorting (matching XSC v4 Contract)
+    const tree = new MerkleTree(leaves, sha256, { sortPairs: true });
+    const root = tree.getRoot();
+    
+    console.log(`[STATE] Merkle Root: 0x${root.toString('hex')}`);
 
-// 5. Let's prove ownership for Agent #777
-const targetAgent = "Receipt_For_Agent_777_Amount_0.001_EGLD";
-const leafToProve = SHA256(targetAgent);
-const proof = tree.getProof(leafToProve);
+    // 3. Generate a proof for a specific record (e.g. Agent 777)
+    const targetAgentIndex = 777;
+    const leafToProve = sha256(receipts[targetAgentIndex]);
+    const proof = tree.getProof(leafToProve);
 
-console.log(`[4] Agent 777 wants to use their cNFT on-chain.`);
-console.log(`    Instead of sending the whole database, the Agent sends this cryptographic PROOF to the Smart Contract:\n`);
+    // 4. Pack the proof into a single hex string for the 'Packed Proof' optimization
+    const packedProof = Buffer.concat(proof.map(p => p.data)).toString('hex');
 
-// Extract just the hex data of the proof to simulate sending it to the Smart Contract
-let proofHexArray = proof.map(p => p.data.toString('hex'));
-console.log(proofHexArray);
+    console.log(`[PROOF] Proof generated for Agent ${targetAgentIndex}.`);
+    console.log(`[PROOF] Leaf: 0x${leafToProve.toString('hex')}`);
+    console.log(`[PROOF] Packed Proof (Concatenated Siblings): 0x${packedProof}`);
 
-console.log(`\n[5] Local Off-chain Verification:`);
-const isValid = tree.verify(proof, leafToProve, root);
-console.log(`    Is the proof valid mathematically? -> ${isValid ? 'YES 🛡️' : 'NO ❌'}`);
-console.log("\n==========================================");
+    // 5. Verification Check (Internal)
+    const isValid = tree.verify(proof, leafToProve, root);
+    console.log(`[DEBUG] Internal Verification: ${isValid ? 'PASSED' : 'FAILED'}`);
+    
+    console.log('\n--- Keeper Ready for Testnet Broadcast ---');
+}
+
+runKeeper().catch(console.error);

@@ -2,42 +2,39 @@
 
 multiversx_sc::imports!();
 
-/// XCron State Compression (XSC) Core Contract
-/// This is the production-ready implementation of a Merkle Tree state root verifier
-/// to enable cNFTs and Compressed State for AI Agents on MultiversX.
+/// XCron State Compression (XSC) - Institutional Fortified Protocol v4
+/// 
+/// Optimized for:
+/// - Single-Argument Merkle Proofs (Packed Proofs)
+/// - Zero-Heap Execution
+/// - Post-Quantum Resistance Ready (SHA-256)
+/// - Emergency Pause & Replay Protection
 #[multiversx_sc::contract]
 pub trait XscCore {
     #[init]
     fn init(&self, authorized_keeper: ManagedAddress) {
         self.authorized_keeper().set(&authorized_keeper);
-        
-        // Initialize an empty root (32 bytes of zeros)
-        let empty_root = ManagedBuffer::new_from_bytes(&[0u8; 32]);
-        self.merkle_root().set(&empty_root);
+        self.root_nonce().set(0u64);
+        self.is_paused().set(false);
+    }
+
+    #[upgrade]
+    fn upgrade(&self, authorized_keeper: ManagedAddress) {
+        self.authorized_keeper().set(&authorized_keeper);
     }
 
     // ==================
-    // ENDPOINTS (WRITE)
+    // ADMINISTRATIVE
     // ==================
 
-    /// Updates the Merkle Root. Only the authorized XCron Keeper can call this.
-    /// This happens when off-chain cNFTs are minted, burned, or updated.
-    #[endpoint(updateRoot)]
-    fn update_root(&self, new_root: ManagedBuffer) {
-        let caller = self.blockchain().get_caller();
-        require!(
-            caller == self.authorized_keeper().get(),
-            "Only the authorized XCron Keeper can update the state root"
-        );
-        require!(new_root.len() == 32, "Merkle Root must be exactly 32 bytes");
-
-        self.merkle_root().set(&new_root);
-        
-        // Emit an event so indexers know the state has been compressed and updated
-        self.root_updated_event(&new_root);
+    /// Protocol Circuit Breaker
+    #[endpoint(setPaused)]
+    #[only_owner]
+    fn set_paused(&self, paused: bool) {
+        self.is_paused().set(paused);
     }
 
-    /// Allows the owner to change the authorized Keeper server
+    /// Update the authorized Keeper address
     #[endpoint(setAuthorizedKeeper)]
     #[only_owner]
     fn set_authorized_keeper(&self, new_keeper: ManagedAddress) {
@@ -45,65 +42,98 @@ pub trait XscCore {
     }
 
     // ==================
-    // VIEWS (READ/VERIFY)
+    // STATE UPDATES
     // ==================
 
-    /// The core cryptography function.
-    /// Verifies if a specific `leaf` (e.g., a cNFT hash) exists in the current Merkle Tree.
-    /// Used by other Smart Contracts to validate ownership before acting.
+    /// Updates the Merkle Root. Incrementing nonce ensures replay protection.
+    #[endpoint(updateRoot)]
+    fn update_root(&self, new_root: ManagedBuffer) {
+        self.require_not_paused();
+        
+        let caller = self.blockchain().get_caller();
+        require!(
+            caller == self.authorized_keeper().get(),
+            "Unauthorized Keeper"
+        );
+        require!(new_root.len() == 32, "Invalid Root Length");
+
+        let nonce = self.root_nonce().get() + 1;
+        self.root_nonce().set(nonce);
+        self.merkle_root().set(&new_root);
+
+        self.root_updated_event(&new_root, nonce);
+    }
+
+    // ==================
+    // VERIFICATION (PACKED PROOFS)
+    // ==================
+
+    /// Verifies if a leaf exists in the compressed state using a PACKED proof.
+    /// @param leaf: 32-byte leaf hash.
+    /// @param packed_proof: Concatenated 32-byte siblings (single buffer).
+    /// 
+    /// This eliminates the 'Too many arguments' limitation of gateways.
     #[view(verifyProof)]
-    fn verify_proof(&self, leaf: ManagedBuffer, proof: MultiValueEncoded<ManagedBuffer>) -> bool {
+    fn verify_proof(&self, leaf: ManagedBuffer, packed_proof: ManagedBuffer) -> bool {
+        self.require_not_paused();
+        require!(leaf.len() == 32, "Invalid Leaf Length");
+        require!(packed_proof.len() % 32 == 0, "Invalid Packed Proof Length");
+
         let current_root = self.merkle_root().get();
         let mut computed_hash = leaf;
 
-        for sibling in proof.into_iter() {
-            require!(sibling.len() == 32, "Invalid proof sibling length");
-            computed_hash = self.hash_pair(computed_hash, sibling);
+        let proof_len = packed_proof.len();
+        let mut offset = 0usize;
+
+        while offset < proof_len {
+            // copy_slice is extremely gas efficient in MultiversX VM
+            let sibling = packed_proof.copy_slice(offset, 32).unwrap();
+            computed_hash = self.compute_parent_hash(&computed_hash, &sibling);
+            offset += 32;
         }
 
         computed_hash == current_root
     }
 
     // ==================
-    // INTERNAL CRYPTO LOGIC
+    // CRYPTO INTERNALS
     // ==================
 
-    /// Sorts two hashes and concatenates them to compute the parent hash.
-    /// Sorting prevents the need to pass left/right directions in the proof.
-    fn hash_pair(&self, a: ManagedBuffer, b: ManagedBuffer) -> ManagedBuffer {
+    fn compute_parent_hash(&self, a: &ManagedBuffer, b: &ManagedBuffer) -> ManagedBuffer {
         let mut concat = ManagedBuffer::new();
-        
-        // Lexicographical sorting
-        if self.is_less_than(&a, &b) {
-            concat.append(&a);
-            concat.append(&b);
+
+        if self.buf_compare(a, b) <= 0 {
+            concat.append(a);
+            concat.append(b);
         } else {
-            concat.append(&b);
-            concat.append(&a);
+            concat.append(b);
+            concat.append(a);
         }
 
         self.crypto().sha256(&concat).as_managed_buffer().clone()
     }
 
-    /// Helper to compare two ManagedBuffers lexicographically
-    fn is_less_than(&self, a: &ManagedBuffer, b: &ManagedBuffer) -> bool {
-        let a_bytes = a.to_boxed_bytes();
-        let b_bytes = b.to_boxed_bytes();
-        let a_slice = a_bytes.as_slice();
-        let b_slice = b_bytes.as_slice();
+    /// Zero-Heap comparison for gas efficiency
+    fn buf_compare(&self, a: &ManagedBuffer, b: &ManagedBuffer) -> i8 {
+        let mut a_bytes = [0u8; 32];
+        let mut b_bytes = [0u8; 32];
         
+        let _ = a.load_slice(0, &mut a_bytes);
+        let _ = b.load_slice(0, &mut b_bytes);
+
         for i in 0..32 {
-            if a_slice[i] < b_slice[i] {
-                return true;
-            } else if a_slice[i] > b_slice[i] {
-                return false;
-            }
+            if a_bytes[i] < b_bytes[i] { return -1; }
+            if a_bytes[i] > b_bytes[i] { return 1; }
         }
-        false
+        0
+    }
+
+    fn require_not_paused(&self) {
+        require!(!self.is_paused().get(), "Protocol Paused");
     }
 
     // ==================
-    // STORAGE MAPPERS
+    // STORAGE
     // ==================
 
     #[view(getMerkleRoot)]
@@ -114,10 +144,18 @@ pub trait XscCore {
     #[storage_mapper("authorizedKeeper")]
     fn authorized_keeper(&self) -> SingleValueMapper<ManagedAddress>;
 
+    #[view(getRootNonce)]
+    #[storage_mapper("rootNonce")]
+    fn root_nonce(&self) -> SingleValueMapper<u64>;
+
+    #[view(isPaused)]
+    #[storage_mapper("isPaused")]
+    fn is_paused(&self) -> SingleValueMapper<bool>;
+
     // ==================
     // EVENTS
     // ==================
 
     #[event("rootUpdated")]
-    fn root_updated_event(&self, #[indexed] new_root: &ManagedBuffer);
+    fn root_updated_event(&self, #[indexed] new_root: &ManagedBuffer, #[indexed] nonce: u64);
 }

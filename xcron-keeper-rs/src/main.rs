@@ -50,6 +50,10 @@ pub struct Cli {
     #[arg(long, default_value = "erd1qqqqqqqqqqqqqpgqjq6g52c9dxy7vtckspndqxhqmm0mmken7k8sahvvd5")]
     pub target_contract: String,
 
+    /// PBFT Block Period in milliseconds (6000 for Pre-Supernova, 600 or 88 for Supernova)
+    #[arg(long, default_value_t = 6000)]
+    pub block_period_ms: u64,
+
     /// Max number of wallets to use (0 = all)
     #[arg(long, default_value_t = 0)]
     pub wallets: usize,
@@ -515,6 +519,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let base_snipe_interval = cli.snipe_interval_sec;
         let snipe_interval = cli.snipe_interval_sec;
         let snipe_window = cli.snipe_window_ms;
+        let cli_block_period_ms = cli.block_period_ms;
         let cli_tps = cli.tps;
         let mixed_profile = cli.mixed_profile;
         let chain_id_for_tx = cli.chain_id.clone();
@@ -752,11 +757,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     },
                     ExecutionMode::XcronBoundary => {
                         // BLOCK BOUNDARY EXECUTION: Fire at the exact edge of block close/open
-                        // Strategy: Use block timestamp to determine position within 6s block cycle
+                        // Strategy: Use block timestamp to determine position within dynamic block cycle
                         // Last 20ms -> scheduleTask (creates task at boundary)
                         // First 20ms -> executeTask (races to execute before state confirms)
                         let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
-                        let block_period_ms: u64 = 6000; // 6s blocks pre-Supernova, 600ms post-Supernova
+                        let block_period_ms: u64 = cli_block_period_ms; // Dynamically adapted for Supernova
                         let position_in_block = now_ms % block_period_ms;
                         
                         // Only fire in the boundary windows (last 20ms or first 20ms)

@@ -157,12 +157,12 @@ impl MultiversXNetwork {
 
         let account_resp: AccountResponse = serde_json::from_str(&body)?;
         
-        if account_resp.data.is_none() {
+        if let Some(data) = account_resp.data {
+            return Ok(data.account.nonce);
+        } else {
             let err_msg = account_resp.error.unwrap_or_default();
             return Err(format!("API Error: {}", err_msg).into());
         }
-
-        Ok(account_resp.data.unwrap().account.nonce)
     }
 
     /// 🛡️ XCRON-PROTECT: Vector 8 Fix - Supernova Finality Polling
@@ -225,9 +225,10 @@ impl MultiversXNetwork {
                 if status == StatusCode::CREATED || status == StatusCode::OK {
                     let send_resp: Result<SendTxResponse, _> = serde_json::from_str(&body);
                     if let Ok(resp) = send_resp {
-                        if resp.code == Some("successful".to_string()) && resp.data.is_some() {
-                            let hash = resp.data.unwrap().txHash;
-                            return Ok::<String, String>(hash);
+                        if resp.code == Some("successful".to_string()) {
+                            if let Some(data) = resp.data {
+                                return Ok::<String, String>(data.txHash);
+                            }
                         }
                     }
                 } else if body.contains("different shard ID") {

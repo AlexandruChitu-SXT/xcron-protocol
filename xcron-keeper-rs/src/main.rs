@@ -427,7 +427,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if cli.mode == ExecutionMode::FundHydra {
         println!("💸 FUNDING HYDRA WALLETS MODE ENGAGED 💸");
-        let parent = KeeperWallet::load_pem(if std::path::Path::new("./.secrets/wallet.pem").exists() { "./.secrets/wallet.pem" } else { "../.secrets/wallet.pem" }).expect("needs wallet.pem");
+        let wallet_path = std::env::var("KEEPER_WALLET_PATH").unwrap_or_else(|_| {
+            if std::path::Path::new("./.secrets/wallet.pem").exists() {
+                "./.secrets/wallet.pem".to_string()
+            } else {
+                "../.secrets/wallet.pem".to_string()
+            }
+        });
+        let parent = KeeperWallet::load_pem(&wallet_path).expect("needs keeper wallet");
         let mut parent_nonce = network.fetch_nonce(&parent.bech32_address).await.unwrap_or(0);
         let mut f_handles = vec![];
         
@@ -978,10 +985,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             )
                         }).await.unwrap();
                         
-                        let payload_bytes = base64::Engine::decode(
+                        let tx_data = match tx.data.as_ref() {
+                            Some(d) => d,
+                            None => {
+                                println!("❌ [PCIT DEMO] No data in transaction");
+                                continue;
+                            }
+                        };
+                        let payload_bytes = match base64::Engine::decode(
                             &base64::engine::general_purpose::STANDARD,
-                            tx.data.as_ref().unwrap()
-                        ).unwrap();
+                            tx_data
+                        ) {
+                            Ok(b) => b,
+                            Err(e) => {
+                                println!("❌ [PCIT DEMO] Error al decodificar base64: {}", e);
+                                continue;
+                            }
+                        };
                         
                         (Some(payload_bytes), 30_000_000, "erd1qqqqqqqqqqqqqpgqazq2ztyyfjxgejwp0fv3xltp9xhsw9yga9kqnufeat".to_string(), "0")
                     },
@@ -1067,13 +1087,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                             let route = pool_registry.get(&opp.target_dex);
                             
-                            if route.is_none() {
-                                println!("⛔ [OMNI-RADAR] Descartando: Pool {} no enrutada o sin par WEGLD.", &opp.target_dex[..16.min(opp.target_dex.len())]);
-                                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                                continue;
-                            }
-                            
-                            let (mid_token, pool_b_bech32, endpoint_b_name) = route.unwrap();
+                            let (mid_token, pool_b_bech32, endpoint_b_name) = match route {
+                                Some(r) => r,
+                                None => {
+                                    println!("⛔ [OMNI-RADAR] Descartando: Pool {} no enrutada o sin par WEGLD.", &opp.target_dex[..16.min(opp.target_dex.len())]);
+                                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                                    continue;
+                                }
+                            };
 
                             println!("🚀 [xCron OMNI-HFT] Ruta confirmada contra: {} | Target DEX: {}", opp.victim_hash, opp.target_dex);
                             

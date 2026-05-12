@@ -31,6 +31,7 @@ pub trait KeeperRegistryContract:
         cooldown_seconds: u64,
         treasury_addr: ManagedAddress,
     ) {
+        require!(slash_pct_bps <= 10_000, "Slash percentage cannot exceed 100%");
         // L-5: Prevent deploying with zero treasury — slashed funds would be burned
         require!(!treasury_addr.is_zero(), "Treasury address cannot be zero");
 
@@ -162,8 +163,14 @@ pub trait KeeperRegistryContract:
         self.require_authorized_caller();
 
         let mut info = self.keepers(&keeper).get();
-        let slash_amount =
+        let calculated_slash =
             &info.stake * self.slash_pct_bps().get() / common::constants::BPS_DENOMINATOR;
+            
+        let slash_amount = if info.stake > calculated_slash {
+            calculated_slash
+        } else {
+            info.stake.clone()
+        };
 
         info.stake -= &slash_amount;
         info.slashed_amount += &slash_amount;
@@ -220,8 +227,15 @@ pub trait KeeperRegistryContract:
                 _ => common::constants::SLASH_STRIKE_3_BPS,    // 20%
             };
 
-            let slash_amount =
+            let calculated_slash =
                 &info.stake * slash_bps / common::constants::BPS_DENOMINATOR;
+            
+            let slash_amount = if info.stake > calculated_slash {
+                calculated_slash
+            } else {
+                info.stake.clone()
+            };
+
             info.stake -= &slash_amount;
             info.slashed_amount += &slash_amount;
 
@@ -243,8 +257,11 @@ pub trait KeeperRegistryContract:
                 }
             ));
 
-            // Strike 3: auto-expel keeper
-            if info.consecutive_failures >= common::constants::MAX_STRIKES {
+            // 🛡️ XCRON-ECONOMIC-SHIELD: Maintenance Margin Floor (75% de min_stake)
+            // Permite absorber Strike 1 (queda 95%) y Strike 2 (queda 80.75%) intactos,
+            // pero bloquea la insolvencia severa si el stake cae por debajo del umbral crítico.
+            let maintenance_threshold = self.min_stake().get() * 75u64 / 100u64;
+            if info.consecutive_failures >= common::constants::MAX_STRIKES || info.stake < maintenance_threshold {
                 info.active = false;
                 self.active_keeper_set().swap_remove(&keeper);
             }

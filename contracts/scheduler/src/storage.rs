@@ -36,6 +36,18 @@ pub trait StorageModule {
     #[storage_mapper("minDeposit")]
     fn min_deposit(&self) -> SingleValueMapper<BigUint>;
 
+    #[storage_mapper("zkVerifierAddr")]
+    fn zk_verifier_addr(&self) -> SingleValueMapper<ManagedAddress>;
+
+    #[storage_mapper("xscAddress")]
+    fn xsc_address(&self) -> SingleValueMapper<ManagedAddress>;
+
+    #[storage_mapper("usedCompressedTasks")]
+    fn used_compressed_tasks(&self, task_hash: &ManagedByteArray<32>) -> SingleValueMapper<bool>;
+
+    #[storage_mapper("assignedEnclaveKeeper")]
+    fn assigned_enclave_keeper(&self, task_hash: &ManagedByteArray<32>) -> SingleValueMapper<ManagedAddress>;
+
     #[storage_mapper("protocolFeeBps")]
     fn protocol_fee_bps(&self) -> SingleValueMapper<u64>;
 

@@ -62,6 +62,8 @@ pub trait SchedulerContract:
         min_deposit: BigUint,
         protocol_fee_bps: u64,
     ) {
+        require!(protocol_fee_bps <= 10_000, "Protocol fee cannot exceed 100%");
+        
         self.keeper_registry_addr().set(&keeper_registry);
         self.rewards_addr().set(&rewards_addr);
         self.min_deposit().set(&min_deposit);

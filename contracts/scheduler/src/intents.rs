@@ -296,7 +296,12 @@ pub trait IntentsModule:
         // but for HFT, Keeper fulfilling it atomically via `call_value` is safer).
     }
 
-    /// Internal Merkle Proof verifier
+    /// Internal Merkle Proof verifier - Institutional Core Level v4
+    /// 
+    /// Optimizations:
+    /// - Zero-Heap: No dynamic allocations during hashing.
+    /// - Domain Separation: Injects 0x01 prefix to internal nodes to prevent Second Pre-Image attacks.
+    /// - Lexicographical Sorting: Ensures canonical ordering without extra flags.
     fn verify_merkle_proof(
         &self,
         leaf_hash: ManagedByteArray<Self::Api, 32>,
@@ -305,14 +310,31 @@ pub trait IntentsModule:
     ) -> bool {
         let mut current_hash = leaf_hash;
         
+        let mut a_bytes = [0u8; 32];
+        let mut b_bytes = [0u8; 32];
+        let prefix = [0x01u8];
+
         for sibling in proof.iter() {
             let mut combined = ManagedBuffer::new();
+            combined.append_bytes(&prefix);
+
+            // Cargar hashes en la pila para comparación rápida sin BoxedBytes
+            let _ = current_hash.as_managed_buffer().load_slice(0, &mut a_bytes);
+            let _ = sibling.as_managed_buffer().load_slice(0, &mut b_bytes);
             
-            let current_bytes = current_hash.as_managed_buffer().to_boxed_bytes();
-            let sibling_bytes = sibling.as_managed_buffer().to_boxed_bytes();
-            
-            // BUG FIX: Lexicographical ordering to prevent Second Pre-Image Attacks (Merkle Forgery)
-            if current_bytes.as_slice() < sibling_bytes.as_slice() {
+            // Ordenación Lexicográfica Canónica
+            let mut is_less = false;
+            for i in 0..32 {
+                if a_bytes[i] < b_bytes[i] {
+                    is_less = true;
+                    break;
+                }
+                if a_bytes[i] > b_bytes[i] {
+                    break;
+                }
+            }
+
+            if is_less {
                 combined.append(current_hash.as_managed_buffer());
                 combined.append(sibling.as_managed_buffer());
             } else {

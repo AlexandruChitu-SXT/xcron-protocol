@@ -4,6 +4,7 @@ mod crypto;
 mod relayer;
 mod red_team;
 mod quantum_shield; // Import the new quantum shield module
+mod observer_listener; // Import the VPS network observer listener daemon module
 
 use schema::{ExecutionIntent, ExecutionReceipt, ExecutedOrder, Proof};
 use validator::validate_intent;

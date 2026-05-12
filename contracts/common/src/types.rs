@@ -149,6 +149,8 @@ pub struct QuantumTaskState<M: ManagedTypeApi> {
     pub deposit: BigUint<M>,
     /// Current lifecycle status to prevent replay attacks.
     pub status: TaskStatus,
+    /// Timestamp when execution started (for 24h safety valve).
+    pub executing_at: u64,
 }
 
 /// Current status of a task in its lifecycle.

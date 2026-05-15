@@ -128,6 +128,14 @@ pub trait StorageModule {
     #[storage_mapper("intent_by_id")]
     fn intent_by_id(&self, intent_id: u64) -> SingleValueMapper<common::types::Intent<Self::Api>>;
 
+    #[view(getMultiIntentNonce)]
+    #[storage_mapper("multi_intent_nonce")]
+    fn multi_intent_nonce(&self) -> SingleValueMapper<u64>;
+
+    #[view(getMultiIntent)]
+    #[storage_mapper("multi_intent_by_id")]
+    fn multi_intent_by_id(&self, intent_id: u64) -> SingleValueMapper<common::types::MultiIntent<Self::Api>>;
+
     // ═══════════════════════════════════════════════════════════════════
     //  PRE-COGNITIVE INTENTS STORAGE (PCIT)
     // ═══════════════════════════════════════════════════════════════════

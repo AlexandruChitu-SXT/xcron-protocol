@@ -34,6 +34,30 @@ pub struct Intent<M: ManagedTypeApi> {
     pub settled_by: Option<ManagedAddress<M>>,
 }
 
+/// A specific outcome for a MultiIntent.
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct MultiIntentOutcome<M: ManagedTypeApi> {
+    pub token_out: TokenIdentifier<M>,
+    pub min_return: BigUint<M>,
+}
+
+/// A complex Intent that allows a single input asset to be swapped for 
+/// multiple output assets atomically.
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct MultiIntent<M: ManagedTypeApi> {
+    pub id: u64,
+    pub owner: ManagedAddress<M>,
+    pub token_in: TokenIdentifier<M>,
+    pub amount_in: BigUint<M>,
+    pub outcomes: ManagedVec<M, MultiIntentOutcome<M>>,
+    pub deadline: u64,
+    pub solver_fee: BigUint<M>,
+    pub status: IntentStatus,
+    pub settled_by: Option<ManagedAddress<M>>,
+}
+
 /// Current status of an Intent.
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Debug)]

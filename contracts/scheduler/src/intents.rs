@@ -144,6 +144,132 @@ pub trait IntentsModule:
         }
     }
 
+    /// Creates a Multi-Intent, allowing one input token to be swapped for multiple output tokens.
+    #[payable("*")]
+    #[endpoint(createMultiIntent)]
+    fn create_multi_intent(
+        &self,
+        outcomes: ManagedVec<common::types::MultiIntentOutcome<Self::Api>>,
+        deadline: u64,
+        solver_fee: BigUint,
+    ) -> u64 {
+        self.require_not_paused();
+
+        let egld_payment = self.call_value().egld().clone_value();
+        require!(egld_payment == solver_fee, "XCRON-PROTECT: EGLD payment must match solver_fee");
+
+        let transfers = self.call_value().all_esdt_transfers();
+        require!(transfers.len() == 1, "Must receive exactly 1 ESDT token as input");
+        let esdt_transfer = transfers.get(0);
+        let token_in = esdt_transfer.token_identifier.clone();
+        let amount_in = esdt_transfer.amount.clone();
+        
+        require!(
+            self.accepted_payment_tokens(&token_in).get(), 
+            "XCRON-PROTECT: Input token not whitelisted"
+        );
+
+        require!(outcomes.len() > 0, "XCRON-PROTECT: Outcomes cannot be empty");
+        require!(outcomes.len() <= 5, "XCRON-PROTECT: Too many outcomes (max 5)");
+
+        // 🛡️ XCRON-PROTECT: Token Uniqueness Check
+        // Prevent solvers from being confused by duplicate tokens in a batch.
+        for i in 0..outcomes.len() {
+            let token_i = outcomes.get(i).token_out;
+            for j in (i + 1)..outcomes.len() {
+                require!(
+                    token_i != outcomes.get(j).token_out,
+                    "XCRON-PROTECT: Duplicate tokens in MultiIntent outcomes not allowed"
+                );
+            }
+        }
+
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        require!(deadline < 10_000_000_000u64, "XCRON-PROTECT: Deadline must be in seconds");
+        require!(deadline > current_time, "XCRON-PROTECT: Deadline must be in the future");
+
+        let caller = self.blockchain().get_caller();
+        let intent_id = self.multi_intent_nonce().get() + 1;
+        self.multi_intent_nonce().set(intent_id);
+
+        let intent = common::types::MultiIntent {
+            id: intent_id,
+            owner: caller,
+            token_in,
+            amount_in,
+            outcomes,
+            deadline,
+            solver_fee,
+            status: IntentStatus::Pending,
+            settled_by: None,
+        };
+
+        self.multi_intent_by_id(intent_id).set(&intent);
+        self.multi_intent_created_event(intent_id, &caller);
+        
+        intent_id
+    }
+
+    /// Revokes a Multi-Intent and refunds the input funds.
+    #[endpoint(cancelMultiIntent)]
+    fn cancel_multi_intent(&self, intent_id: u64) {
+        let mut intent = self.multi_intent_by_id(intent_id).get();
+        let caller = self.blockchain().get_caller();
+        
+        require!(intent.owner == caller, "Only owner can cancel");
+        require!(intent.status == IntentStatus::Pending, "Intent not pending");
+
+        intent.status = IntentStatus::Cancelled;
+        self.multi_intent_by_id(intent_id).set(&intent);
+
+        self.send().direct_esdt(&caller, &intent.token_in, 0, &intent.amount_in);
+        if intent.solver_fee > 0 {
+            self.send().direct_egld(&caller, &intent.solver_fee);
+        }
+    }
+
+    /// Atomically settles a Multi-Intent. The Solver must provide ALL requested output tokens.
+    #[payable("*")]
+    #[endpoint(solveMultiIntent)]
+    fn solve_multi_intent(&self, intent_id: u64) {
+        let caller = self.blockchain().get_caller();
+        self.require_registered_keeper(&caller);
+
+        let mut intent = self.multi_intent_by_id(intent_id).get();
+        require!(intent.status == IntentStatus::Pending, "XCRON-PROTECT: Intent not pending");
+        require!(
+            self.blockchain().get_block_timestamp_seconds().as_u64_seconds() <= intent.deadline,
+            "XCRON-PROTECT: Intent expired"
+        );
+
+        let payments = self.call_value().all_esdt_transfers();
+        require!(payments.len() == intent.outcomes.len(), "XCRON-PROTECT: Number of tokens doesn't match requirements");
+
+        // Verify each token matches the intent requirements in order
+        for (i, outcome) in intent.outcomes.iter().enumerate() {
+            let payment = payments.get(i);
+            require!(payment.token_identifier == outcome.token_out, "XCRON-PROTECT: Token mismatch at index {}", i);
+            require!(payment.amount >= outcome.min_return, "XCRON-PROTECT: Slippage condition failed at index {}", i);
+        }
+
+        // Settled
+        intent.status = IntentStatus::Settled;
+        intent.settled_by = Some(caller.clone());
+        self.multi_intent_by_id(intent_id).set(&intent);
+        self.multi_intent_settled_event(intent_id, &caller);
+
+        // Distribute tokens to user
+        for payment in payments.iter() {
+             self.send().direct_esdt(&intent.owner, &payment.token_identifier, 0, &payment.amount);
+        }
+
+        // Give original deposit + fee to Solver
+        self.send().direct_esdt(&caller, &intent.token_in, 0, &intent.amount_in);
+        if intent.solver_fee > 0 {
+            self.send().direct_egld(&caller, &intent.solver_fee);
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     //  PRE-COGNITIVE INTENT TREES (PCIT)
     // ═══════════════════════════════════════════════════════════════════

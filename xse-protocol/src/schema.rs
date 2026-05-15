@@ -1,6 +1,15 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct BatchExecutionIntent {
+    pub batch_id: String,
+    pub nonce: u64,
+    pub timestamp: i64,
+    pub intents: Vec<ExecutionIntent>,
+    pub atomic: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ExecutionIntent {
     pub intent_type: String,
     pub venue: String,

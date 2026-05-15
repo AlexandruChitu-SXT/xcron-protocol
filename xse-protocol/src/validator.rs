@@ -1,4 +1,5 @@
 use crate::schema::ExecutionIntent;
+use chrono::{DateTime, Utc};
 
 pub enum ValidationError {
     WithdrawalsEnabled,
@@ -6,6 +7,7 @@ pub enum ValidationError {
     AssetNotAllowed(String),
     ExcessiveSlippage(f64),
     InvalidQuantumSignature,
+    BatchSizeExceeded(usize),
 }
 
 impl std::fmt::Display for ValidationError {
@@ -16,11 +18,12 @@ impl std::fmt::Display for ValidationError {
             ValidationError::AssetNotAllowed(a) => write!(f, "Asset not in allowed_assets: {}", a),
             ValidationError::ExcessiveSlippage(s) => write!(f, "Requested slippage {}% exceeds limits", s),
             ValidationError::InvalidQuantumSignature => write!(f, "CRITICAL: FIPS-204 Quantum Signature Verification Failed"),
+            ValidationError::BatchSizeExceeded(n) => write!(f, "Batch size {} exceeds limit of 50", n),
         }
     }
 }
 
-use chrono::{DateTime, Utc};
+const MAX_BATCH_SIZE: usize = 50;
 
 pub fn validate_intent(intent: &ExecutionIntent, quantum_signature: Option<&[u8]>) -> Result<(), ValidationError> {
     if intent.constraints.allow_withdrawals {
@@ -68,6 +71,28 @@ pub fn validate_intent(intent: &ExecutionIntent, quantum_signature: Option<&[u8]
     }
 
     Ok(())
+}
+
+pub fn validate_batch(batch: &crate::schema::BatchExecutionIntent, signatures: Vec<Option<&[u8]>>) -> Result<Vec<usize>, (usize, ValidationError)> {
+    if batch.intents.len() > MAX_BATCH_SIZE {
+        return Err((0, ValidationError::BatchSizeExceeded(batch.intents.len())));
+    }
+
+    let mut valid_indices = Vec::new();
+
+    for (index, intent) in batch.intents.iter().enumerate() {
+        let sig = signatures.get(index).and_then(|s| s.as_deref());
+        match validate_intent(intent, sig) {
+            Ok(_) => valid_indices.push(index),
+            Err(e) => {
+                if batch.atomic {
+                    return Err((index, e));
+                }
+            }
+        }
+    }
+
+    Ok(valid_indices)
 }
 
 #[cfg(test)]

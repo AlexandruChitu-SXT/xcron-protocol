@@ -117,3 +117,4 @@ xcron_promo*.webp
 .netlify
 
 xcron-keeper-rs/src/bin/vector*.rs
+.xcron/

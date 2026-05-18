@@ -175,7 +175,7 @@ pub trait IntentsModule:
         // 🛡️ XCRON-PROTECT: Token Uniqueness Check
         // Prevent solvers from being confused by duplicate tokens in a batch.
         for i in 0..outcomes.len() {
-            let token_i = outcomes.get(i).token_out;
+            let token_i = outcomes.get(i).token_out.clone();
             for j in (i + 1)..outcomes.len() {
                 require!(
                     token_i != outcomes.get(j).token_out,
@@ -194,7 +194,7 @@ pub trait IntentsModule:
 
         let intent = common::types::MultiIntent {
             id: intent_id,
-            owner: caller,
+            owner: caller.clone(),
             token_in,
             amount_in,
             outcomes,

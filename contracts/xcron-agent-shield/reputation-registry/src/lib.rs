@@ -181,4 +181,38 @@ pub trait ReputationRegistry:
         // Per ERC-8004: anyone can append responses — no caller check
         self.agent_response(job_id).set(response_uri);
     }
+
+    /// Algorithmic Valuation System (AVS):
+    /// Calculates the fair value of an AI Agent NFT based on verified cash flow, expected APR, and reputation score.
+    /// Formula:
+    /// Fair Value = (Annual Earnings / Expected APR) * (Reputation Score / 100)
+    #[view(evaluateAgentFairValue)]
+    fn evaluate_agent_fair_value(
+        &self,
+        agent_nonce: u64,
+        net_monthly_earnings: BigUint,
+        expected_apr_basis_points: u32, // e.g. 1500 = 15% APR
+    ) -> BigUint {
+        require!(expected_apr_basis_points > 0, "Invalid Expected APR");
+
+        // 1. Calculate Annual Earnings: Monthly * 12
+        let annual_earnings = net_monthly_earnings * 12u32;
+
+        // 2. Base Valuation (Discounted Cash Flow approach):
+        // Base Value = (Annual Earnings * 10000) / expected_apr_basis_points
+        let base_value = (annual_earnings * 10000u32) / expected_apr_basis_points;
+
+        // 3. Adjust by Reputation Score:
+        // reputation_score is 0-100.
+        // If no reputation score is stored yet, default to 80/100 as base score.
+        let rep_score = self.reputation_score(agent_nonce).get();
+        let adjusted_score = if rep_score == 0 {
+            BigUint::from(80u32)
+        } else {
+            rep_score
+        };
+
+        // Fair Value = (Base Value * Adjusted Score) / 100
+        (base_value * adjusted_score) / 100u32
+    }
 }

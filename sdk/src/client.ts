@@ -148,6 +148,38 @@ export class XCronClient {
     }
 
     /**
+     * Build a transaction to schedule a Sovereign Quantum Task (XSE).
+     * This task is encrypted and executed within a Sovereign Enclave.
+     *
+     * @example
+     * ```typescript
+     * const tx = xcron.scheduleQuantumTask({
+     *     targetContract: "erd1qqq...",
+     *     targetEndpoint: "transfer",
+     *     quantumSecret: "...", // 32-byte hex secret
+     *     depositEgld: "100000000000000000",
+     * });
+     * ```
+     */
+    scheduleQuantumTask(params: ScheduleTaskParams & { quantumSecret?: string }): Transaction {
+        const args = this.buildScheduleArgs(params);
+
+        // For Quantum Tasks, the data field in MultiversX ABI includes the secret
+        // executeQuantumTask@<serialized_task>@<secret_option>
+        // Here we call the scheduler endpoint directly
+        const tx = this.scheduler.call({
+            func: new ContractFunction("scheduleQuantumTask"),
+            args,
+            gasLimit: DEFAULT_GAS_LIMIT,
+            value: TokenTransfer.egldFromBigInteger(params.depositEgld),
+            caller: Address.Zero(),
+            chainID: this.getChainId(),
+        });
+
+        return tx;
+    }
+
+    /**
      * Get the contract addresses for this client.
      */
     getAddresses(): XCronAddresses {

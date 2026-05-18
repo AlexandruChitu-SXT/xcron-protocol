@@ -5,7 +5,7 @@ pub enum ValidationError {
     WithdrawalsEnabled,
     Expired,
     AssetNotAllowed(String),
-    ExcessiveSlippage(f64),
+    ExcessiveSlippage(u32),
     InvalidQuantumSignature,
     BatchSizeExceeded(usize),
 }
@@ -16,7 +16,7 @@ impl std::fmt::Display for ValidationError {
             ValidationError::WithdrawalsEnabled => write!(f, "CRITICAL: allow_withdrawals must be false"),
             ValidationError::Expired => write!(f, "Intent has expired"),
             ValidationError::AssetNotAllowed(a) => write!(f, "Asset not in allowed_assets: {}", a),
-            ValidationError::ExcessiveSlippage(s) => write!(f, "Requested slippage {}% exceeds limits", s),
+            ValidationError::ExcessiveSlippage(bps) => write!(f, "Requested slippage {} bps exceeds institutional limit of 100 bps (1%)", bps),
             ValidationError::InvalidQuantumSignature => write!(f, "CRITICAL: FIPS-204 Quantum Signature Verification Failed"),
             ValidationError::BatchSizeExceeded(n) => write!(f, "Batch size {} exceeds limit of 50", n),
         }
@@ -30,23 +30,17 @@ pub fn validate_intent(intent: &ExecutionIntent, quantum_signature: Option<&[u8]
         return Err(ValidationError::WithdrawalsEnabled);
     }
     
-    // 🛡️ XCRON-PROTECT: Vector 27 Fix - NaN/Infinity Math Bomb
-    // Rust f64 allows NaN and Infinity. Malicious payloads could inject NaN to bypass
-    // numerical checks or corrupt settlement math.
-    if !intent.constraints.max_slippage_pct.is_finite() {
-        return Err(ValidationError::ExcessiveSlippage(0.0));
-    }
-    
-    // 🛡️ XCRON-PROTECT: Vector 22 Fix - MEV Sandwich Vulnerability
-    // A 5.0% slippage on large corporate execution intents is a goldmine for MEV bots.
-    // We strictly enforce a 1.0% maximum slippage for all institutional trades.
-    if intent.constraints.max_slippage_pct > 1.0 || intent.constraints.max_slippage_pct < 0.0 {
-        return Err(ValidationError::ExcessiveSlippage(intent.constraints.max_slippage_pct));
+    // 🛡️ XCRON-PROTECT: Institutional Slippage Constraint
+    // We strictly enforce a 100 bps (1.00%) maximum slippage for all institutional trades.
+    // Integer-based math prevents non-deterministic float rounding errors.
+    if intent.constraints.max_slippage_bps > 100 {
+        return Err(ValidationError::ExcessiveSlippage(intent.constraints.max_slippage_bps));
     }
 
     for order in &intent.orders {
-        if !order.max_quote_amount.is_finite() || order.max_quote_amount <= 0.0 {
-            return Err(ValidationError::AssetNotAllowed("INVALID_AMOUNT_NAN_OR_ZERO".to_string()));
+        let amount = order.max_quote_amount_atomic.parse::<u128>().unwrap_or(0);
+        if amount == 0 {
+            return Err(ValidationError::AssetNotAllowed("INVALID_AMOUNT_ZERO_OR_NON_NUMERIC".to_string()));
         }
         if !intent.constraints.allowed_assets.contains(&order.asset) {
             return Err(ValidationError::AssetNotAllowed(order.asset.clone()));
@@ -74,6 +68,13 @@ pub fn validate_intent(intent: &ExecutionIntent, quantum_signature: Option<&[u8]
 }
 
 pub fn validate_batch(batch: &crate::schema::BatchExecutionIntent, signatures: Vec<Option<&[u8]>>) -> Result<Vec<usize>, (usize, ValidationError)> {
+    // 🛡️ XCRON-PROTECT: Idempotency Enforcement
+    // Every batch must have a unique ID. The persistence layer (Smart Contract/CEX) 
+    // checks this against history to prevent replay attacks.
+    if batch.batch_id.is_empty() {
+        return Err((0, ValidationError::AssetNotAllowed("MISSING_BATCH_ID".to_string())));
+    }
+
     if batch.intents.len() > MAX_BATCH_SIZE {
         return Err((0, ValidationError::BatchSizeExceeded(batch.intents.len())));
     }
@@ -109,11 +110,11 @@ mod tests {
             orders: vec![OrderIntent {
                 side: "BUY".to_string(),
                 asset: "ETH".to_string(),
-                max_quote_amount: 100.0,
+                max_quote_amount_atomic: 100_000_000,
                 order_type: "MARKET".to_string(),
             }],
             constraints: Constraints {
-                max_slippage_pct: 1.0,
+                max_slippage_bps: 100,
                 expires_at: "2030-01-01T00:00:00Z".to_string(),
                 allowed_assets: vec!["ETH".to_string()],
                 allow_withdrawals: false,

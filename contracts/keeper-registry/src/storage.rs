@@ -48,4 +48,10 @@ pub trait StorageModule {
     /// Will be seized by the protocol once unbonding is complete.
     #[storage_mapper("slashedPendingUnbond")]
     fn slashed_pending_unbond(&self, addr: &ManagedAddress) -> SingleValueMapper<BigUint>;
+
+    /// 🛡️ V3/V5: Total EGLD committed to keepers currently in unstake cooldown.
+    /// Maintained atomically by requestUnstake (+) and withdrawStake (-).
+    /// delegateStake reads this to prevent over-delegation.
+    #[storage_mapper("totalCommittedCooldownEgld")]
+    fn total_committed_cooldown_egld(&self) -> SingleValueMapper<BigUint>;
 }

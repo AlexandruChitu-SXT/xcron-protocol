@@ -49,5 +49,5 @@ Slashed funds are permanently redirected to the Treasury, creating an ultra-defl
 
 ## 6. Strategic Roadmap (Q2 2026)
 *   **Testnet Supernova Alignment:** Deploying V2 contracts to Testnet to validate the State Pruning under real high-throughput load.
-*   **AI Arena Integration:** Connecting the `xcron-mcp-server` to Sasu Robert's Agent Arena.
+*   **AI Arena Integration:** Connecting the `xcron-mcp-server` to the MultiversX Agent Arena.
 *   **Mainnet Immutable Deploy:** Launching the Protocol natively on Mainnet with zero upgrade-keys as a public good for the MultiversX ecosystem.

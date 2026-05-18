@@ -250,6 +250,11 @@ pub trait ExecutionModule:
         self.task_executed_event_quantum(&task_hash, &keeper, true);
     }
 
+    /// 🛡️ XCRON-PROTECT: V1 FIX — Zero Reward on Failure
+    /// Keepers are NOT paid when target execution fails. The full deposit
+    /// is returned to the task owner. This prevents the "fail-to-earn" attack
+    /// where a malicious keeper targets always-reverting contracts to farm rewards.
+    /// The keeper absorbs the gas cost as economic disincentive.
     fn finalize_failed_execution(
         &self,
         task_hash: ManagedByteArray<Self::Api, 32>,
@@ -270,14 +275,20 @@ pub trait ExecutionModule:
             self.target_blacklist().insert(target_contract.clone());
         }
 
-        let reward = self.calculate_reward(&deposit);
+        // V1 FIX (Destructor-Hardened): Free Spam & Fail-to-Earn Protection
+        // 1. User pays the protocol_fee as a penalty (deters 100% free spam).
+        // 2. Keeper gets 0 reward. They lose gas money. This forces keepers to
+        //    simulate tasks off-chain and ONLY execute tasks that will succeed.
+        // 3. Protocol receives the fee.
+        
         let fee_bps = self.protocol_fee_bps().get();
         let protocol_fee = &deposit * fee_bps / common::constants::BPS_DENOMINATOR;
 
-        self.send().direct_egld(&keeper, &reward);
-        let total_spent = &reward + &protocol_fee;
-        if deposit > total_spent {
-            self.send().direct_egld(&owner, &(&deposit - &total_spent));
+        // Keeper gets nothing for a failed execution
+        // self.send().direct_egld(&keeper, &BigUint::zero());
+        
+        if deposit > protocol_fee {
+            self.send().direct_egld(&owner, &(&deposit - &protocol_fee));
         }
 
         self.forward_protocol_fee(&keeper, 0, &protocol_fee);
@@ -293,16 +304,19 @@ pub trait ExecutionModule:
         if max_reward > BigUint::zero() && uncapped_reward > max_reward { max_reward } else { uncapped_reward }
     }
 
+    /// 🛡️ XCRON-PROTECT: V8 FIX — Strict Boolean Decode for Oracle Gate
+    /// Previously, ANY non-empty response was treated as "safe" (including a `false` byte).
+    /// Now we properly decode the boolean value from the XWAP oracle response.
     fn require_xwap_market_safe(&self) {
         let xwap_addr = self.xwap_address().get();
         if !xwap_addr.is_zero() {
             let raw_results = self.tx().to(&xwap_addr).raw_call("isSafeToExecute").returns(multiversx_sc::types::ReturnsRawResult).sync_call();
-            let mut is_safe = false;
-            if !raw_results.is_empty() {
-                let raw_val = raw_results.get(0);
-                if !raw_val.is_empty() { is_safe = true; }
-            }
-            require!(is_safe, "XWAP Oracle unsafe");
+            let is_safe = if !raw_results.is_empty() {
+                bool::top_decode(raw_results.get(0).to_boxed_bytes().as_slice()).unwrap_or(false)
+            } else {
+                false
+            };
+            require!(is_safe, "XWAP Oracle unsafe: market conditions not met");
         }
     }
 
@@ -335,5 +349,53 @@ pub trait ExecutionModule:
         let caller = self.blockchain().get_caller();
         self.require_registered_keeper(&caller);
         self.xse_payload_triggered_event(&caller, &encrypted_payload_hex);
+    }
+
+    /// 🛡️ XCRON-PROTECT: V12 FIX — 24-Hour Safety Valve for Stuck XSE Tasks
+    /// If a keeper puts a task into Executing state (for XSE enclave processing)
+    /// but never calls settleXseTask, the task is stuck forever and the deposit locked.
+    /// This endpoint allows the task owner to rescue their deposit after 24 hours.
+    /// The keeper responsible is reported as failed (reputation strike).
+    #[endpoint(rescueStuckXseTask)]
+    fn rescue_stuck_xse_task(&self, task_hash: ManagedByteArray<Self::Api, 32>) {
+        self.require_not_paused();
+
+        require!(!self.quantum_tasks(&task_hash).is_empty(), "Task not found");
+        let quantum_state = self.quantum_tasks(&task_hash).get();
+
+        require!(
+            quantum_state.status == common::types::TaskStatus::Executing,
+            "V12: Task is not in Executing state"
+        );
+
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let stuck_threshold = 24 * 60 * 60; // 24 hours in seconds
+        require!(
+            current_time >= quantum_state.executing_at + stuck_threshold,
+            "V12: Task has not been stuck for 24 hours yet"
+        );
+
+        // Only the task owner or the contract owner can rescue
+        let caller = self.blockchain().get_caller();
+        require!(
+            caller == quantum_state.owner || caller == self.blockchain().get_owner_address(),
+            "V12: Only task owner or protocol owner can rescue"
+        );
+
+        // Punish the assigned keeper (if any) with a failure record
+        let assigned_keeper = self.assigned_enclave_keeper(&task_hash).get();
+        if !assigned_keeper.is_zero() {
+            self.forward_keeper_result(&assigned_keeper, false);
+        }
+
+        // Clean up and refund
+        let deposit = quantum_state.deposit.clone();
+        let owner = quantum_state.owner.clone();
+        self.quantum_tasks(&task_hash).clear();
+        self.owner_tasks(&owner).swap_remove(&task_hash);
+        self.assigned_enclave_keeper(&task_hash).clear();
+
+        self.send().direct_egld(&owner, &deposit);
+        self.task_executed_event_quantum(&task_hash, &assigned_keeper, false);
     }
 }

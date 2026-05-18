@@ -29,7 +29,7 @@ No funds-at-risk or permission-bypass vulnerabilities found.
 | Field | Detail |
 |-------|--------|
 | **Severity** | High |
-| **Location** | [validation_response](file:///Users/robertsasu/RustProjects/agentic-payments/mx-8004/validation-registry/src/lib.rs#L187-L220) |
+| **Location** | [validation_response](validation-registry/src/lib.rs#L187-L220) |
 | **Impact** | Escrow `release` is **permanently blocked** in production — no on-chain path sets `JobStatus::Verified` |
 | **Root Cause** | `validation_response` updates `ValidationRequestData` but never transitions `JobData.status` |
 | **Fix** | Add `job_mapper.update(\|job\| job.status = JobStatus::Verified)` in `validation_response` after storing the response |
@@ -42,7 +42,7 @@ No funds-at-risk or permission-bypass vulnerabilities found.
 | Field | Detail |
 |-------|--------|
 | **Severity** | Medium |
-| **Location** | [lib.rs:125](file:///Users/robertsasu/RustProjects/agentic-payments/mx-8004/escrow/src/lib.rs#L125) |
+| **Location** | [lib.rs:125](escrow/src/lib.rs#L125) |
 | **Code** | `require!(current_timestamp > escrow.deadline, ...)` |
 | **Impact** | Uses strict `>` — refund at exact deadline second is denied. Semantically ambiguous: is the deadline the last second of work, or the first second of eligibility? |
 | **Recommendation** | Consider `>=` if deadline should be inclusive. Document the convention clearly. |
@@ -52,7 +52,7 @@ No funds-at-risk or permission-bypass vulnerabilities found.
 | Field | Detail |
 |-------|--------|
 | **Severity** | Medium |
-| **Location** | [lib.rs:41-71](file:///Users/robertsasu/RustProjects/agentic-payments/mx-8004/escrow/src/lib.rs#L41-L71) |
+| **Location** | [lib.rs:41-71](escrow/src/lib.rs#L41-L71) |
 | **Impact** | Employer can set `deadline = 0`, making the escrow immediately refundable. Or set `deadline` in the past. |
 | **Recommendation** | Add `require!(deadline > current_timestamp, "Deadline must be in the future")` |
 
@@ -63,7 +63,7 @@ No funds-at-risk or permission-bypass vulnerabilities found.
 | Field | Detail |
 |-------|--------|
 | **Severity** | Low |
-| **Location** | [errors.rs](file:///Users/robertsasu/RustProjects/agentic-payments/mx-8004/escrow/src/errors.rs) |
+| **Location** | [errors.rs](escrow/src/errors.rs) |
 | **Impact** | Minor gas overhead — `&str` has UTF-8 validation. `&[u8]` is more idiomatic for MultiversX SC. |
 | **Note** | Other contracts in this workspace use `&str` too, so this is consistent. No action needed unless standardizing. |
 

@@ -3,6 +3,10 @@ name = "xcron-keeper-rs"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "xcron_keeper_rs"
+path = "src/lib.rs"
+
 [dependencies]
 base64 = "0.22.1"
 bech32 = "0.9.1"
@@ -34,14 +38,4 @@ zeroize = { version = "1.8", features = ["zeroize_derive"] }
 pqcrypto-dilithium = "0.5.0"
 pqcrypto-traits = "0.3.5"
 xse-protocol = { path = "../xse-protocol" }
-[[bin]]
-name = "vector1_deadlock"
-path = "src/bin/vector1_pbft_deadlock.rs"
 
-[[bin]]
-name = "vector2_underflow"
-path = "src/bin/vector2_rating_underflow.rs"
-
-[[bin]]
-name = "vector3_memory_bomb"
-path = "src/bin/vector3_memory_bomb.rs"

@@ -1,57 +1,12 @@
 "use client";
 
 import React from "react";
+import { CloneKeyManager } from "@/components/CloneKeyManager";
 
-export default function CloneKeysPromo() {
+export default function CloneKeysPage() {
   return (
-    <div className="relative w-full h-[500px] bg-black overflow-hidden rounded-[32px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        /* CYBERPUNK / XCRON SCENE */
-        .xcron-scene {
-          position: absolute; width: 100%; height: 100%; background: #010306; 
-          display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; color: #fff;
-        }
-        
-        /* Grid Background */
-        .xcron-scene::after {
-          content: ''; position: absolute; top:0; left:0; width: 100%; height: 100%; pointer-events: none;
-          background: linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
-          background-size: 50px 50px; z-index: -1;
-          transform: perspective(500px) rotateX(60deg) translateY(-100px) scale(3);
-          animation: gridMove 5s linear infinite;
-        }
-        @keyframes gridMove { 0% { transform: perspective(500px) rotateX(60deg) translateY(0) scale(3); } 100% { transform: perspective(500px) rotateX(60deg) translateY(50px) scale(3); } }
-
-        .xcron-title { font-size: 2.5rem; color: #00f0ff; letter-spacing: 5px; font-weight: bold; text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; opacity: 0; animation: fadeDown 1s 0.5s ease-out forwards; }
-        .clone-keys { font-size: 5rem; color: #fff; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 0 #f00, -2px -2px 0 #0ff; margin-top: 20px; animation: cyberGlitch 3s infinite; opacity: 0; animation: fadeDown 1s 1.5s ease-out forwards, cyberGlitch 3s infinite 2.5s; }
-        .subtitle { color: #88c0d0; font-size: 1.5rem; margin-top: 40px; text-transform: uppercase; letter-spacing: 3px; opacity: 0; animation: fadeUp 1.5s 2.5s ease-out forwards; }
-
-        @keyframes cyberGlitch {
-          0% { text-shadow: 2px 2px 0 #f00, -2px -2px 0 #0ff; }
-          1% { text-shadow: -5px 0 0 #f00, 5px 0 0 #0ff; }
-          2% { text-shadow: 2px 2px 0 #f00, -2px -2px 0 #0ff; }
-          100% { text-shadow: 2px 2px 0 #f00, -2px -2px 0 #0ff; }
-        }
-        @keyframes fadeDown { from { opacity: 0; transform: translateY(-50px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
-        `
-      }} />
-
-      {/* SOLE CYBERPUNK SCENE */}
-      <div className="xcron-scene font-sans">
-        <div className="text-center md:whitespace-nowrap xcron-title">DELEGATED EXECUTION</div>
-        <div className="text-center md:whitespace-nowrap clone-keys">CLONE KEYS</div>
-        <div className="text-center subtitle">Zero-Risk Delegation. Infinite Execution.</div>
-        
-        <button 
-          className="mt-16 px-10 py-4 bg-transparent border-2 border-[#00f0ff] text-[#00f0ff] font-bold tracking-widest text-lg hover:bg-[#00f0ff] hover:text-black hover:shadow-[0_0_30px_#00f0ff] transition-all duration-300 opacity-0"
-          style={{ animation: 'fadeUp 1s 4s forwards' }}
-        >
-          INITIALIZE PURCHASE
-        </button>
-      </div>
+    <div className="w-full">
+      <CloneKeyManager />
     </div>
   );
 }

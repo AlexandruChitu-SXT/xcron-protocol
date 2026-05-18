@@ -33,6 +33,7 @@ rand_core = { version = "0.6", features = ["getrandom"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
 pqcrypto-dilithium = "0.5.0"
 pqcrypto-traits = "0.3.5"
+xse-protocol = { path = "../xse-protocol" }
 [[bin]]
 name = "vector1_deadlock"
 path = "src/bin/vector1_pbft_deadlock.rs"

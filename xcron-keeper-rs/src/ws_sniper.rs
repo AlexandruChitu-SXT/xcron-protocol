@@ -101,20 +101,31 @@ pub async fn start_websocket_sniper(
 
                                             let is_swap = decoded.contains("73776170546f6b656e734669786564496e707574") // swapTokensFixedInput
                                                 || decoded.contains("73776170546f6b656e7346697865644f7574707574") // swapTokensFixedOutput
-                                                || decoded.contains("swapTokensFixedInput"); // Fallback a texto plano si MvX no lo hashea
+                                                || decoded.contains("swapTokensFixedInput");
 
-                                            if is_swap {
+                                            let is_xcron_intent = decoded.contains("6372656174654d756c7469496e707574") // createMultiIntent
+                                                || decoded.contains("createMultiIntent")
+                                                || decoded.contains("createIntent");
+
+                                            if is_swap || is_xcron_intent {
+                                                // 🛡️ XCRON-PROTECT: Anti-Spam Filter
+                                                // Ignorar transacciones con GasPrice ridículo (posible DoS)
+                                                if gas_price < 1_000_000_000 {
+                                                    continue;
+                                                }
+
                                                 total_swaps_found += 1;
 
-                                                let mut amount_info = "omni_swap".to_string();
+                                                let mut amount_info = if is_xcron_intent { "XCRON_INTENT".to_string() } else { "omni_swap".to_string() };
                                                 let parts: Vec<&str> = decoded.split('@').collect();
                                                 if parts.len() >= 3 {
                                                     amount_info = format!("payload_raw={}", decoded);
                                                 }
 
                                                 // Radar Global: No discriminamos, enviamos el objetivo al Cerebro.
-                                                // El Cerebro (main.rs) filtrará usando el HashMap de piscinas conocidas.
-                                                println!("🌐 [OMNI-RADAR] Posible Víctima | Hash: {}...{} | Target DEX: {}...",
+                                                println!("🌐 [{}] {} Detectada | Hash: {}...{} | Target: {}...",
+                                                    if is_xcron_intent { "INTENT" } else { "SWAP" },
+                                                    name_clone,
                                                     &hash[..8.min(hash.len())], 
                                                     &hash[hash.len().saturating_sub(4)..],
                                                     &receiver[..16.min(receiver.len())]
@@ -123,25 +134,32 @@ pub async fn start_websocket_sniper(
                                                 let opp = ArbitrageOpportunity {
                                                     victim_hash: hash.to_string(),
                                                     gas_price,
-                                                    target_dex: receiver.to_string(), // La piscina real
+                                                    target_dex: receiver.to_string(),
                                                     amount_in_hex: amount_info,
                                                 };
 
-                                                let _ = sender_clone.send(opp).await;
+                                                // 🛡️ XCRON-PROTECT: Atomic Handoff
+                                                // Si el canal está lleno, no bloqueamos el hilo de escaneo P2P.
+                                                // Los ataques de "Channel Clogging" se mitigan con try_send.
+                                                let _ = sender_clone.try_send(opp);
                                             }
                                     }
                                 }
-                            }
-                        }
+                             }
+                         }
                     }
-                    Err(_) => {}
+                    Err(_) => {
+                        // 🛡️ XCRON-PROTECT: Stealth Reconnect
+                        // Si un nodo falla, esperamos un tiempo aleatorio para evitar "Thundering Herd"
+                        sleep(Duration::from_millis(500)).await;
+                    }
                 }
                 
-                // Tiroteo de alta frecuencia pura: 10 milisegundos de delay (100 peticiones por segundo por hilo)
+                // Tiroteo de alta frecuencia pura: 10 milisegundos de delay
                 sleep(Duration::from_millis(10)).await;
                 
-                if poll_count % 100 == 0 { // Print cada 1 segundo (100 * 10ms)
-                    println!("📡 [{}] Mempool Scanned | Swaps en Radar: {}", name_clone, total_swaps_found);
+                if poll_count % 100 == 0 {
+                    println!("📡 [{}] Mempool Scanned | Swaps/Intents en Radar: {}", name_clone, total_swaps_found);
                 }
             }
         });

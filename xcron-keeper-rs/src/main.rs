@@ -192,6 +192,7 @@ fn generate_fuzzing_payload() -> Vec<u8> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+    let _ = env_logger::builder().filter_level(log::LevelFilter::Info).try_init();
     
     if cli.mode == ExecutionMode::XseSim {
         use dispatcher::{ExecutionTask, SettlementDispatcher, AIAgentDispatcher};
@@ -199,6 +200,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("==================================================");
         println!("🚀 INICIANDO NUEVA ARQUITECTURA MODULAR (WEB3 + IA)");
         println!("==================================================");
+        
+        // 🛡️ XCRON QUANTUM SHIELD: Generar Semilla Cuántica Híbrida en Vivo (Consenso L1 + Jitter de CPU)
+        let gateways = vec![cli.gateway.clone()];
+        let pq_seed = quantum_shield::fetch_true_quantum_entropy(&gateways).await;
+        println!("🔑 Semilla Post-Cuántica Híbrida Generada: {}", hex::encode(pq_seed));
+        println!("--------------------------------------------------");
         
         // 1. Cargamos una cartera de pruebas (Seguridad criptográfica)
         let wallet = KeeperWallet::generate_throwaway();

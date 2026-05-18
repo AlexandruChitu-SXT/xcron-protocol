@@ -9,6 +9,7 @@ wallets/
 *.keystore.json
 
 # ──────── RUST / SMART CONTRACTS ────────
+target/
 contracts/target/
 contracts/output/
 **/wasm/target/
@@ -116,3 +117,4 @@ xcron_promo*.webp
 .netlify
 
 xcron-keeper-rs/src/bin/vector*.rs
+.xcron/

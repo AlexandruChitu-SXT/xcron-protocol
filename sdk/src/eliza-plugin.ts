@@ -105,6 +105,33 @@ const scheduleTaskAction: ElizaAction = {
     },
 };
 
+const scheduleQuantumTaskAction: ElizaAction = {
+    name: "schedule_quantum_task",
+    description: "Schedule a Sovereign Quantum Task. This is a HIGH-SECURITY task executed inside a Sovereign Enclave (XSE) with Post-Quantum protection. Ideal for confidential transactions or high-value automation.",
+    parameters: {
+        targetContract: { type: "string", description: "The bech32 address (erd1qqq...) of the contract to call", required: true },
+        targetEndpoint: { type: "string", description: "The function name to call on the contract", required: true },
+        depositEgld: { type: "string", description: "Amount of EGLD to deposit for gas (e.g. '100000000000000000' = 0.1 EGLD)", required: true },
+        quantumSecret: { type: "string", description: "Optional 32-byte hex secret for the Quantum Hash Seal. If not provided, a secure one will be generated." },
+    },
+    handler: async (params, context) => {
+        const xcron = new XCronClient(context.network);
+        const tx = xcron.scheduleQuantumTask({
+            targetContract: params.targetContract,
+            targetEndpoint: params.targetEndpoint,
+            depositEgld: params.depositEgld,
+            quantumSecret: params.quantumSecret,
+            trigger: { type: "TimeOnce", targetTime: Math.floor(Date.now() / 1000) + 30 }, // Immediate quantum execution
+        });
+
+        return {
+            success: true,
+            message: `Sovereign Quantum Task prepared. This execution will be protected by the XSE Enclave and Post-Quantum signatures. Transaction ready for signing.`,
+            data: { transaction: tx.toPlainObject(), type: "quantum" },
+        };
+    },
+};
+
 const cancelTaskAction: ElizaAction = {
     name: "cancel_task",
     description: "Cancel a pending XCron task and get the deposit refunded.",
@@ -198,6 +225,7 @@ export const xcronPlugin: ElizaPlugin = {
     description: "XCron Protocol — Decentralized task automation on MultiversX. Schedule, cancel, and monitor automated smart contract calls via chat.",
     actions: [
         scheduleTaskAction,
+        scheduleQuantumTaskAction,
         cancelTaskAction,
         queryStatsAction,
         getCrossShardStatsAction,

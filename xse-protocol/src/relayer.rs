@@ -42,16 +42,18 @@ impl CexRelayer {
         enclave: &HardwareEnclave,
         encrypted_keys: &EncryptedSecrets,
         target_assets: Vec<String>,
-        amount_usd: f64,
+        amount_atomic_str: String,
     ) -> Result<String, String> {
         println!("🔒 [XSE-ENCLAVE] Initiating Hardware-Isolated Execution...");
         
+        let amount_atomic = amount_atomic_str.parse::<u128>().map_err(|_| "Invalid amount string".to_string())?;
+
         // 1. ISOLATED DECRYPTION (Never leaves the CPU cache)
         let api_keys = enclave.decrypt_secrets(encrypted_keys).await?;
         println!("🔓 [XSE-ENCLAVE] API Keys successfully decrypted into volatile RAM. Ready for execution.");
 
         // 2. EXECUTING TRADES VIA API (Zero-Knowledge Routing)
-        let amount_per_asset = amount_usd / target_assets.len() as f64;
+        let amount_per_asset_atomic = amount_atomic / target_assets.len() as u128;
         
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -59,11 +61,11 @@ impl CexRelayer {
             .as_millis();
 
         for asset in target_assets {
-            println!("🚀 [XSE-ENCLAVE] Executing Spot Buy: {} USD of {}...", amount_per_asset, asset);
+            println!("🚀 [XSE-ENCLAVE] Executing Spot Buy: {} (atomic units) of {}...", amount_per_asset_atomic, asset);
             
             // Generate HMAC-SHA256 signature for Binance API
             let query_string = format!("symbol={}&side=BUY&type=MARKET&quoteOrderQty={}&timestamp={}", 
-                asset.replace("/", ""), amount_per_asset, timestamp);
+                asset.replace("/", ""), amount_per_asset_atomic, timestamp);
             
             type HmacSha256 = Hmac<Sha256>;
             let mut mac = HmacSha256::new_from_slice(api_keys.api_secret.as_bytes())

@@ -49,6 +49,18 @@ pub trait ConfigModule: crate::storage::StorageModule {
         self.xwap_address().set(&addr);
     }
 
+    #[only_owner]
+    #[endpoint(setXscAddress)]
+    fn set_xsc_address(&self, addr: ManagedAddress) {
+        self.xsc_address().set(&addr);
+    }
+
+    #[only_owner]
+    #[endpoint(setZkVerifierAddr)]
+    fn set_zk_verifier_addr(&self, addr: ManagedAddress) {
+        self.zk_verifier_addr().set(&addr);
+    }
+
     /// Phase 1: whitelist a keeper by address.
     /// Also adds to keeper_list for round-robin task assignment.
     #[only_owner]

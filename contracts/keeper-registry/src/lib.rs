@@ -31,6 +31,7 @@ pub trait KeeperRegistryContract:
         cooldown_seconds: u64,
         treasury_addr: ManagedAddress,
     ) {
+        require!(slash_pct_bps <= 10_000, "Slash percentage cannot exceed 100%");
         // L-5: Prevent deploying with zero treasury — slashed funds would be burned
         require!(!treasury_addr.is_zero(), "Treasury address cannot be zero");
 
@@ -48,6 +49,7 @@ pub trait KeeperRegistryContract:
         self.version().update(|v| *v += 1);
         // set_if_empty: only sets values on first upgrade that adds them
         self.cooldown_seconds().set_if_empty(common::constants::UNSTAKE_COOLDOWN_SECONDS);
+        self.total_committed_cooldown_egld().set_if_empty(BigUint::zero());
     }
 
     // ── Circuit Breaker ── (provided by common::pausable::PausableModule)
@@ -105,6 +107,7 @@ pub trait KeeperRegistryContract:
     // ═══════════════════════════════════════════════════════════
 
     /// Request unstake — triggers cooldown period.
+    /// 🛡️ V3/V5: Atomically tracks committed EGLD for liquidity reserve.
     #[endpoint(requestUnstake)]
     fn request_unstake(&self) {
         self.require_not_paused();
@@ -118,10 +121,14 @@ pub trait KeeperRegistryContract:
         self.active_keeper_set().swap_remove(&caller);
         self.unstake_request_time(&caller)
             .set(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
+        
+        // V3/V5 FIX: Track committed cooldown EGLD atomically
+        self.total_committed_cooldown_egld().update(|total| *total += &info.stake);
     }
 
     /// Withdraw stake after cooldown period has elapsed.
     /// If withdrawing before 30 days since registration: 5% early exit penalty.
+    /// 🛡️ V3/V5: Atomically releases committed EGLD from liquidity reserve.
     #[endpoint(withdrawStake)]
     fn withdraw_stake(&self) {
         let caller = self.blockchain().get_caller();
@@ -135,6 +142,16 @@ pub trait KeeperRegistryContract:
             current >= request_time + self.cooldown_seconds().get(),
             "Cooldown not elapsed"
         );
+
+        // V3/V5 FIX: Release committed EGLD from cooldown tracker
+        let stake_to_release = info.stake.clone();
+        self.total_committed_cooldown_egld().update(|total| {
+            if *total >= stake_to_release {
+                *total -= &stake_to_release;
+            } else {
+                *total = BigUint::zero();
+            }
+        });
 
         // Early exit penalty: 5% if withdrawing before 30 days
         let mut amount = info.stake.clone();
@@ -162,8 +179,14 @@ pub trait KeeperRegistryContract:
         self.require_authorized_caller();
 
         let mut info = self.keepers(&keeper).get();
-        let slash_amount =
+        let calculated_slash =
             &info.stake * self.slash_pct_bps().get() / common::constants::BPS_DENOMINATOR;
+            
+        let slash_amount = if info.stake > calculated_slash {
+            calculated_slash
+        } else {
+            info.stake.clone()
+        };
 
         info.stake -= &slash_amount;
         info.slashed_amount += &slash_amount;
@@ -174,11 +197,27 @@ pub trait KeeperRegistryContract:
             self.active_keeper_set().swap_remove(&keeper);
         }
 
+        // V3/V5 FIX (Destructor-Hardened): Prevent Cooldown Leak
+        // If the keeper is slashed while in cooldown, reduce the committed EGLD
+        if !info.active && !self.unstake_request_time(&keeper).is_empty() {
+            self.total_committed_cooldown_egld().update(|total| {
+                if *total >= slash_amount {
+                    *total -= &slash_amount;
+                } else {
+                    *total = BigUint::zero();
+                }
+            });
+        }
+
         self.keepers(&keeper).set(&info);
 
         // Send slashed amount to treasury if we have liquid funds, otherwise register debt
         let treasury = self.treasury_addr().get();
-        let provider = self.staking_provider_addr().get();
+        let provider = if self.staking_provider_addr().is_empty() {
+            ManagedAddress::zero()
+        } else {
+            self.staking_provider_addr().get()
+        };
 
         if provider.is_zero() {
             // Liquid system — transfer directly
@@ -220,8 +259,15 @@ pub trait KeeperRegistryContract:
                 _ => common::constants::SLASH_STRIKE_3_BPS,    // 20%
             };
 
-            let slash_amount =
+            let calculated_slash =
                 &info.stake * slash_bps / common::constants::BPS_DENOMINATOR;
+            
+            let slash_amount = if info.stake > calculated_slash {
+                calculated_slash
+            } else {
+                info.stake.clone()
+            };
+
             info.stake -= &slash_amount;
             info.slashed_amount += &slash_amount;
 
@@ -243,10 +289,25 @@ pub trait KeeperRegistryContract:
                 }
             ));
 
-            // Strike 3: auto-expel keeper
-            if info.consecutive_failures >= common::constants::MAX_STRIKES {
+            // 🛡️ XCRON-ECONOMIC-SHIELD: Maintenance Margin Floor (75% de min_stake)
+            // Permite absorber Strike 1 (queda 95%) y Strike 2 (queda 80.75%) intactos,
+            // pero bloquea la insolvencia severa si el stake cae por debajo del umbral crítico.
+            let maintenance_threshold = self.min_stake().get() * 75u64 / 100u64;
+            if info.consecutive_failures >= common::constants::MAX_STRIKES || info.stake < maintenance_threshold {
                 info.active = false;
                 self.active_keeper_set().swap_remove(&keeper);
+            }
+            
+            // V3/V5 FIX (Destructor-Hardened): Prevent Cooldown Leak
+            // If the keeper is slashed while in cooldown, reduce the committed EGLD
+            if !info.active && !self.unstake_request_time(&keeper).is_empty() {
+                self.total_committed_cooldown_egld().update(|total| {
+                    if *total >= slash_amount {
+                        *total -= &slash_amount;
+                    } else {
+                        *total = BigUint::zero();
+                    }
+                });
             }
         }
         self.keepers(&keeper).set(&info);
@@ -256,7 +317,13 @@ pub trait KeeperRegistryContract:
     //  STAKING V5 DELEGATION (ADMIN OPS)
     // ═══════════════════════════════════════════════════════════
 
+    /// 🛡️ XCRON-PROTECT: V3/V5 FIX (Destructor-Hardened) — Liquidity Reserve Guard
     /// Delegate EGLD from the registry to the configured Staking Provider.
+    /// CRITICAL: Uses O(1) `total_committed_cooldown_egld` mapper to calculate
+    /// EGLD that must remain liquid for keepers in unstake cooldown.
+    /// NOTE: Keepers requesting unstake are REMOVED from active_keeper_set,
+    /// so we cannot iterate it. Instead, requestUnstake/withdrawStake
+    /// maintain the committed total atomically.
     #[only_owner]
     #[endpoint(delegateStake)]
     fn delegate_stake(&self, amount: BigUint) {
@@ -264,7 +331,17 @@ pub trait KeeperRegistryContract:
         require!(!provider.is_zero(), "Staking provider not set");
         
         let balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0);
-        require!(amount <= balance, "Insufficient liquid balance to delegate");
+        
+        // V3/V5 FIX: Read committed EGLD from atomic mapper (updated in requestUnstake/withdrawStake)
+        let committed_egld = self.total_committed_cooldown_egld().get();
+        
+        let delegable = if balance > committed_egld {
+            &balance - &committed_egld
+        } else {
+            BigUint::zero()
+        };
+        
+        require!(amount <= delegable, "V3: Would leave insufficient liquidity for pending keeper withdrawals");
 
         let _ = self.tx()
             .to(&provider)
@@ -287,8 +364,10 @@ pub trait KeeperRegistryContract:
             .sync_call();
     }
 
+    /// 🛡️ XCRON-PROTECT: V4 FIX — Yield Claim Observability
     /// Claim native EGLD yield generated by delegated stakes.
     /// This yield belongs 100% to the protocol treasury.
+    /// Now emits event with exact yield amount for monitoring.
     #[only_owner]
     #[endpoint(claimProviderRewards)]
     fn claim_provider_rewards(&self) {
@@ -303,6 +382,9 @@ pub trait KeeperRegistryContract:
             .sync_call();
 
         let final_balance = self.blockchain().get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0);
+        
+        // V4 FIX: Require that we actually received yield
+        require!(final_balance >= initial_balance, "V4: Provider claim returned less than initial balance");
         
         if final_balance > initial_balance {
             let yield_generated = final_balance - initial_balance;

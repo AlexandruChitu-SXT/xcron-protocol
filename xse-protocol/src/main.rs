@@ -77,7 +77,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔐 [CLIENT] Encrypting Binance API Keys with Enclave's RSA Public Key...");
     let raw_secret = "VALID_BINANCE_API_KEY:VALID_BINANCE_API_SECRET".as_bytes();
     let mut rng = rand::thread_rng();
-    let encrypted_blob = enclave.public_key().encrypt(&mut rng, Pkcs1v15Encrypt, raw_secret)
+    let padding = rsa::Oaep::new::<sha2::Sha256>();
+    let encrypted_blob = enclave.public_key().encrypt(&mut rng, padding, raw_secret)
         .expect("Failed to encrypt client secrets");
 
     let encrypted_payload = EncryptedSecrets {

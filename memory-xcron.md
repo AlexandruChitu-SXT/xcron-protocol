@@ -57,3 +57,14 @@
 - **Sinergia A2A (Agent-to-Agent):** Análisis del manifiesto "Open Rails for the Agentic Economy" de MultiversX. La actualización *Supernova* (600ms block time) requiere ejecución sub-segundo. XCron Protocol se posiciona como el motor indispensable: MultiversX aporta el "Settlement" rápido y XCron aporta el "Enjambre P2P" y el `xcron-agent-proxy` (reducción del 77% en costes de API LLM), haciendo económicamente viable que los agentes operen 24/7.
 - **Estado actual xCron:** `xcron-agent-proxy` auditado en Rust, parcheado para evitar destrucción estructural del JSON (compatibilidad OpenAI total), configurado para producción (.env) y subido a GitHub oficial. La máquina está lista para el siguiente asalto del Performance Benchmarks.
 ### 2026-05-12 | Tarea: Auditoría Intensa y Fortificación de Seguridad. | Decisión clave: Implementar Bloqueo de 24h para recuperación de depósitos y matemática saturada en slashing/rewards. | Estado actual xCron: Núcleo (Scheduler + Registry) blindado y compilado exitosamente. Se resolvió el riesgo de fondos bloqueados por pánicos en callbacks.
+
+---
+
+## 📱 X (Twitter) Algorithmic Post Strategy (Strict Rules)
+Cuando Alexandru pida redactar un post para X o Twitter, el agente DEBE aplicar de forma obligatoria y automática estas reglas de redacción:
+- **Tono:** 100% personal, auténtico, directo y técnico (de fundador y desarrollador de élite). NUNCA usar tono artificial de IA, ni adjetivos corporativos vacíos, ni emojis genéricos (como 🚀, 🔥, 🌌) en el texto del post, a menos que él lo añada o sea para un meme explícito.
+- **Formato:** Hilos técnicos muy visuales, espaciados y limpios (usando saltos de línea para facilitar la retención visual y el "Dwell Time").
+- **Idioma:** 100% en inglés nativo premium para alinear los clústeres de recomendación de X con la audiencia global Web3/VC/Builders.
+- **Bookmarks Bait:** Diseñar ganchos al principio del hilo que inviten a guardar el post en marcadores (multiplicador 10x).
+- **Reply Loop Trigger:** Terminar siempre con una pregunta técnica y debate para forzar comentarios (multiplicador 9x-13.5x) y responder sistemáticamente a todos para ganar el boost de 150x de respuesta del autor.
+- **No Links First:** Nunca incluir enlaces a GitHub, Medium o webs externas en el tuit principal (penalización del 70%). Poner siempre el enlace en la primera respuesta del hilo.

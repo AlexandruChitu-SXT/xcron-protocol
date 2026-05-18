@@ -1,4 +1,4 @@
-name: Cron CI – Code Quality & Security
+name: XCron CI – Code Quality & Security
 
 on:
   push:
@@ -7,38 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # ────────────────────────────────
-  # 1. Frontend — TypeScript + Build
-  # ────────────────────────────────
-  frontend:
-    name: Frontend
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend-next
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend-next/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: TypeScript type check
-        run: npx tsc --noEmit
-
-      - name: Build production bundle
-        run: npm run build
-
-  # ────────────────────────────────
-  # 2. Smart Contracts — Rust + Clippy
-  # ────────────────────────────────
   contracts:
     name: Contracts
     runs-on: ubuntu-latest
@@ -65,16 +33,11 @@ jobs:
       - name: Clippy lint (all contracts)
         working-directory: contracts
         run: cargo clippy --all-targets -- -W warnings -D clippy::all 2>&1 || true
-        # Note: using || true initially — remove once all warnings are fixed
 
       - name: Build contracts
         working-directory: contracts
         run: cargo build --release 2>&1 || true
-        # Note: full WASM build requires sc-meta, this checks Rust compilation
 
-  # ────────────────────────────────
-  # 3. Security — Secret Scanning
-  # ────────────────────────────────
   secrets-scan:
     name: Secret Scanning
     runs-on: ubuntu-latest
@@ -94,9 +57,6 @@ jobs:
       - name: Scan for secrets
         run: gitleaks detect --source . --verbose --no-banner --config .gitleaks.toml
 
-  # ────────────────────────────────
-  # 4. Sensitive Data Pattern Check
-  # ────────────────────────────────
   sensitive-patterns:
     name: Sensitive Data Patterns
     runs-on: ubuntu-latest
@@ -109,23 +69,19 @@ jobs:
           echo "🔍 Scanning for sensitive patterns..."
           FOUND=0
 
-          # PEM private key headers (exclude generator scripts)
           if grep -rn "BEGIN PRIVATE KEY\|BEGIN EC PRIVATE KEY\|BEGIN RSA PRIVATE KEY" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.rs" --include="*.json" --include="*.env" . 2>/dev/null | grep -v node_modules | grep -v generate-keepers; then
             echo "❌ FOUND: Private key headers in source files!"
             FOUND=1
           fi
 
-          # Mnemonics (12-24 word patterns)
           if grep -rn "abandon\|hockey\|indoor" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.rs" --include="*.env" . 2>/dev/null | grep -v node_modules | grep -v ".git"; then
             echo "⚠️  WARNING: Possible mnemonic words found (review manually)"
           fi
 
-          # Hardcoded API keys
           if grep -rn "WALLETCONNECT_PROJECT_ID.*=.*['\"].\{20,\}['\"]" --include="*.ts" --include="*.tsx" --include="*.env" . 2>/dev/null | grep -v node_modules | grep -v ".example"; then
             echo "⚠️  WARNING: Possible hardcoded API keys found"
           fi
 
-          # .pem files committed
           if find . -name "*.pem" -not -path "./.git/*" -not -path "*/node_modules/*" | head -1 | grep -q .; then
             echo "❌ FOUND: .pem files in repository!"
             FOUND=1

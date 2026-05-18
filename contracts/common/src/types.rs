@@ -36,7 +36,7 @@ pub struct Intent<M: ManagedTypeApi> {
 
 /// A specific outcome for a MultiIntent.
 #[type_abi]
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, ManagedVecItem)]
 pub struct MultiIntentOutcome<M: ManagedTypeApi> {
     pub token_out: TokenIdentifier<M>,
     pub min_return: BigUint<M>,

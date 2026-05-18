@@ -29,14 +29,10 @@ multiversx_sc::imports!();
 
 // ── Proof Data Type ──
 
-#[multiversx_sc::derive::type_abi]
-#[derive(
-    multiversx_sc::codec::TopEncode,
-    multiversx_sc::codec::TopDecode,
-    multiversx_sc::codec::NestedEncode,
-    multiversx_sc::codec::NestedDecode,
-    Clone,
-)]
+use multiversx_sc::derive_imports::*;
+
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct ProofData<M: ManagedTypeApi> {
     /// SHA-256 commitment hash submitted by the keeper
     pub commitment: ManagedByteArray<M, 32>,

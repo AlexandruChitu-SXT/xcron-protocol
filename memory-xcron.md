@@ -14,7 +14,7 @@
 - Contratos keeper en Rust (mx-sdk-rs)
 
 ## Problemas abiertos:
-- Security Track BoN: 10 bugs originales no enviados a Adrian, 6 nuevos rechazados
+- Security Track BoN: 10 bugs originales no enviados, 6 nuevos rechazados
 - MEV front-running research en curso
 - Nodos duplicados con misma key causaban "Instances: 2" (resuelto 2026-03-22)
 
@@ -28,7 +28,7 @@
 - **Hallazgos:** 5 CVE/GHSAs publicados de mx-chain-go analizados, 10 vectores de ataque definidos
 - **Estado:** Observer BoN sincronizado, observer devnet arrancando, plan de ataque unificado listo
 - **Fix crítico:** Matados nodos duplicados en VPS3 y VPS4 que emitían heartbeat con mismas keys (causaba penalización de rating)
-- **Intel clave:** Robert Sasu confirmó que el hardfork de BoN fue por "pending cross-referenced miniblocks on meta" — coincide con nuestro Bug 4 original
+- **Intel clave:** Se confirmó que el hardfork de BoN fue por "pending cross-referenced miniblocks on meta" — coincide con nuestro Bug 4 original
 
 - **2026-03-23** | Tarea: Auditoría MEV y pivote a Back-Running. | Decisión clave: Cancelar Sándwich (Front-run es suicida a 120ms), crear un Back-runner puro ejecutado localmente en VPS Shard 1. | Estado actual xCron: Observer Validado en Shard 1 (Latencia teórica nula con xExchange).
 
@@ -42,7 +42,7 @@
 
 ### 2026-03-26
 - **Tarea:** Preparación Challenge 4 "Contract Storm" usando Rust `dex-interactor`.
-- **Decisión clave:** Descartar JS y usar el código base Rust de Andrei Marinica (`mx-sdk-rs`) inyectando multiplicación de hilos (`--times N`) para reventar el contador de SC calls. Despliegue manual vía SCP a las VPS alemanas para ejecución directa en `127.0.0.1:8080` evadiendo 100% la cap de Cloudflare.
+- **Decisión clave:** Descartar JS y usar el código base Rust de `mx-sdk-rs` inyectando multiplicación de hilos (`--times N`) para reventar el contador de SC calls. Despliegue manual vía SCP a las VPS alemanas para ejecución directa en `127.0.0.1:8080` evadiendo 100% la cap de Cloudflare.
 - **Estado actual xCron:** Compilación Rust exitosa (sin errores de dependencias). Script bash de inyección preparado. Listo para ejecutar manual de prueba antes del asalto.
 
 ### 2026-04-05

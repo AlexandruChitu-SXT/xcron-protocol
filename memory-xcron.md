@@ -68,3 +68,9 @@ Cuando Alexandru pida redactar un post para X o Twitter, el agente DEBE aplicar 
 - **Bookmarks Bait:** Diseñar ganchos al principio del hilo que inviten a guardar el post en marcadores (multiplicador 10x).
 - **Reply Loop Trigger:** Terminar siempre con una pregunta técnica y debate para forzar comentarios (multiplicador 9x-13.5x) y responder sistemáticamente a todos para ganar el boost de 150x de respuesta del autor.
 - **No Links First:** Nunca incluir enlaces a GitHub, Medium o webs externas en el tuit principal (penalización del 70%). Poner siempre el enlace en la primera respuesta del hilo.
+
+---
+
+## 🛠️ Reglas del Agente para GitHub y Copiado Directo
+- **Cero Asteriscos en Textos para Copiar:** Cuando el fundador solicite títulos, descripciones o comentarios para GitHub (Pull Requests, Commits, Issues, etc.), el agente DEBE entregar el texto completamente limpio, plano y libre de formateo Markdown como asteriscos (`**` o `*`) o adornos sintácticos innecesarios en la prosa ordinaria. Esto permite que el fundador pueda copiar y pegar directamente desde el chat al navegador sin tener que limpiar a mano el texto.
+

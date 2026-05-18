@@ -4,6 +4,7 @@ mod crypto;
 mod relayer;
 mod red_team;
 mod quantum_shield; // Import the new quantum shield module
+mod observer_listener; // Import the VPS network observer listener daemon module
 
 use schema::{ExecutionIntent, ExecutionReceipt, ExecutedOrder, Proof};
 use validator::validate_intent;
@@ -76,7 +77,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔐 [CLIENT] Encrypting Binance API Keys with Enclave's RSA Public Key...");
     let raw_secret = "VALID_BINANCE_API_KEY:VALID_BINANCE_API_SECRET".as_bytes();
     let mut rng = rand::thread_rng();
-    let encrypted_blob = enclave.public_key().encrypt(&mut rng, Pkcs1v15Encrypt, raw_secret)
+    let padding = rsa::Oaep::new::<sha2::Sha256>();
+    let encrypted_blob = enclave.public_key().encrypt(&mut rng, padding, raw_secret)
         .expect("Failed to encrypt client secrets");
 
     let encrypted_payload = EncryptedSecrets {
@@ -85,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let target_assets: Vec<String> = intent.orders.iter().map(|o| o.asset.clone()).collect();
-    let total_amount_usd: f64 = intent.orders.iter().map(|o| o.max_quote_amount).sum();
+    let total_amount_atomic: u128 = intent.orders.iter().map(|o| o.max_quote_amount_atomic.parse::<u128>().unwrap_or(0)).sum();
 
     // In Dry-Run mode, we simulate Binance health and execution
     if intent.mode == "dry_run" {
@@ -96,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         let is_healthy = relayer.check_binance_health(&target_assets[0]).await;
         if is_healthy {
-            match relayer.execute_reverse_dca(&enclave, &encrypted_payload, target_assets.clone(), total_amount_usd).await {
+            match relayer.execute_reverse_dca(&enclave, &encrypted_payload, target_assets.clone(), total_amount_atomic.to_string()).await {
                 Ok(result) => println!("{}", result),
                 Err(e) => {
                     println!("❌ [XSE-ENCLAVE] Fatal Execution Error: {}", e);
@@ -108,15 +110,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 5. GENERATING EXECUTION RECEIPT (Settlement Layer)
     let mut executed_orders = Vec::new();
-    for order in &intent.orders {
+    for (index, order) in intent.orders.iter().enumerate() {
+        let amt = order.max_quote_amount_atomic.parse::<u128>().unwrap_or(0);
         executed_orders.push(ExecutedOrder {
+            intent_index: index,
             asset: order.asset.clone(),
             side: order.side.clone(),
-            requested_quote_amount: order.max_quote_amount,
-            executed_quote_amount: order.max_quote_amount,
-            executed_base_amount: order.max_quote_amount / 50.0, // Mock price math
-            average_price: 50.0,
+            requested_quote_amount_atomic: order.max_quote_amount_atomic.clone(),
+            executed_quote_amount_atomic: order.max_quote_amount_atomic.clone(),
+            executed_base_amount_atomic: (amt / 50).to_string(),
+            average_price_atomic: (50 * 1_000_000).to_string(),
             venue_order_id: format!("sim_{}", rand::random::<u32>()),
+            venue: intent.venue.clone(),
         });
     }
 
@@ -129,17 +134,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let receipt = ExecutionReceipt {
-        client_reference_id: intent.client_reference_id.clone(),
-        status: "COMPLETED".to_string(),
-        venue: intent.venue.clone(),
-        mode: intent.mode.clone(),
+        batch_id: "SIM_BATCH_001".to_string(), // In production, this comes from the Batch Intent
+        status: "SUCCESS".to_string(),
+        failure_context: None,
         orders: executed_orders,
-        timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs().to_string(),
+        total_executed_quote_atomic: total_amount_atomic.to_string(),
+        timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64,
         proof: Proof {
             executor_id: "XSE_NODE_01".to_string(),
             attestation_hash: enclave.public_key_hash(),
             receipt_hash,
         },
+        metadata: std::collections::HashMap::from([
+            ("mode".to_string(), intent.mode.clone()),
+            ("client_ref".to_string(), intent.client_reference_id.clone()),
+        ]),
     };
 
     println!("🧾 [SETTLEMENT] Generated Execution Receipt:");

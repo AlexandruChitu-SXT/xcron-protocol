@@ -14,7 +14,7 @@
 - Contratos keeper en Rust (mx-sdk-rs)
 
 ## Problemas abiertos:
-- Security Track BoN: 10 bugs originales no enviados a Adrian, 6 nuevos rechazados
+- Security Track BoN: 10 bugs originales no enviados, 6 nuevos rechazados
 - MEV front-running research en curso
 - Nodos duplicados con misma key causaban "Instances: 2" (resuelto 2026-03-22)
 
@@ -28,7 +28,7 @@
 - **Hallazgos:** 5 CVE/GHSAs publicados de mx-chain-go analizados, 10 vectores de ataque definidos
 - **Estado:** Observer BoN sincronizado, observer devnet arrancando, plan de ataque unificado listo
 - **Fix crítico:** Matados nodos duplicados en VPS3 y VPS4 que emitían heartbeat con mismas keys (causaba penalización de rating)
-- **Intel clave:** Robert Sasu confirmó que el hardfork de BoN fue por "pending cross-referenced miniblocks on meta" — coincide con nuestro Bug 4 original
+- **Intel clave:** Se confirmó que el hardfork de BoN fue por "pending cross-referenced miniblocks on meta" — coincide con nuestro Bug 4 original
 
 - **2026-03-23** | Tarea: Auditoría MEV y pivote a Back-Running. | Decisión clave: Cancelar Sándwich (Front-run es suicida a 120ms), crear un Back-runner puro ejecutado localmente en VPS Shard 1. | Estado actual xCron: Observer Validado en Shard 1 (Latencia teórica nula con xExchange).
 
@@ -42,7 +42,7 @@
 
 ### 2026-03-26
 - **Tarea:** Preparación Challenge 4 "Contract Storm" usando Rust `dex-interactor`.
-- **Decisión clave:** Descartar JS y usar el código base Rust de Andrei Marinica (`mx-sdk-rs`) inyectando multiplicación de hilos (`--times N`) para reventar el contador de SC calls. Despliegue manual vía SCP a las VPS alemanas para ejecución directa en `127.0.0.1:8080` evadiendo 100% la cap de Cloudflare.
+- **Decisión clave:** Descartar JS y usar el código base Rust de `mx-sdk-rs` inyectando multiplicación de hilos (`--times N`) para reventar el contador de SC calls. Despliegue manual vía SCP a las VPS alemanas para ejecución directa en `127.0.0.1:8080` evadiendo 100% la cap de Cloudflare.
 - **Estado actual xCron:** Compilación Rust exitosa (sin errores de dependencias). Script bash de inyección preparado. Listo para ejecutar manual de prueba antes del asalto.
 
 ### 2026-04-05
@@ -56,3 +56,15 @@
 - **Decisión clave:** Reducir 29 skills fragmentadas a 6 índices maestros para evitar pérdida de foco, alucinaciones y mala memoria a largo plazo en el Agente. A partir de hoy, el Agente SIEMPRE debe consultar este `memory-xcron.md` para no perder el contexto de la visión global.
 - **Sinergia A2A (Agent-to-Agent):** Análisis del manifiesto "Open Rails for the Agentic Economy" de MultiversX. La actualización *Supernova* (600ms block time) requiere ejecución sub-segundo. XCron Protocol se posiciona como el motor indispensable: MultiversX aporta el "Settlement" rápido y XCron aporta el "Enjambre P2P" y el `xcron-agent-proxy` (reducción del 77% en costes de API LLM), haciendo económicamente viable que los agentes operen 24/7.
 - **Estado actual xCron:** `xcron-agent-proxy` auditado en Rust, parcheado para evitar destrucción estructural del JSON (compatibilidad OpenAI total), configurado para producción (.env) y subido a GitHub oficial. La máquina está lista para el siguiente asalto del Performance Benchmarks.
+### 2026-05-12 | Tarea: Auditoría Intensa y Fortificación de Seguridad. | Decisión clave: Implementar Bloqueo de 24h para recuperación de depósitos y matemática saturada en slashing/rewards. | Estado actual xCron: Núcleo (Scheduler + Registry) blindado y compilado exitosamente. Se resolvió el riesgo de fondos bloqueados por pánicos en callbacks.
+
+---
+
+## 📱 X (Twitter) Algorithmic Post Strategy (Strict Rules)
+Cuando Alexandru pida redactar un post para X o Twitter, el agente DEBE aplicar de forma obligatoria y automática estas reglas de redacción:
+- **Tono:** 100% personal, auténtico, directo y técnico (de fundador y desarrollador de élite). NUNCA usar tono artificial de IA, ni adjetivos corporativos vacíos, ni emojis genéricos (como 🚀, 🔥, 🌌) en el texto del post, a menos que él lo añada o sea para un meme explícito.
+- **Formato:** Hilos técnicos muy visuales, espaciados y limpios (usando saltos de línea para facilitar la retención visual y el "Dwell Time").
+- **Idioma:** 100% en inglés nativo premium para alinear los clústeres de recomendación de X con la audiencia global Web3/VC/Builders.
+- **Bookmarks Bait:** Diseñar ganchos al principio del hilo que inviten a guardar el post en marcadores (multiplicador 10x).
+- **Reply Loop Trigger:** Terminar siempre con una pregunta técnica y debate para forzar comentarios (multiplicador 9x-13.5x) y responder sistemáticamente a todos para ganar el boost de 150x de respuesta del autor.
+- **No Links First:** Nunca incluir enlaces a GitHub, Medium o webs externas en el tuit principal (penalización del 70%). Poner siempre el enlace en la primera respuesta del hilo.

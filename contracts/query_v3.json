@@ -1,0 +1,8 @@
+CRITICAL cli: Couldn't query contract:                                 cli.py:44
+         ... invalid function (not found)                                       
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Couldn't query contract:                                                     │
+│ ... invalid function (not found)                                             │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯

@@ -158,6 +158,33 @@ pub trait IdentityRegistry:
         self.agent_updated_event(nonce);
     }
 
+    /// ERC-8004 Synchronize Ownership: Allows a new NFT holder (after a sale or transfer)
+    /// to prove they physically hold the NFT, dynamically updating the agents() registry
+    /// to prevent metadata sabotage by the original minter.
+    #[payable("*")]
+    #[endpoint(sync_ownership)]
+    fn sync_ownership(&self) {
+        require!(!self.agent_token_id().is_empty(), ERR_TOKEN_NOT_ISSUED);
+
+        let payment = self.call_value().single_esdt();
+        let token_id = self.agent_token_id().get_token_id();
+        require!(payment.token_identifier == token_id, ERR_INVALID_NFT);
+
+        let nonce = payment.token_nonce;
+        let caller = self.blockchain().get_caller();
+
+        // Update the on-chain registry with the new verified owner
+        self.agents().insert(nonce, caller.clone());
+
+        // Return the NFT immediately to the verified caller
+        self.tx()
+            .to(&caller)
+            .single_esdt(&token_id, nonce, &BigUint::from(1u64))
+            .transfer();
+
+        self.agent_updated_event(nonce);
+    }
+
     /// Set or update metadata entries for an agent. O(1) per entry via MapMapper.
     #[endpoint(set_metadata)]
     fn set_metadata(

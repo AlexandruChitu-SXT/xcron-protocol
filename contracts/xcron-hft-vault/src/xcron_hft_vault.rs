@@ -199,11 +199,19 @@ pub trait XcronHftVault {
             .get_esdt_balance(&sc_address, &token_in, 0);
 
         // Si el balance final NO es ESTRICTAMENTE MAYOR al inicial,
-        // TODA la transacción se destruye. Cero impacto. Cero pérdida.
-        // Solo se pierde el Gas de red (~$0.01-0.05).
+        // toda la transacción se destruye.
         require!(
             balance_end > balance_start,
             "ABORT: Operacion no rentable. Capital protegido."
+        );
+
+        // 🛡️ XCRON-PROTECT: Economic Fuse Hardening (PP-11)
+        // Enforce that the vault actually made a net profit >= min_final_amount - amount_in.
+        // This prevents low-profit dust transactions from consuming gas.
+        let expected_min_end = &balance_start - &amount_in + &min_final_amount;
+        require!(
+            balance_end >= expected_min_end,
+            "ABORT: Ganancia neta por debajo del umbral economico minimo."
         );
 
         // Si llegamos aquí: la ganancia está asegurada y almacenada en el contrato.

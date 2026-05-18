@@ -82,4 +82,20 @@ pub trait EventsModule {
         #[indexed] intent_id: u64,
         #[indexed] owner: &ManagedAddress,
     );
+
+    /// Emitted when a new declarative multi-intent is created by a user.
+    #[event("multiIntentCreated")]
+    fn multi_intent_created_event(
+        &self,
+        #[indexed] intent_id: u64,
+        #[indexed] owner: &ManagedAddress,
+    );
+
+    /// Emitted when a multi-intent is successfully settled by a solver.
+    #[event("multiIntentSettled")]
+    fn multi_intent_settled_event(
+        &self,
+        #[indexed] intent_id: u64,
+        #[indexed] solver: &ManagedAddress,
+    );
 }

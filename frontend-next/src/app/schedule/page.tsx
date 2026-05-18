@@ -141,7 +141,7 @@ const TEMPLATES: Record<TemplateType, { title: string; description: string; cate
         description: 'Declarative routing. Specify what you want to swap and the minimum acceptable return.',
         category: 'Vanguard V2',
         defaults: {
-            targetContract: '',
+            targetContract: CONTRACTS.scheduler,
             targetEndpoint: 'solveIntent',
             triggerType: 'once' as const,
             targetRound: '',

@@ -193,8 +193,7 @@ fn generate_fuzzing_payload() -> Vec<u8> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let _ = env_logger::builder().filter_level(log::LevelFilter::Info).try_init();
-    
-    if cli.mode == ExecutionMode::XseSim {
+        if cli.mode == ExecutionMode::XseSim {
         use dispatcher::{ExecutionTask, SettlementDispatcher, AIAgentDispatcher};
         
         println!("==================================================");
@@ -210,6 +209,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 1. Cargamos una cartera de pruebas (Seguridad criptográfica)
         let wallet = KeeperWallet::generate_throwaway();
         println!("🔐 Identidad Criptográfica Generada: {}", wallet.bech32_address);
+        println!("--------------------------------------------------");
+
+        // 🛡️ [CONEXIÓN EPHEMERAL STEALTH XSE]
+        // Derivar dirección sigilosa de un solo uso dentro de la RAM del Enclave
+        println!("🛡️  [XSE ENCLAVE] Derivando dirección efímera sigilosa...");
+        let enclave_seed: [u8; 32] = pq_seed.clone().try_into().unwrap_or_else(|_| {
+            let mut s = [0u8; 32];
+            s.copy_from_slice(&pq_seed[..32]);
+            s
+        });
+        
+        let user_pubkey = wallet.signing_key.verifying_key().to_bytes();
+        let intent_nonce = 1001u64;
+
+        match xse_protocol::crypto::derive_ephemeral_stealth_key(&enclave_seed, &user_pubkey, intent_nonce) {
+            Ok(stealth_keypair) => {
+                use bech32::u5;
+                let u5_data: Vec<u5> = bech32::convert_bits(&stealth_keypair.public_key, 8, 5, true)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|b| u5::try_from_u8(b).unwrap())
+                    .collect();
+                
+                let stealth_bech32 = bech32::encode(
+                    "erd",
+                    u5_data,
+                    bech32::Variant::Bech32
+                ).unwrap_or_else(|_| "erd1stealth_address_error".to_string());
+                
+                println!("   ✅ Ephemeral Stealth Address (Remitente Fantasma): {}", stealth_bech32);
+                println!("   🔑 Viewing Key (Auditoría Privada Local): {}", hex::encode(stealth_keypair.viewing_key));
+                println!("   ⚠️  Memory register status: Ephemeral key zeroed-on-drop active.");
+            },
+            Err(e) => println!("   ❌ Error en derivación Stealth: {}", e),
+        }
+        println!("--------------------------------------------------");
 
         // 2. Iniciamos el Repartidor Privado (Web2/IA)
         let ai_dispatcher = AIAgentDispatcher::new("https://api.corporate-ai.com/v1/webhook");

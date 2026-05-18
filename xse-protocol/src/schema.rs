@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BatchExecutionIntent {
     pub batch_id: String,
     pub nonce: u64,
@@ -10,6 +11,7 @@ pub struct BatchExecutionIntent {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ExecutionIntent {
     pub intent_type: String,
     pub venue: String,
@@ -21,6 +23,7 @@ pub struct ExecutionIntent {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct OrderIntent {
     pub side: String,
     pub asset: String,
@@ -29,6 +32,7 @@ pub struct OrderIntent {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Constraints {
     pub max_slippage_bps: u32, // Basis points (100 = 1.00%)
     pub expires_at: String,

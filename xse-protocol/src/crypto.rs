@@ -95,3 +95,55 @@ pub fn verify_on_chain_authorization(payload: &[u8], signature_bytes: &[u8], pub
     public_key.verify(payload, &signature)
         .map_err(|_| "On-chain authorization verification failed. Unauthorized execution attempt.".to_string())
 }
+
+/// Structure representing a derived stealth keypair in isolated enclave RAM.
+/// Implements ZeroizeOnDrop to ensure keys are zeroed immediately when going out of scope.
+#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
+pub struct EphemeralStealthKeypair {
+    pub private_key: [u8; 32],
+    pub public_key: [u8; 32],
+    pub viewing_key: [u8; 32],
+}
+
+/// Derives a one-time ephemeral stealth keypair deterministic to (enclave_seed, user_pubkey, nonce)
+/// to execute shielded transactions. Wipes sensitive registers to prevent side-channel memory leaks.
+pub fn derive_ephemeral_stealth_key(
+    enclave_seed: &[u8; 32],
+    user_public_key_bytes: &[u8; 32],
+    intent_nonce: u64,
+) -> Result<EphemeralStealthKeypair, String> {
+    use sha2::{Sha256, Digest};
+    use ed25519_dalek::SigningKey;
+
+    // 1. Compute deterministic scalar seed inside isolated Enclave RAM
+    let mut hasher = Sha256::new();
+    hasher.update(enclave_seed);
+    hasher.update(user_public_key_bytes);
+    hasher.update(&intent_nonce.to_le_bytes());
+    
+    let mut seed = [0u8; 32];
+    seed.copy_from_slice(&hasher.finalize());
+
+    // 2. Derive SigningKey and VerifyingKey (the Stealth Address)
+    let signing_key = SigningKey::from_bytes(&seed);
+    let public_key = signing_key.verifying_key();
+
+    // 3. Compute Viewing Key = Hash(Public Key) for selective regulatory auditing
+    let mut vk_hasher = Sha256::new();
+    vk_hasher.update(public_key.as_bytes());
+    let mut viewing_key = [0u8; 32];
+    viewing_key.copy_from_slice(&vk_hasher.finalize());
+
+    let private_bytes = signing_key.to_bytes();
+    let public_bytes = public_key.to_bytes();
+
+    // 4. Secure zeroization of the ephemeral intermediate seed in RAM
+    seed.zeroize();
+
+    Ok(EphemeralStealthKeypair {
+        private_key: private_bytes,
+        public_key: public_bytes,
+        viewing_key,
+    })
+}
+

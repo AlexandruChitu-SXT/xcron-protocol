@@ -119,7 +119,7 @@ mod tests {
             orders: vec![OrderIntent {
                 side: "BUY".to_string(),
                 asset: "ETH".to_string(),
-                max_quote_amount_atomic: 100_000_000,
+                max_quote_amount_atomic: "100000000".to_string(),
                 order_type: "MARKET".to_string(),
             }],
             constraints: Constraints {

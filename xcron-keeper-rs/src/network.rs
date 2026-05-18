@@ -38,6 +38,21 @@ pub struct SendTxData {
     pub txHash: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct SendTxMultipleResponse {
+    pub data: Option<SendTxMultipleData>,
+    #[serde(default)]
+    pub error: Option<String>,
+    #[serde(default)]
+    pub code: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct SendTxMultipleData {
+    #[serde(rename = "txsHashes")]
+    pub txs_hashes: std::collections::HashMap<String, String>,
+}
+
 pub struct MultiversXNetwork {
     pub client: Client,
     pub base_urls: Vec<String>,
@@ -271,8 +286,13 @@ impl MultiversXNetwork {
                 let body = resp.text().await.unwrap_or_default();
                 
                 if status == StatusCode::CREATED || status == StatusCode::OK {
-                    if body.contains("\"successful\"") {
-                        return Ok::<usize, String>(txs.len());
+                    let send_resp: Result<SendTxMultipleResponse, _> = serde_json::from_str(&body);
+                    if let Ok(resp) = send_resp {
+                        if resp.code == Some("successful".to_string()) {
+                            if let Some(data) = resp.data {
+                                return Ok::<usize, String>(data.txs_hashes.len());
+                            }
+                        }
                     }
                 } else if body.contains("different shard ID") {
                     return Err::<usize, String>("different shard ID".to_string());

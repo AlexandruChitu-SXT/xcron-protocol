@@ -1,4 +1,4 @@
-name: XCron CI — Code Quality & Security
+name: Cron CI – Code Quality & Security
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
   # 1. Frontend — TypeScript + Build
   # ────────────────────────────────
   frontend:
-    name: Frontend (TypeScript + Build)
+    name: Frontend
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,7 +40,7 @@ jobs:
   # 2. Smart Contracts — Rust + Clippy
   # ────────────────────────────────
   contracts:
-    name: Contracts (Rust Clippy + Build)
+    name: Contracts
     runs-on: ubuntu-latest
 
     steps:

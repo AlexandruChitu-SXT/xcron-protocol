@@ -8,6 +8,7 @@ pub enum ValidationError {
     ExcessiveSlippage(u32),
     InvalidQuantumSignature,
     BatchSizeExceeded(usize),
+    InvalidVenue(String),
 }
 
 impl std::fmt::Display for ValidationError {
@@ -19,6 +20,7 @@ impl std::fmt::Display for ValidationError {
             ValidationError::ExcessiveSlippage(bps) => write!(f, "Requested slippage {} bps exceeds institutional limit of 100 bps (1%)", bps),
             ValidationError::InvalidQuantumSignature => write!(f, "CRITICAL: FIPS-204 Quantum Signature Verification Failed"),
             ValidationError::BatchSizeExceeded(n) => write!(f, "Batch size {} exceeds limit of 50", n),
+            ValidationError::InvalidVenue(v) => write!(f, "Requested venue '{}' is not supported. Supported: binance, xexchange, ashswap, dry_run", v),
         }
     }
 }
@@ -28,6 +30,13 @@ const MAX_BATCH_SIZE: usize = 50;
 pub fn validate_intent(intent: &ExecutionIntent, quantum_signature: Option<&[u8]>) -> Result<(), ValidationError> {
     if intent.constraints.allow_withdrawals {
         return Err(ValidationError::WithdrawalsEnabled);
+    }
+    
+    // 🛡️ XCRON-PROTECT: Enforce Venue Allowlist (PP-05)
+    let supported_venues = vec!["binance", "xexchange", "ashswap", "dry_run"];
+    let lowercase_venue = intent.venue.to_lowercase();
+    if !supported_venues.contains(&lowercase_venue.as_str()) {
+        return Err(ValidationError::InvalidVenue(intent.venue.clone()));
     }
     
     // 🛡️ XCRON-PROTECT: Institutional Slippage Constraint

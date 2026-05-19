@@ -1,7 +1,7 @@
 # ACP Escrow Contract — Audit Report
 
-**Date**: 2026-02-11  
-**Auditor**: Antigravity (Automated)  
+**Date**: 2026-02-11 
+**Auditor**: Antigravity (Automated) 
 **Scope**: `mx-8004/escrow/src/` (4 files, 222 LOC)
 
 ---
@@ -18,7 +18,7 @@
 
 ## 2. Vulnerability Matrix
 
-### CRITICAL: None ✅
+### CRITICAL: None 
 
 No funds-at-risk or permission-bypass vulnerabilities found.
 
@@ -73,18 +73,18 @@ No funds-at-risk or permission-bypass vulnerabilities found.
 
 | Check | Result |
 |-------|--------|
-| `#![no_std]` | ✅ Present |
-| Zero-allocation (no `String`, `Vec`, `Box`, `HashMap`, `format!`) | ✅ Clean |
-| No `unwrap()` / `expect()` / `panic!()` | ✅ Clean |
-| No `unsafe` code | ✅ Clean |
-| No raw arithmetic (`+`, `-`, `*` on primitives) | ✅ Clean |
-| CEI pattern (Checks-Effects-Interactions) | ✅ Both `release` and `refund` |
-| `#[payable("*")]` with `call_value()` check | ✅ `deposit` checks `amount > 0` |
-| Access control on sensitive endpoints | ✅ `release` restricted to employer |
-| Storage mapper choice | ✅ `SingleValueMapper` — optimal |
-| Event emission for all state changes | ✅ deposit/release/refund events |
-| Upgrade function present | ✅ Empty `#[upgrade]` |
-| No gas DoS vectors (unbounded loops) | ✅ No loops |
+| `#![no_std]` | Present |
+| Zero-allocation (no `String`, `Vec`, `Box`, `HashMap`, `format!`) | Clean |
+| No `unwrap()` / `expect()` / `panic!()` | Clean |
+| No `unsafe` code | Clean |
+| No raw arithmetic (`+`, `-`, `*` on primitives) | Clean |
+| CEI pattern (Checks-Effects-Interactions) | Both `release` and `refund` |
+| `#[payable("*")]` with `call_value()` check | `deposit` checks `amount > 0` |
+| Access control on sensitive endpoints | `release` restricted to employer |
+| Storage mapper choice | `SingleValueMapper` — optimal |
+| Event emission for all state changes | deposit/release/refund events |
+| Upgrade function present | Empty `#[upgrade]` |
+| No gas DoS vectors (unbounded loops) | No loops |
 
 ---
 

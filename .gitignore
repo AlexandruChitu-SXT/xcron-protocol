@@ -1,98 +1,76 @@
-# ═══════════════════════════════════════════════════════════
-#  xCron Protocol — .gitignore
-# ═══════════════════════════════════════════════════════════
-
-# ──────── SECURITY: PRIVATE KEYS & WALLETS ────────
+# Security: private keys & wallets
 .secrets/
 wallets/
 *.pem
 *.keystore.json
+keys.json
+*-keys.json
+*_keys.json
+solana-master-bot.json
 
-# ──────── RUST / SMART CONTRACTS ────────
+# Rust & Smart Contracts
 target/
+**/target/
 contracts/target/
 contracts/output/
 **/wasm/target/
 wasm/
 output/
+*.mxsc.json
+contracts/*/scenarios/output/
 
-# ──────── NODE.JS ────────
+# Node.js
 node_modules/
 dist/
 .cache/
+.npmrc
+.vercel
+.netlify
 
-# ──────── PYTHON ────────
+# Python
 .venv/
 __pycache__/
 *.pyc
 
-# ──────── IDE & OS ────────
+# IDEs & Operating Systems
 .DS_Store
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# ──────── ENVIRONMENT & SECRETS ────────
+# Environment configurations
 .env
 .env.local
 .env.*.local
 
-# ──────── PERSONAL DATA / GRANT DOCUMENTS ────────
-*.pdf
-xcron/*.pdf
-xcron/*.metadata.json
+# Logs and debug files
+*.log
+build.log
+build2.log
+keeper/build_error.txt
 
-# ──────── KEEPER BOT SECRETS & ARTIFACTS ────────
+# Keeper bot configurations & artifacts
 keeper/keeper-config.json
 keeper/keeper-config.testnet.json
 keeper/keeper-logs/
-keeper/dist/
-keeper/node_modules/
-keeper/build_error.txt
 keeper-logs/
 xportal-claim-state.json
+xcron-keeper-rs/src/bin/vector*.rs
 
-# ──────── BUILD ARTIFACTS ────────
-*.mxsc.json
-contracts/*/scenarios/output/
-
-# ──────── MISC ────────
-*.log
-mx-ai-skills
-*.resolved
-*.resolved.*
-*.metadata.json
-.deployed_addresses.json
-.deployed_testnet.json
+# Local AI agents and memory files
 .agent/
+mx-ai-skills
+memory-xcron.md
+ESTADO_Y_PLAN_MAESTRO.md
 
-# ──────── WASM BUILD ARTIFACTS ────────
-*/target/
-contracts/*/target/
-contracts/*/wasm/target/
-
-
-
-# ──────── KEEPER BOT ────────
-# (keeper-config.json and keeper-logs/ already excluded above)
-
-# ──────── SECURITY: STRICT KEYS & SECRETS ────────
-keys.json
-solana-master-bot.json
-*-keys.json
-*_keys.json
-
-# ──────── ARCHIVE / BATTLE OF NODES SCRIPT SCRAPS ────────
+# Legacy & Battle of Nodes archive files
 archive_bon/
 bon_exploits/
 mx-8004/
-
-# ──────── CLEANED UP — OLD/REDUNDANT ────────
 xcron/
 interaction/
 articulos/
-output/
 contracts/src/
 contracts/wasm/
 hello_deploy.json
@@ -103,18 +81,20 @@ tweet-*.txt
 article-*.txt
 estudio_economico_*.md
 TARGET_CONTRACT.txt
-ESTADO_Y_PLAN_MAESTRO.md
 XCRON_RELEASE_NOTES_V2.md
 multiversx.json
-build.log
-build2.log
-.npmrc
+.xcron/
+
+# Media & Promotional assets
 xcron_promo*.mp4
 xcron_promo*.webp
-.vercel
 
-# Local Netlify folder
-.netlify
-
-xcron-keeper-rs/src/bin/vector*.rs
-.xcron/
+# Misc
+*.resolved
+*.resolved.*
+*.metadata.json
+.deployed_addresses.json
+.deployed_testnet.json
+*.pdf
+xcron/*.pdf
+xcron/*.metadata.json

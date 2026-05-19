@@ -20,14 +20,14 @@ Build a transaction to schedule a one-time or recurring task.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `targetContract` | `string` | ✅ | Bech32 address of the contract to call |
-| `targetEndpoint` | `string` | ✅ | Function name on the target contract |
-| `targetArgs` | `string[]` | ❌ | Hex-encoded arguments |
-| `trigger` | `Trigger` | ✅ | When to execute (see Trigger Types) |
-| `maxGas` | `number` | ❌ | Gas limit for target call (default: 5M) |
-| `maxRetries` | `number` | ❌ | Retry attempts on failure (default: 3) |
-| `ttlSeconds` | `number` | ❌ | Time-to-live before expiration (default: 24h) |
-| `depositEgld` | `string` | ✅ | EGLD deposit in denomination units |
+| `targetContract` | `string` | Yes | Bech32 address of the contract to call |
+| `targetEndpoint` | `string` | Yes | Function name on the target contract |
+| `targetArgs` | `string[]` | No | Hex-encoded arguments |
+| `trigger` | `Trigger` | Yes | When to execute (see Trigger Types) |
+| `maxGas` | `number` | No | Gas limit for target call (default: 5M) |
+| `maxRetries` | `number` | No | Retry attempts on failure (default: 3) |
+| `ttlSeconds` | `number` | No | Time-to-live before expiration (default: 24h) |
+| `depositEgld` | `string` | Yes | EGLD deposit in denomination units |
 
 ---
 
@@ -39,8 +39,8 @@ Convenience method for recurring tasks.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `intervalSeconds` | `number` | ✅ | Seconds between executions |
-| `executions` | `number` | ✅ | Number of times to execute |
+| `intervalSeconds` | `number` | Yes | Seconds between executions |
+| `executions` | `number` | Yes | Number of times to execute |
 
 ---
 

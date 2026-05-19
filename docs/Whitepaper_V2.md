@@ -1,53 +1,69 @@
-# XCron Protocol V2 — The Agentic Coordination Layer
+# XCron Protocol V2: The Agentic Coordination Layer
 **Whitepaper v2.0** (Draft - April 2026)
 
 ## 1. Abstract
-The MultiversX blockchain provides sub-second finality (Supernova) and unparalleled throughput. However, smart contracts inherently lack the ability to initiate actions autonomously based on time or external conditions. As the ecosystem shifts toward **Agentic Commerce**—where AI agents negotiate, trade, and manage assets—a fundamental missing piece is the "Time and Execution Lobe".
+The MultiversX blockchain provides sub-second finality (Supernova) and high transaction throughput. However, smart contracts lack the native ability to initiate actions autonomously based on time or external conditions. As decentralized systems shift toward agentic setups—where autonomous agents interact with smart contracts—a trustless execution service is required.
 
-**XCron Protocol V2** bridges this gap. It is a decentralized, trustless execution layer that allows users and Artificial Intelligences to flexibly schedule on-chain operations (Swaps, Harvests, Rebalances, Payments). By utilizing a decentralized network of incentivized *Keepers*, XCron guarantees executing transactions exactly when criteria are met, transforming MultiversX into an autonomous, event-driven network.
+XCron Protocol V2 is a decentralized execution layer that allows users and external applications to schedule on-chain operations (such as token swaps, reward harvesting, portfolio rebalancing, and recurring payments). By utilizing a decentralized network of incentivized executors (Keepers), XCron ensures transactions are executed when pre-defined criteria are met.
 
-## 2. The Agentic Problem
-Modern Web3 architectures are moving past manual clicking. The introduction of the Model Context Protocol (MCP) and AP2 standards on MultiversX allows AI agents (like Claude or custom LLMs) to understand blockchain state. But AI agents do not have private keys stored locally securely, nor can they be trusted to "wake up" exactly at 3:00 AM to perform an atomic swap safely without MEV exposure.
-We need an infrastructure where the AI is the "Brain" (making decisions) and a decentralized smart contract system is the "Muscle" (executing with absolute cryptographic security).
+---
 
-## 3. XCron Solution & Architecture
-XCron acts as the definitive bridge between Intent and Execution. The protocol consists of three immutable Smart Contracts and an off-chain MCP Gateway.
+## 2. Problem Statement
+Smart contract execution is reactive: execution must be initiated by an external account (EOA). For automated workflows (such as periodic compounding, price-dependent actions, or agent-triggered tasks), developers are forced to rely on centralized infrastructure (e.g., cron jobs running on private servers). This introduces single points of failure, custodial risks if private keys are stored on server instances, and exposure to front-running (MEV) if tasks are propagated insecurely.
 
-### A. Core Smart Contracts
-1. **The Scheduler:** The heart of the protocol. It safely escrows EGLD/Tokens and stores the immutable intent parameters (Target Contract, Endpoint, Arguments, Trigger Time, Gas Limits). 
-2. **Keeper Registry:** The decentralization layer. Anyone can become an executing Keeper by bonding a minimum EGLD stake.
-3. **Rewards Engine:** Distributes fees (Protocol Treasury vs Keeper Rewards) and integrates tightly with MultiversX's Gas Royalties.
+A decentralized, trustless infrastructure is required to separate execution logic from execution triggers, ensuring that task instructions are immutable and incentives are aligned to guarantee timely execution.
+
+---
+
+## 3. Architecture and Components
+
+The protocol is composed of three core smart contracts and an off-chain executor network.
+
+### A. Smart Contracts
+1. **Scheduler**: Serves as the entry point of the protocol. It escrows the execution deposits and stores the immutable task parameters (target contract, target endpoint, arguments, trigger conditions, gas limits, and expiration properties).
+2. **KeeperRegistry**: Manages executor node registrations, tracks staking requirements, maintains reputation metrics, and executes slashing operations.
+3. **Rewards Engine**: Handles execution fee distributions and manages protocol reserves.
 
 ### B. Trigger Mechanisms
-*   `TimeOnce`: Execute block-perfectly at a Unix Timestamp.
-*   `TimeRecurring`: Perpetual execution (e.g., compounding rewards).
-*   `ConditionOnChain`: Hybrid Oracles. Execution is blocked until an on-chain condition (like xExchange slippage ratio) is validated.
+* **TimeOnce**: Triggers execution at a specific Unix timestamp.
+* **TimeRecurring**: Triggers execution repeatedly based on a defined time interval.
+* **ConditionOnChain**: Triggers execution based on a query validation. The task remains locked until an on-chain view query matches target criteria (e.g., verifying a price ratio against an oracle).
 
-### C. The MCP Server (AI Integration)
-XCron V2 ships with `xcron-mcp-server`, a globally accessible plugin that exposes blockchain scheduling directly to AI Agents. Through Clone-Keys (Burner Wallets with hard spending limits), AIs can autonomously fund and schedule on-chain actions safely.
+### C. Off-Chain Integration (Model Context Protocol)
+XCron V2 includes the `xcron-mcp-server`, which exposes blockchain scheduling endpoints to external agent frameworks. Through delegated execution contracts (Clone-Keys), external systems can authorize execution limits and deposit tasks without maintaining direct access to primary wallet keys.
 
-## 4. Military-Grade Security
-Built by veterans of the MultiversX *Performance Benchmarks*, XCron's security architecture is mathematically impenetrable against the most aggressive state attacks:
+---
 
-*   **State Pruning & Zero-Bloat:** Completed or failed tasks are physically `cleared` from the blockchain state database. An attacker attempting a "Storage Bomb" will find the contract storage remains at ~0 KB indefinitely.
-*   **Anti-Spam Flat Fees:** Every intent creation locks a strict, non-refundable creation fee. Rate-limiting attacks (scheduling millions of fake tasks and cancelling them) will instantly bankrupt the attacker.
-*   **Atomic Settlement & MEV Protection:** Task execution is synchronous. If a Keeper attempts front-running or fails to achieve the strict Slippage targets, the transaction reverts atomically via CEI (Checks-Effects-Interactions) patterns.
-*   **Crypto-Round-Robin:** Keeper assignment employs block-header entropy (SHA256) to assign tasks, neutralizing Keeper-vs-Keeper gas wars.
+## 4. Security Framework
 
-## 5. Protocol Economics (The 10-Year Model)
-XCron is designed to be a self-sustaining financial engine. The Protocol Treasury accumulates value passively through two vectors:
+The smart contracts follow the Checks-Effects-Interactions (CEI) pattern and implement specific security defenses:
 
-1. **The 15% Protocol Fee:** Users pay a small premium on the gas budget. 70% goes to the Keeper executing the task, and 15% to the Protocol Treasury.
-2. **30% Gas Royalties:** MultiversX natively refunds 30% of gas spent on our Smart Contracts directly to our Treasury.
+* **State Clearing**: Executed, expired, or cancelled tasks are cleared from contract storage to minimize storage growth and limit state footprint on the blockchain database.
+* **Creation Fee Requirement**: Task creation requires locking a transaction fee deposit, raising the cost of denial-of-service (DoS) attempts through spam tasks.
+* **Atomic Callbacks**: Execution is conducted synchronously. If the target contract call fails or fails to meet slippage limits, the transaction reverts atomically, protecting keeper resources.
+* **Executor Selection**: Keeper assignment uses block-header entropy to designate exclusive execution slots, reducing competitive gas bidding wars.
 
-**Keeper Penalties (Slashing):** Keepers who miss execution windows suffer progressive slashing:
-- Strike 1: 5% of Stake slashed.
-- Strike 2: 15% of Stake slashed.
-- Strike 3: 20% slashed and auto-expulsion from the registry.
+---
 
-Slashed funds are permanently redirected to the Treasury, creating an ultra-deflationary pressure on Keeper inefficiency.
+## 5. Protocol Economics
 
-## 6. Strategic Roadmap (Q2 2026)
-*   **Testnet Supernova Alignment:** Deploying V2 contracts to Testnet to validate the State Pruning under real high-throughput load.
-*   **AI Arena Integration:** Connecting the `xcron-mcp-server` to the MultiversX Agent Arena.
-*   **Mainnet Immutable Deploy:** Launching the Protocol natively on Mainnet with zero upgrade-keys as a public good for the MultiversX ecosystem.
+XCron operates as a self-sustaining coordination protocol:
+
+1. **Protocol Fee**: A percentage (typically 30%) of the execution fee is retained by the protocol treasury, while the remaining portion (70%) is paid to the executing keeper.
+2. **Gas Royalties**: Smart contract gas royalties supported by the MultiversX protocol are directed to the treasury.
+
+### Keeper Slashing Rules
+Keepers who register for tasks but fail to execute within their designated windows face progressive slashing penalties:
+* **First Failure**: 5% of the staked bond is slashed.
+* **Second Failure**: 15% of the staked bond is slashed.
+* **Third Failure**: 20% of the staked bond is slashed, followed by automatic removal from the registry.
+
+Slashed funds are permanently transferred to the protocol treasury.
+
+---
+
+## 6. Development Roadmap (Q2 2026)
+
+* **Testnet Alignment**: Deploying V2 contracts to Testnet to validate state-clearing mechanics under simulated transaction volume.
+* **Agent Integration**: Connecting the `xcron-mcp-server` to the MultiversX Agent Arena interface.
+* **Mainnet Immutable Deployment**: Launching final verified smart contracts on Mainnet with upgrade permissions disabled.

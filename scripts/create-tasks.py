@@ -12,13 +12,13 @@ CHAIN = 'D'
 COUNT = int(sys.argv[1]) if len(sys.argv) > 1 else 20
 
 def get_round():
-    with urllib.request.urlopen(f'{API}/stats') as r:
-        d = json.loads(r.read())
-        return d['epoch'] * d['roundsPerEpoch'] + d['roundsPassed']
+  with urllib.request.urlopen(f'{API}/stats') as r:
+    d = json.loads(r.read())
+    return d['epoch'] * d['roundsPerEpoch'] + d['roundsPassed']
 
 def get_nonce(addr):
-    with urllib.request.urlopen(f'{API}/accounts/{addr}') as r:
-        return json.loads(r.read())['nonce']
+  with urllib.request.urlopen(f'{API}/accounts/{addr}') as r:
+    return json.loads(r.read())['nonce']
 
 deployer = 'erd135zkexfnzryv7z04vppm28uajdsxfvnel2n3kdw2spv3jk0j7k8stpwpgu'
 nonce = get_nonce(deployer)
@@ -31,30 +31,30 @@ endpoints = ['ping', 'claimRewards', 'compound', 'swap', 'mint']
 created = 0
 
 for i in range(COUNT):
-    ep = endpoints[i % len(endpoints)]
-    target_round = current_round + 3 + (i * 2)  # stagger targets
-    target_hex = format(target_round, '016x')
-    deposit = '100000000000000000'  # 0.1 EGLD
+  ep = endpoints[i % len(endpoints)]
+  target_round = current_round + 3 + (i * 2) # stagger targets
+  target_hex = format(target_round, '016x')
+  deposit = '100000000000000000' # 0.1 EGLD
 
-    cmd = [
-        'mxpy', 'contract', 'call', SCHEDULER,
-        '--function', 'scheduleTask',
-        '--arguments', f'addr:{PING_SC}', f'str:{ep}', '0', f'0x00{target_hex}', '10000000', '3', '1000',
-        '--pem', PEM,
-        '--gas-limit', '30000000',
-        '--chain', CHAIN,
-        '--proxy', PROXY,
-        '--nonce', str(nonce),
-        '--value', deposit,
-        '--send',
-    ]
+  cmd = [
+    'mxpy', 'contract', 'call', SCHEDULER,
+    '--function', 'scheduleTask',
+    '--arguments', f'addr:{PING_SC}', f'str:{ep}', '0', f'0x00{target_hex}', '10000000', '3', '1000',
+    '--pem', PEM,
+    '--gas-limit', '30000000',
+    '--chain', CHAIN,
+    '--proxy', PROXY,
+    '--nonce', str(nonce),
+    '--value', deposit,
+    '--send',
+  ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
-    if 'emittedTransactionHash' in result.stdout:
-        print(f'  ✅ #{i+1} {ep}() → round {target_round}')
-        created += 1
-    else:
-        print(f'  ❌ #{i+1} failed')
-    nonce += 1
+  result = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+  if 'emittedTransactionHash' in result.stdout:
+    print(f'  #{i+1} {ep}() → round {target_round}')
+    created += 1
+  else:
+    print(f'  #{i+1} failed')
+  nonce += 1
 
 print(f'\n═══ Created: {created}/{COUNT} tasks ═══')

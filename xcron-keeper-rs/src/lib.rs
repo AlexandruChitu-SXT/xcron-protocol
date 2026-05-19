@@ -6,3 +6,4 @@ pub mod event_engine;
 pub mod dispatcher;
 pub mod tui;
 pub mod mempool_sniper;
+pub mod drip_funder;

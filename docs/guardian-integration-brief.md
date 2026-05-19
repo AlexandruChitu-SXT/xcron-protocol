@@ -9,12 +9,12 @@
 
 | Feature | Estado | Cómo funciona |
 |---|---|---|
-| **Ejecución delegada** | ✅ Funcional | Los keepers ejecutan en nombre del usuario — el usuario NO firma cada tx |
-| **Depósitos limitados** | ✅ On-chain | El usuario deposita solo lo necesario, no expone su balance completo |
-| **Commit-Reveal** | ✅ On-chain | Anti-MEV: los keepers ocultan su intención antes de ejecutar |
-| **Progressive Slashing** | ✅ On-chain | Keepers maliciosos pierden stake: 10% → 25% → 50% → 100% |
-| **Parámetros predefinidos** | ✅ On-chain | Cada tarea tiene: función exacta, contrato target, intervalo, monto máximo |
-| **AI Security layers** | ✅ Frontend | Sanitización de input, anti-injección, rate limiting, validación de argumentos |
+| **Ejecución delegada** | Funcional | Los keepers ejecutan en nombre del usuario — el usuario NO firma cada tx |
+| **Depósitos limitados** | On-chain | El usuario deposita solo lo necesario, no expone su balance completo |
+| **Commit-Reveal** | On-chain | Anti-MEV: los keepers ocultan su intención antes de ejecutar |
+| **Progressive Slashing** | On-chain | Keepers maliciosos pierden stake: 10% → 25% → 50% → 100% |
+| **Parámetros predefinidos** | On-chain | Cada tarea tiene: función exacta, contrato target, intervalo, monto máximo |
+| **AI Security layers** | Frontend | Sanitización de input, anti-injección, rate limiting, validación de argumentos |
 
 **Resumen para drew.erd:** XCron ya funciona como ejecución delegada — el usuario define QUÉ hacer y los keepers lo hacen. Pero hoy el usuario conecta su wallet principal. Ahí es donde Guardian entra.
 

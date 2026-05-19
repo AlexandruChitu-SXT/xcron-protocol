@@ -5,17 +5,17 @@
 XCron is a three-contract system that automates smart contract calls on MultiversX.
 
 ```
-┌─────────────┐     schedule      ┌─────────────┐  async call   ┌──────────────┐
-│   User /    │ ──────────────►   │  Scheduler   │ ───────────► │   Target     │
-│   dApp      │   deposit EGLD    │  Contract    │  ◄─callback─ │   Contract   │
-└─────────────┘                   └──────┬───────┘              └──────────────┘
-                                         │
-                              ┌──────────┴──────────┐
-                              │                     │
-                     ┌────────▼────────┐  ┌─────────▼────────┐
-                     │ Keeper Registry │  │  Rewards Engine   │
-                     │ (stake/slash)   │  │  (fee collection) │
-                     └─────────────────┘  └──────────────────┘
+┌─────────────┐   schedule   ┌─────────────┐ async call  ┌──────────────┐
+│  User /  │ ──────────────►  │ Scheduler  │ ───────────► │  Target   │
+│  dApp   │  deposit EGLD  │ Contract  │ ◄─callback─ │  Contract  │
+└─────────────┘          └──────┬───────┘       └──────────────┘
+                     │
+               ┌──────────┴──────────┐
+               │           │
+           ┌────────▼────────┐ ┌─────────▼────────┐
+           │ Keeper Registry │ │ Rewards Engine  │
+           │ (stake/slash)  │ │ (fee collection) │
+           └─────────────────┘ └──────────────────┘
 ```
 
 ## Execution Flow
@@ -25,8 +25,8 @@ XCron is a three-contract system that automates smart contract calls on Multiver
 3. **Round-robin assignment** — Each task is assigned to a keeper. The assigned keeper has a 30-second exclusive window.
 4. **Keeper calls `executeTask`** — Triggers an async call to the target contract.
 5. **Callback verifies result** — `execution_callback` handles the outcome:
-   - ✅ **Success** → Keeper gets 70% reward, protocol gets 30% fee, remaining deposit refunded.
-   - ❌ **Failure** → Entire deposit refunded to user. Keeper gets nothing.
+  - **Success** → Keeper gets 70% reward, protocol gets 30% fee, remaining deposit refunded.
+  - **Failure** → Entire deposit refunded to user. Keeper gets nothing.
 6. **Recurring tasks** — Automatically rescheduled with remaining deposit if executions remain.
 
 ## Contracts

@@ -20,9 +20,9 @@ pub struct Transaction {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub signature: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub relayer: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature: Option<String>,
     #[serde(rename = "relayerSignature", skip_serializing_if = "Option::is_none")]
     pub relayer_signature: Option<String>,
 }
@@ -59,11 +59,35 @@ impl Transaction {
 
     /// Generates the payload string for signing
     pub fn serialize_for_signing(&self) -> Result<String, serde_json::Error> {
-        let mut unsigned_tx = self.clone();
-        unsigned_tx.signature = None;
-        unsigned_tx.relayer_signature = None;
-        let json_str = serde_json::to_string(&unsigned_tx)?;
-        Ok(json_str)
+        let mut parts = Vec::new();
+        parts.push(format!("\"nonce\":{}", self.nonce));
+        parts.push(format!("\"value\":\"{}\"", self.value));
+        parts.push(format!("\"receiver\":\"{}\"", self.receiver));
+        parts.push(format!("\"sender\":\"{}\"", self.sender));
+        parts.push(format!("\"gasPrice\":{}", self.gas_price));
+        parts.push(format!("\"gasLimit\":{}", self.gas_limit));
+        
+        if let Some(ref data) = self.data {
+            parts.push(format!("\"data\":\"{}\"", data));
+        }
+        
+        parts.push(format!("\"chainID\":\"{}\"", self.chain_id));
+        parts.push(format!("\"version\":{}", self.version));
+        
+        if let Some(options) = self.options {
+            parts.push(format!("\"options\":{}", options));
+        }
+
+        if let Some(ref relayer) = self.relayer {
+            parts.push(format!("\"relayer\":\"{}\"", relayer));
+        }
+        
+        Ok(format!("{{{}}}", parts.join(",")))
+    }
+
+    /// Generates the payload string for Relayer signing
+    pub fn serialize_for_relayer_signing(&self) -> Result<String, serde_json::Error> {
+        self.serialize_for_signing()
     }
 
     /// Signs the transaction and attaches the signature encoded in Hex
@@ -87,11 +111,12 @@ impl Transaction {
     pub fn to_relayed_v3(&mut self, relayer_address: &str, relayer_signing_key: &SigningKey) -> Result<(), Box<dyn std::error::Error>> {
         self.relayer = Some(relayer_address.to_string());
         
-        let payload = self.serialize_for_signing()?;
+        let payload = self.serialize_for_relayer_signing()?;
         let signature_bytes = relayer_signing_key.sign(payload.as_bytes());
         self.relayer_signature = Some(hex::encode(signature_bytes.to_bytes()));
         Ok(())
     }
+
 
     /// High-Speed transaction builder for Quantum Task Execution.
     /// Constructs the exact MultiVersX ABI payload (`executeQuantumTask@<serialized_task>@[quantum_secret]`)

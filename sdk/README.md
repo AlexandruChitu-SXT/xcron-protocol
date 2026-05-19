@@ -206,18 +206,18 @@ Get the MultiversX API URL for the configured network.
 
 | Network | Contracts | Status |
 |---------|-----------|--------|
-| Devnet | ✅ Deployed | Active |
-| Testnet | ✅ Deployed | Active |
-| Mainnet | ⏳ | Post-audit |
+| Devnet | Deployed | Active |
+| Testnet | Deployed | Active |
+| Mainnet | Pending | Post-audit |
 
 ---
 
 ## Links
 
-- 🌐 [xcron.io](https://xcron.io)
-- 📦 [npm](https://www.npmjs.com/package/xcron-sdk)
-- 🔗 [GitHub](https://github.com/AlexandruChitu-SXT/xcron-protocol)
-- 📄 [Whitepaper](https://github.com/AlexandruChitu-SXT/xcron-protocol/blob/main/docs/whitepaper.md)
+- [xcron.io](https://xcron.io)
+- [npm](https://www.npmjs.com/package/xcron-sdk)
+- [GitHub](https://github.com/AlexandruChitu-SXT/xcron-protocol)
+- [Whitepaper](https://github.com/AlexandruChitu-SXT/xcron-protocol/blob/main/docs/whitepaper.md)
 
 ## License
 

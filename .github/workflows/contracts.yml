@@ -66,31 +66,31 @@ jobs:
 
       - name: Check for private keys / mnemonics
         run: |
-          echo "🔍 Scanning for sensitive patterns..."
+          echo "[INFO] Scanning for sensitive patterns..."
           FOUND=0
 
           if grep -rn "BEGIN PRIVATE KEY\|BEGIN EC PRIVATE KEY\|BEGIN RSA PRIVATE KEY" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.rs" --include="*.json" --include="*.env" . 2>/dev/null | grep -v node_modules | grep -v generate-keepers; then
-            echo "❌ FOUND: Private key headers in source files!"
+            echo "[ERROR] FOUND: Private key headers in source files!"
             FOUND=1
           fi
 
           if grep -rn "abandon\|hockey\|indoor" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.rs" --include="*.env" . 2>/dev/null | grep -v node_modules | grep -v ".git"; then
-            echo "⚠️  WARNING: Possible mnemonic words found (review manually)"
+            echo "[WARNING] Possible mnemonic words found (review manually)"
           fi
 
           if grep -rn "WALLETCONNECT_PROJECT_ID.*=.*['\"].\{20,\}['\"]" --include="*.ts" --include="*.tsx" --include="*.env" . 2>/dev/null | grep -v node_modules | grep -v ".example"; then
-            echo "⚠️  WARNING: Possible hardcoded API keys found"
+            echo "[WARNING] Possible hardcoded API keys found"
           fi
 
           if find . -name "*.pem" -not -path "./.git/*" -not -path "*/node_modules/*" | head -1 | grep -q .; then
-            echo "❌ FOUND: .pem files in repository!"
+            echo "[ERROR] FOUND: .pem files in repository!"
             FOUND=1
           fi
 
           if [ $FOUND -eq 1 ]; then
             echo ""
-            echo "🚨 Sensitive data detected! Please remove before merging."
+            echo "[CRITICAL] Sensitive data detected! Please remove before merging."
             exit 1
           fi
 
-          echo "✅ No sensitive patterns found."
+          echo "[SUCCESS] No sensitive patterns found."

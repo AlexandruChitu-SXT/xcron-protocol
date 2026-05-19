@@ -1,37 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# XCron Protocol Web Dashboard
+
+This is the Next.js web application for the XCron Protocol, providing an interactive dashboard to monitor keeper metrics, schedule tasks, manage burner keys (Clone-Keys), and view execution telemetry on the MultiversX network.
+
+## Project Structure
+
+* `/src/app`: Page routing, layout structure, and API route definitions.
+* `/src/components`: UI components (telemetry views, active feed indicators, radar visualization, price tickers).
+* `/src/hooks`: Integration hooks for reading contract queries, tracking transaction state, and managing clone keys.
+* `/src/utils`: Helper functions, including quantum encryption wrappers and ABI configurations.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+* Node.js 20+
+* npm or pnpm package manager
+
+### Configuration
+
+Copy the example environment file and configure the target network API endpoint and contract addresses:
+
+```bash
+cp .env.example .env.local
+```
+
+### Installation
+
+Install dependencies using the legacy peer dependency flag to accommodate the MultiversX JS SDK requirements:
+
+```bash
+npm install --legacy-peer-deps
+```
+
+### Local Development
+
+Run the Next.js development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000` to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Building for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To build the static application bundle:
 
-## Learn More
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+This will run type checking, generate optimization assets, and bundle the output inside the build directory.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-empty trigger
+Deployments are configured for Netlify and Vercel. The build process uses the `netlify.toml` configuration at the root of the workspace to build this subdirectory and publish the output.

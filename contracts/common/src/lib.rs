@@ -9,3 +9,8 @@ pub mod constants;
 pub mod errors;
 pub mod pausable;
 pub mod types;
+pub mod lns;
+pub mod hyperbolic;
+pub mod trig;
+pub mod chaotic;
+

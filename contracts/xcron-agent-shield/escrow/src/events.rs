@@ -25,4 +25,11 @@ pub trait EventsModule {
         #[indexed] employer: &ManagedAddress,
         amount: BigUint,
     );
+
+    #[event("shield_frozen")]
+    fn shield_frozen_event(
+        &self,
+        #[indexed] token_id: &TokenIdentifier,
+        spent: &BigUint,
+    );
 }

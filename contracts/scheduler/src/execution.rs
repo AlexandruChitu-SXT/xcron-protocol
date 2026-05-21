@@ -34,15 +34,25 @@ pub trait ExecutionModule:
     if let common::types::Trigger::QuantumSealedHash { expected_hash } = &task_payload.trigger {
       let secret = quantum_secret.into_option().unwrap_or_else(|| sc_panic!("Missing Quantum Secret"));
       require!(secret.as_managed_buffer().len() == 32, "XCRON-PROTECT: Quantum Secret must be 32 bytes");
-      let computed_hash = self.crypto().sha256(secret.as_managed_buffer());
-      require!(computed_hash.as_managed_buffer() == expected_hash.as_managed_buffer(), "Q-1: Quantum Hash Seal broken");
+      
+      let mut hash_input = ManagedBuffer::new();
+      hash_input.append(secret.as_managed_buffer());
+      hash_input.append(task_payload.owner.as_managed_buffer());
+      hash_input.append(&ManagedBuffer::from(&task_payload.id.to_be_bytes()[..]));
+      hash_input.append(task_payload.target_contract.as_managed_buffer());
+      
+      let computed_hash = self.crypto().keccak256(&hash_input);
+      require!(computed_hash.as_managed_buffer() == expected_hash.as_managed_buffer(), "Q-1: CL-CRIB Hash Seal broken");
     }
 
     if let Some(assigned) = &task_payload.assigned_keeper {
       require!(&keeper == assigned, "MEV Protection: Locked task");
     }
 
-    self.perform_round_robin_check(&task_payload, &task_hash, &keeper);
+    // Skip Round Robin for Quantum tasks, since they are secured by the secret itself
+    if !matches!(task_payload.trigger, common::types::Trigger::QuantumSealedHash { .. }) {
+      self.perform_round_robin_check(&task_payload, &task_hash, &keeper);
+    }
 
     if task_payload.confidential {
       self.assigned_enclave_keeper(&task_hash).set(&keeper);
@@ -153,10 +163,12 @@ pub trait ExecutionModule:
     let target_shard = self.blockchain().get_shard_of_address(&task_payload.target_contract);
     let is_cross_shard = target_shard != self.blockchain().get_shard_of_address(&self.blockchain().get_sc_address());
     
-    let keeper_shard_cached = self.keeper_shard(&keeper).get();
+    let keeper_shard_actual = self.blockchain().get_shard_of_address(&keeper);
+    self.keeper_shard(&keeper).set(keeper_shard_actual);
+
     let cross_shard_overhead = if !is_cross_shard {
       0u64
-    } else if keeper_shard_cached == target_shard {
+    } else if keeper_shard_actual == target_shard {
       task_payload.max_gas * 15 / 100
     } else {
       task_payload.max_gas * 30 / 100
@@ -169,7 +181,7 @@ pub trait ExecutionModule:
     };
 
     let min_gas_needed = task_payload.max_gas + cross_shard_overhead + callback_gas + 10_000_000u64;
-    require!(self.blockchain().get_gas_left() >= min_gas_needed, "Insufficient gas");
+    require!(self.blockchain().get_gas_left() >= min_gas_needed, "Insufficient gas for full execution");
 
     quantum_state.status = common::types::TaskStatus::Executing;
     quantum_state.executing_at = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
@@ -184,6 +196,8 @@ pub trait ExecutionModule:
     for arg in task_payload.target_args.into_iter() {
       exact_args.push(arg);
     }
+
+    self.executing_task_owner().set(&task_payload.owner);
 
     self.tx()
       .to(&task_payload.target_contract)
@@ -203,6 +217,7 @@ pub trait ExecutionModule:
     keeper: ManagedAddress,
     #[call_result] result: ManagedAsyncCallResult<IgnoreValue>,
   ) {
+    self.executing_task_owner().clear();
     let quantum_state = self.quantum_tasks(&task_hash).get();
     let deposit = quantum_state.deposit.clone();
     let owner = quantum_state.owner.clone();
@@ -242,7 +257,8 @@ pub trait ExecutionModule:
     self.send().direct_egld(&keeper, &reward);
     let total_spent = &reward + &protocol_fee;
     if deposit > total_spent {
-      self.send().direct_egld(&owner, &(&deposit - &total_spent));
+      let refund = &deposit - &total_spent;
+      self.claimable_refunds(&owner).update(|v| *v += &refund);
     }
 
     self.forward_protocol_fee(&keeper, 0, &protocol_fee);
@@ -265,6 +281,7 @@ pub trait ExecutionModule:
   ) {
     self.quantum_tasks(&task_hash).clear();
     self.owner_tasks(&owner).swap_remove(&task_hash);
+    self.used_compressed_tasks(&task_hash).set(true);
     self.assigned_enclave_keeper(&task_hash).clear();
 
     self.total_failed_execs().update(|v| *v += 1);
@@ -288,7 +305,8 @@ pub trait ExecutionModule:
     // self.send().direct_egld(&keeper, &BigUint::zero());
     
     if deposit > protocol_fee {
-      self.send().direct_egld(&owner, &(&deposit - &protocol_fee));
+      let refund = &deposit - &protocol_fee;
+      self.claimable_refunds(&owner).update(|v| *v += &refund);
     }
 
     self.forward_protocol_fee(&keeper, 0, &protocol_fee);
@@ -308,7 +326,7 @@ pub trait ExecutionModule:
   /// Previously, ANY non-empty response was treated as "safe" (including a `false` byte).
   /// Now we properly decode the boolean value from the XWAP oracle response.
   fn require_xwap_market_safe(&self) {
-    let xwap_addr = self.xwap_address().get();
+    let xwap_addr = if !self.xwap_address().is_empty() { self.xwap_address().get() } else { ManagedAddress::zero() };
     if !xwap_addr.is_zero() {
       let raw_results = self.tx().to(&xwap_addr).raw_call("isSafeToExecute").returns(multiversx_sc::types::ReturnsRawResult).sync_call();
       let is_safe = if !raw_results.is_empty() {
@@ -323,23 +341,39 @@ pub trait ExecutionModule:
   fn perform_round_robin_check(&self, task_payload: &common::types::Task<Self::Api>, task_hash: &ManagedByteArray<Self::Api, 32>, keeper: &ManagedAddress) {
     let keeper_count = self.keeper_list().len();
     if keeper_count > 1 {
-      let ripe_time_ms = match &task_payload.trigger {
+      let ripe_time = match &task_payload.trigger {
         common::types::Trigger::TimeOnce { target_time } => *target_time,
         common::types::Trigger::TimeRecurring { start_time, .. } => *start_time,
-        _ => self.blockchain().get_block_timestamp_seconds().as_u64_seconds() * 1000,
+        _ => self.get_timestamp_ms(),
       };
+
+      let is_legacy = {
+        let mut bytes = [0u8; 32];
+        let _ = task_hash.as_managed_buffer().load_slice(0, &mut bytes);
+        bytes[0..24].iter().all(|&b| b == 0)
+      };
+
       let mut hash_data = ManagedBuffer::new();
-      hash_data.append(task_hash.as_managed_buffer());
-      hash_data.append(&ManagedBuffer::from(ripe_time_ms.to_be_bytes().as_ref()));
+      if is_legacy {
+        hash_data.append(&ManagedBuffer::from(task_payload.id.to_be_bytes().as_ref()));
+      } else {
+        hash_data.append(task_hash.as_managed_buffer());
+      }
+      hash_data.append(&ManagedBuffer::from(ripe_time.to_be_bytes().as_ref()));
       hash_data.append(self.blockchain().get_block_random_seed().as_managed_buffer());
+
       let hash = self.crypto().sha256(&hash_data);
       let mut hash_bytes = [0u8; 8];
       let _ = hash.as_managed_buffer().load_slice(0, &mut hash_bytes);
+
       let assigned_index = (u64::from_be_bytes(hash_bytes) % keeper_count as u64) as usize + 1;
       let assigned_keeper = self.keeper_list().get(assigned_index);
       if *keeper != assigned_keeper {
-        let current_time_ms = self.blockchain().get_block_timestamp_seconds().as_u64_seconds() * 1000;
-        require!(current_time_ms >= ripe_time_ms + (common::constants::ROUND_ROBIN_GRACE_SECONDS * 1000), "Task assigned to another keeper");
+        let current_time_ms = self.get_timestamp_ms();
+        require!(
+          current_time_ms >= ripe_time + (common::constants::ROUND_ROBIN_GRACE_SECONDS * 1000),
+          "Task assigned to another keeper -- wait 30s grace period"
+        );
       }
     }
   }
@@ -395,7 +429,137 @@ pub trait ExecutionModule:
     self.owner_tasks(&owner).swap_remove(&task_hash);
     self.assigned_enclave_keeper(&task_hash).clear();
 
-    self.send().direct_egld(&owner, &deposit);
+    self.claimable_refunds(&owner).update(|v| *v += &deposit);
     self.task_executed_event_quantum(&task_hash, &assigned_keeper, false);
+  }
+
+  /// Wrapper legacy para ejecutar una tarea por ID (usado en tests)
+  #[endpoint(executeTask)]
+  fn execute_task(
+    &self,
+    task_id: u64,
+    _quantum_secret: OptionalValue<ManagedByteArray<Self::Api, 32>>,
+  ) {
+    self.require_not_paused();
+
+    let keeper = self.blockchain().get_caller();
+    self.require_registered_keeper(&keeper);
+
+    require!(!self.tasks(task_id).is_empty(), "Task not found");
+    let task_payload = self.tasks(task_id).get();
+
+    let mut hash_bytes = [0u8; 32];
+    hash_bytes[24..32].copy_from_slice(&task_id.to_be_bytes());
+    let task_hash = ManagedByteArray::new_from_bytes(&hash_bytes);
+
+    require!(!self.quantum_tasks(&task_hash).is_empty(), "Task not found");
+    let quantum_state = self.quantum_tasks(&task_hash).get();
+
+    require!(
+      quantum_state.status == common::types::TaskStatus::Pending || quantum_state.status == common::types::TaskStatus::Committed,
+      "Task not Pending"
+    );
+
+    self.perform_round_robin_check(&task_payload, &task_hash, &keeper);
+
+    if task_payload.confidential {
+      self.assigned_enclave_keeper(&task_hash).set(&keeper);
+    }
+
+    self.dispatch_task_execution(task_hash, task_payload, keeper, quantum_state);
+  }
+
+  /// Wrapper legacy para recuperar tareas atascadas por ID (usado en tests)
+  #[only_owner]
+  #[endpoint(recoverStuckTask)]
+  fn recover_stuck_task(&self, task_id: u64) {
+    self.require_not_paused();
+
+    let mut hash_bytes = [0u8; 32];
+    hash_bytes[24..32].copy_from_slice(&task_id.to_be_bytes());
+    let task_hash = ManagedByteArray::new_from_bytes(&hash_bytes);
+
+    require!(!self.quantum_tasks(&task_hash).is_empty(), "Task not found");
+    let quantum_state = self.quantum_tasks(&task_hash).get();
+
+    require!(
+      quantum_state.status == common::types::TaskStatus::Executing,
+      "Task not in Executing state"
+    );
+
+    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let stuck_threshold = 24 * 60 * 60; // 24 hours
+    require!(
+      current_time >= quantum_state.executing_at + stuck_threshold,
+      "Task not stuck yet (wait 24h)"
+    );
+
+    let deposit = quantum_state.deposit.clone();
+    let owner = quantum_state.owner.clone();
+    self.quantum_tasks(&task_hash).clear();
+    self.owner_tasks(&owner).swap_remove(&task_hash);
+    self.tasks(task_id).clear();
+    self.assigned_enclave_keeper(&task_hash).clear();
+
+    self.claimable_refunds(&owner).update(|v| *v += &deposit);
+    self.task_expired_event_quantum(&task_hash);
+  }
+
+  /// Wrapper legacy para expirar tareas pasadas de TTL por ID (usado en tests)
+  #[endpoint(expireStaleTasks)]
+  fn expire_stale_tasks(&self, args: MultiValueEncoded<ManagedBuffer>) {
+    let caller = self.blockchain().get_caller();
+    require!(
+      self.whitelisted_keepers().contains(&caller) || caller == self.blockchain().get_owner_address(),
+      "Not authorized to expire tasks"
+    );
+
+    let current_time_ms = self.get_timestamp_ms();
+    for arg in args {
+      let arg_bytes = arg.to_boxed_bytes();
+      let arg_len = arg_bytes.len();
+      
+      let (task_hash, is_legacy, legacy_id) = if arg_len == 32 {
+        let mut hash_bytes = [0u8; 32];
+        let _ = arg.load_to_byte_array(&mut hash_bytes);
+        (ManagedByteArray::new_from_bytes(&hash_bytes), false, 0u64)
+      } else {
+        let task_id = u64::top_decode(arg_bytes.as_slice()).unwrap_or(0);
+        let mut hash_bytes = [0u8; 32];
+        hash_bytes[24..32].copy_from_slice(&task_id.to_be_bytes());
+        (ManagedByteArray::new_from_bytes(&hash_bytes), true, task_id)
+      };
+
+      if self.quantum_tasks(&task_hash).is_empty() {
+        continue;
+      }
+      let quantum_state = self.quantum_tasks(&task_hash).get();
+      if quantum_state.status != common::types::TaskStatus::Pending {
+        continue;
+      }
+
+      let should_expire = if is_legacy {
+        if self.tasks(legacy_id).is_empty() {
+          false
+        } else {
+          let task_payload = self.tasks(legacy_id).get();
+          task_payload.ttl_seconds > 0 && current_time_ms > task_payload.created_at + (task_payload.ttl_seconds * 1000)
+        }
+      } else {
+        false
+      };
+
+      if should_expire {
+        let deposit = quantum_state.deposit.clone();
+        let owner = quantum_state.owner.clone();
+        self.quantum_tasks(&task_hash).clear();
+        self.owner_tasks(&owner).swap_remove(&task_hash);
+        if is_legacy {
+          self.tasks(legacy_id).clear();
+        }
+        self.claimable_refunds(&owner).update(|v| *v += &deposit);
+        self.task_expired_event_quantum(&task_hash);
+      }
+    }
   }
 }

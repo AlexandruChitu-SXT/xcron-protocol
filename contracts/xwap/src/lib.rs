@@ -21,6 +21,8 @@
 
 #![no_std]
 
+extern crate alloc;
+
 multiversx_sc::imports!();
 
 pub mod config;

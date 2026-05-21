@@ -46,16 +46,19 @@ where
     pub fn init<
         Arg0: ProxyArg<ManagedAddress<Env::Api>>,
         Arg1: ProxyArg<ManagedAddress<Env::Api>>,
+        Arg2: ProxyArg<ManagedAddress<Env::Api>>,
     >(
         self,
         validation_contract_address: Arg0,
         identity_contract_address: Arg1,
+        agent_role_address: Arg2,
     ) -> TxTypedDeploy<Env, From, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_deploy()
             .argument(&validation_contract_address)
             .argument(&identity_contract_address)
+            .argument(&agent_role_address)
             .original_result()
     }
 }

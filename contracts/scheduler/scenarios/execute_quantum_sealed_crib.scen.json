@@ -1,6 +1,6 @@
 {
-    "name": "round-robin-assignment",
-    "comment": "Non-assigned keeper is blocked during grace period but can execute after 30s",
+    "name": "execute-quantum-sealed-crib",
+    "comment": "Test execution of Quantum Sealed CRIB task",
     "steps": [
         {
             "step": "setState",
@@ -14,10 +14,6 @@
                     "balance": "50,000,000,000,000,000,000"
                 },
                 "address:keeper1": {
-                    "nonce": "0",
-                    "balance": "10,000,000,000,000,000,000"
-                },
-                "address:keeper2": {
                     "nonce": "0",
                     "balance": "10,000,000,000,000,000,000"
                 },
@@ -71,7 +67,7 @@
         },
         {
             "step": "scCall",
-            "id": "add-keeper1",
+            "id": "whitelist-keeper",
             "comment": "Whitelist keeper1",
             "tx": {
                 "from": "address:owner",
@@ -90,41 +86,14 @@
         },
         {
             "step": "scCall",
-            "id": "add-keeper2",
-            "comment": "Whitelist keeper2",
-            "tx": {
-                "from": "address:owner",
-                "to": "sc:scheduler",
-                "function": "addWhitelistedKeeper",
-                "arguments": [
-                    "address:keeper2"
-                ],
-                "gasLimit": "10,000,000",
-                "gasPrice": "0"
-            },
-            "expect": {
-                "out": [],
-                "status": "0"
-            }
-        },
-        {
-            "step": "scCall",
             "id": "schedule-task",
-            "comment": "User1 schedules a TimeOnce task ripe at timestamp 2000",
+            "comment": "User1 schedules a CRIB task via modern path",
             "tx": {
                 "from": "address:user1",
                 "to": "sc:scheduler",
                 "function": "scheduleQuantumTask",
                 "arguments": [
-                    "address:target_contract",
-                    "str:ping",
-                    "0x00000000",
-                    "0x0000000000001e8480",
-                    "10,000,000",
-                    "3",
-                    "604800",
-                    "",
-                    ""
+                    "0x000000000000000175736572315f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7461726765745f636f6e74726163745f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f0000000470696e6700000000046d8c8c877f2597c40f2b0bd9237378425d430ff88a291163f581cd19a0cd16d00000000000989680000000080de0b6b3a7640000030000000000000003e8000000000000000000000000000000000000000000"
                 ],
                 "egldValue": "1,000,000,000,000,000,000",
                 "gasLimit": "20,000,000",
@@ -132,54 +101,22 @@
             },
             "expect": {
                 "out": [
-                    "1"
+                    "0xc8ebb002a7ab6c21528f3c3e9d6e47dc0a57ad91ced35f280d1a5b159b48b84b"
                 ],
                 "status": "0"
             }
         },
         {
-            "step": "setState",
-            "comment": "Advance timestamp to 2000 \u2014 task is ripe",
-            "currentBlockInfo": {
-                "blockTimestamp": "2000"
-            }
-        },
-        {
             "step": "scCall",
-            "id": "non-assigned-keeper-blocked",
-            "comment": "Keeper1 tries to execute during grace period \u2014 should be blocked if not assigned",
+            "id": "execute-task-success",
+            "comment": "Keeper1 executes CRIB task with correct secret",
             "tx": {
                 "from": "address:keeper1",
                 "to": "sc:scheduler",
-                "function": "executeTask",
+                "function": "executeQuantumTask",
                 "arguments": [
-                    "1"
-                ],
-                "gasLimit": "50,000,000",
-                "gasPrice": "0"
-            },
-            "expect": {
-                "status": "4",
-                "message": "str:Task assigned to another keeper -- wait 30s grace period"
-            }
-        },
-        {
-            "step": "setState",
-            "comment": "Advance timestamp to 2031 \u2014 grace period over",
-            "currentBlockInfo": {
-                "blockTimestamp": "2031"
-            }
-        },
-        {
-            "step": "scCall",
-            "id": "non-assigned-keeper-after-grace",
-            "comment": "Keeper1 can now execute after grace period",
-            "tx": {
-                "from": "address:keeper1",
-                "to": "sc:scheduler",
-                "function": "executeTask",
-                "arguments": [
-                    "1"
+                    "0x000000000000000175736572315f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7461726765745f636f6e74726163745f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f0000000470696e6700000000046d8c8c877f2597c40f2b0bd9237378425d430ff88a291163f581cd19a0cd16d00000000000989680000000080de0b6b3a7640000030000000000000003e8000000000000000000000000000000000000000000",
+                    "0x0101010101010101010101010101010101010101010101010101010101010101"
                 ],
                 "gasLimit": "50,000,000",
                 "gasPrice": "0"

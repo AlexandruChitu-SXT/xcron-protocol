@@ -33,7 +33,7 @@
             "comment": "Deploy Rewards with 20% treasury split (2000 BPS)",
             "tx": {
                 "from": "address:owner",
-                "contractCode": "mxsc:output/rewards.mxsc.json",
+                "contractCode": "mxsc:../output/rewards.mxsc.json",
                 "arguments": [
                     "address:keeper_registry",
                     "2000"

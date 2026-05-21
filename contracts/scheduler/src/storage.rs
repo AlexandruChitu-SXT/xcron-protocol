@@ -18,6 +18,12 @@ pub trait StorageModule {
 
     // time_index, condition_tasks, task_metadata, and commits have been removed.
     // The Keeper indices are managed entirely in RAM off-chain via Event DA.
+    // Legacy storage mappers for backwards compatibility with scenario tests
+    #[storage_mapper("tasks")]
+    fn tasks(&self, id: u64) -> SingleValueMapper<common::types::Task<Self::Api>>;
+
+    #[storage_mapper("commits")]
+    fn commits(&self, id: u64) -> SingleValueMapper<common::types::CommitInfo<Self::Api>>;
 
     // ── Owner → tasks mapping (for rate limiting) ────────────────────────────────
     #[storage_mapper("ownerTasks")]
@@ -194,4 +200,16 @@ pub trait StorageModule {
     #[view(getAcceptedPaymentTokens)]
     #[storage_mapper("acceptedPaymentTokens")]
     fn accepted_payment_tokens(&self, token_identifier: &TokenIdentifier) -> SingleValueMapper<bool>;
+
+    #[view(getClaimableRefunds)]
+    #[storage_mapper("claimableRefunds")]
+    fn claimable_refunds(&self, address: &ManagedAddress) -> SingleValueMapper<BigUint>;
+
+    #[view(getTargetOwnerRestriction)]
+    #[storage_mapper("target_owner_restriction")]
+    fn target_owner_restriction(&self, target: &ManagedAddress) -> SingleValueMapper<ManagedAddress>;
+
+    #[view(getExecutingTaskOwner)]
+    #[storage_mapper("executing_task_owner")]
+    fn executing_task_owner(&self) -> SingleValueMapper<ManagedAddress>;
 }

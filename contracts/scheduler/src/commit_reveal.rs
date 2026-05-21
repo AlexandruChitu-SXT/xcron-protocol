@@ -13,6 +13,10 @@ pub trait CommitRevealModule:
     + crate::helpers::HelpersModule
     + common::pausable::PausableModule
 {
+    fn get_safe_block_timestamp(&self) -> u64 {
+        self.blockchain().get_block_timestamp_seconds().as_u64_seconds()
+    }
+
     /// CR-1: Commit to execute a task (prevents frontrunning).
     #[payable("EGLD")]
     #[endpoint(commitTask)]

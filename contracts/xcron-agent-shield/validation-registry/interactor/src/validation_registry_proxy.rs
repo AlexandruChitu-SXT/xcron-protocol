@@ -267,4 +267,30 @@ where
             .argument(&address)
             .original_result()
     }
+
+    pub fn add_whitelisted_validator<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        address: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("addWhitelistedValidator")
+            .argument(&address)
+            .original_result()
+    }
+
+    pub fn remove_whitelisted_validator<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        address: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("removeWhitelistedValidator")
+            .argument(&address)
+            .original_result()
+    }
 }

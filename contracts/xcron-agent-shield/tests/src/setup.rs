@@ -79,6 +79,14 @@ impl AgentTestState {
             .new_address(VALIDATION_SC_ADDRESS)
             .run();
 
+        world
+            .tx()
+            .from(OWNER_ADDRESS)
+            .to(VALIDATION_SC_ADDRESS)
+            .typed(ValidationRegistryProxy)
+            .add_whitelisted_validator(VALIDATOR.to_managed_address())
+            .run();
+
         let reputation_sc = world
             .tx()
             .from(OWNER_ADDRESS)
@@ -138,6 +146,14 @@ impl AgentTestState {
             .code(VALIDATION_CODE)
             .returns(ReturnsNewManagedAddress)
             .new_address(VALIDATION_SC_ADDRESS)
+            .run();
+
+        world
+            .tx()
+            .from(OWNER_ADDRESS)
+            .to(VALIDATION_SC_ADDRESS)
+            .typed(ValidationRegistryProxy)
+            .add_whitelisted_validator(VALIDATOR.to_managed_address())
             .run();
 
         let reputation_sc = world
@@ -1325,6 +1341,14 @@ impl EscrowTestState {
             .new_address(VALIDATION_SC_ADDRESS)
             .run();
 
+        world
+            .tx()
+            .from(OWNER_ADDRESS)
+            .to(VALIDATION_SC_ADDRESS)
+            .typed(ValidationRegistryProxy)
+            .add_whitelisted_validator(VALIDATOR.to_managed_address())
+            .run();
+
         let reputation_sc = world
             .tx()
             .from(OWNER_ADDRESS)
@@ -1340,7 +1364,11 @@ impl EscrowTestState {
             .tx()
             .from(OWNER_ADDRESS)
             .typed(EscrowProxy)
-            .init(validation_sc.clone(), identity_sc.clone())
+            .init(
+                validation_sc.clone(),
+                identity_sc.clone(),
+                AGENT.to_managed_address(),
+            )
             .code(ESCROW_CODE)
             .returns(ReturnsNewManagedAddress)
             .new_address(ESCROW_SC_ADDRESS)

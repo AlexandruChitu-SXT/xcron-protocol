@@ -28,82 +28,69 @@ pub trait KeepersModule: crate::storage::StorageModule + crate::events::EventsMo
 
     /// Compute the median of all fresh keeper reports.
     fn get_median_off_chain(&self) -> BigUint {
+        let (median, _, _) = self.process_keepers_summary();
+        median
+    }
+
+    /// Check if ≥ consensus_min_permille fraction of keepers agree within 5% of median.
+    fn check_consensus(&self) -> bool {
+        let (_, consensus_ok, _) = self.process_keepers_summary();
+        consensus_ok
+    }
+
+    /// O(N) optimized keepers state aggregation in a single storage pass and native WASM sorting
+    fn process_keepers_summary(&self) -> (BigUint, bool, bool) {
         let current_block = self.blockchain().get_block_nonce();
         let max_age = self.freshness_blocks().get();
+        let total_keepers = self.registered_keepers().len();
+        
+        if total_keepers == 0 {
+            return (BigUint::zero(), false, false);
+        }
 
-        let mut prices: ManagedVec<BigUint> = ManagedVec::new();
+        let mut prices = alloc::vec::Vec::new();
+        let mut has_fresh_reports = false;
 
         for keeper in self.registered_keepers().iter() {
-            if !self.keeper_report(&keeper).is_empty() {
-                let report = self.keeper_report(&keeper).get();
+            let report_mapper = self.keeper_report(&keeper);
+            if !report_mapper.is_empty() {
+                let report = report_mapper.get();
                 if current_block.saturating_sub(report.block) <= max_age {
                     prices.push(report.price);
+                    has_fresh_reports = true;
                 }
             }
         }
 
         let n = prices.len();
         if n == 0 {
-            return BigUint::zero();
+            return (BigUint::zero(), false, false);
         }
 
-        // Insertion sort ascending (small N, ≤ ~20)
-        for i in 1..n {
-            let mut j = i;
-            while j > 0 {
-                let p_prev = prices.get(j - 1).clone();
-                let p_cur = prices.get(j).clone();
-                if p_prev > p_cur {
-                    let _ = prices.set(j - 1, p_cur);
-                    let _ = prices.set(j, p_prev);
-                    j -= 1;
-                } else {
-                    break;
-                }
-            }
+        // Require a simple majority of registered keepers to be active/fresh for quorum
+        let min_active = (total_keepers + 1) / 2;
+        if n < min_active {
+            return (BigUint::zero(), false, has_fresh_reports);
         }
+
+        prices.sort();
 
         let mid = n / 2;
-        if n % 2 == 1 {
-            prices.get(mid).clone()
+        let median = if n % 2 == 1 {
+            prices[mid].clone()
         } else {
-            let a = prices.get(mid - 1).clone();
-            let b = prices.get(mid).clone();
+            let a = &prices[mid - 1];
+            let b = &prices[mid];
             (a + b) / 2u64
-        }
-    }
-
-    /// Check if ≥ consensus_min_permille fraction of keepers agree within 5% of median.
-    fn check_consensus(&self) -> bool {
-        let median = self.get_median_off_chain();
-        if median == BigUint::zero() {
-            return false;
-        }
-
-        let current_block = self.blockchain().get_block_nonce();
-        let max_age = self.freshness_blocks().get();
-        let total = self.registered_keepers().len();
-        if total == 0 {
-            return false;
-        }
+        };
 
         let mut agreeing: u64 = 0;
-
-        for keeper in self.registered_keepers().iter() {
-            if self.keeper_report(&keeper).is_empty() {
-                continue;
-            }
-            let report = self.keeper_report(&keeper).get();
-            if current_block.saturating_sub(report.block) > max_age {
-                continue;
-            }
-
-            let divergence = if report.price > median {
-                (&report.price - &median) * 1000u64 / &median
+        for price in &prices {
+            let divergence = if price > &median {
+                (price - &median) * 1000u64 / &median
             } else {
-                (&median - &report.price) * 1000u64 / &median
+                (&median - price) * 1000u64 / &median
             };
-
             let div_u64 = divergence.to_u64().unwrap_or(u64::MAX);
             if div_u64 <= CONSENSUS_TOLERANCE_PERMILLE {
                 agreeing += 1;
@@ -111,7 +98,9 @@ pub trait KeepersModule: crate::storage::StorageModule + crate::events::EventsMo
         }
 
         let consensus_min = self.consensus_min_permille().get();
-        let agreeing_permille = agreeing * 1000u64 / total as u64;
-        agreeing_permille >= consensus_min
+        let agreeing_permille = agreeing * 1000u64 / n as u64; // Divisor is n (active keepers)
+        let consensus_ok = agreeing_permille >= consensus_min;
+
+        (median, consensus_ok, has_fresh_reports)
     }
 }

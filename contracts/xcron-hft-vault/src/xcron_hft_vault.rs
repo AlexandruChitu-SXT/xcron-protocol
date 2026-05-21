@@ -6,10 +6,10 @@ multiversx_sc::derive_imports!();
 /// XCron HFT Vault — Atomic Flash Arbitrage Engine
 ///
 /// Este contrato ejecuta arbitraje circular atómico en una sola transacción:
-/// 1. Toma WEGLD del balance interno
-/// 2. Swap WEGLD → TOKEN_B en Pool A (xExchange)
-/// 3. Swap TOKEN_B → WEGLD en Pool B (AshSwap u otro)
-/// 4. Verifica que el WEGLD final > WEGLD inicial (rentabilidad neta)
+/// 1. Toma WEGLD/EGLD/ESDT del balance interno
+/// 2. Swap TOKEN_A → TOKEN_B en Pool A (xExchange u otro DEX)
+/// 3. Swap TOKEN_B → TOKEN_A en Pool B (AshSwap u otro DEX)
+/// 4. Verifica que el TOKEN_A final >= TOKEN_A inicial + min_net_profit
 /// 5. Si no hay beneficio → REVERT automático (cero riesgo de inventario)
 
 #[multiversx_sc::contract]
@@ -56,6 +56,16 @@ pub trait XcronHftVault {
     self.authorized_bot().set(&new_bot);
   }
 
+  #[view(getSchedulerAddress)]
+  #[storage_mapper("scheduler_address")]
+  fn scheduler_address(&self) -> SingleValueMapper<ManagedAddress>;
+
+  #[endpoint(setSchedulerAddress)]
+  #[only_owner]
+  fn set_scheduler_address(&self, scheduler: ManagedAddress) {
+    self.scheduler_address().set(&scheduler);
+  }
+
   // ==========================================================
   // FONDOS: Gestión del Capital de Arbitraje (Solo Dueño)
   // ==========================================================
@@ -64,32 +74,36 @@ pub trait XcronHftVault {
   #[payable("*")]
   fn deposit(&self) {
     // Los fondos se acumulan pasivamente en el balance del Smart Contract.
-    // Listos para usarse como flash-liquidity en milisegundos.
   }
 
   #[endpoint]
   #[only_owner]
-  fn withdraw(&self, token_identifier: TokenIdentifier, amount: BigUint) {
+  fn withdraw(&self, token_identifier: EgldOrEsdtTokenIdentifier<Self::Api>, amount: BigUint) {
     let caller = self.blockchain().get_caller();
-    self.tx()
-      .to(&caller)
-      .single_esdt(&token_identifier, 0, &amount)
-      .transfer();
+    if token_identifier.is_egld() {
+      self.send().direct_egld(&caller, &amount);
+    } else {
+      self.tx()
+        .to(&caller)
+        .single_esdt(&token_identifier.unwrap_esdt(), 0, &amount)
+        .transfer();
+    }
   }
 
   #[endpoint(withdrawAll)]
   #[only_owner]
-  fn withdraw_all(&self, token_identifier: TokenIdentifier) {
-    let sc_address = self.blockchain().get_sc_address();
-    let balance = self
-      .blockchain()
-      .get_esdt_balance(&sc_address, &token_identifier, 0);
+  fn withdraw_all(&self, token_identifier: EgldOrEsdtTokenIdentifier<Self::Api>) {
+    let balance = self.blockchain().get_sc_balance(&token_identifier, 0);
     require!(balance > 0, "No balance to withdraw");
     let caller = self.blockchain().get_caller();
-    self.tx()
-      .to(&caller)
-      .single_esdt(&token_identifier, 0, &balance)
-      .transfer();
+    if token_identifier.is_egld() {
+      self.send().direct_egld(&caller, &balance);
+    } else {
+      self.tx()
+        .to(&caller)
+        .single_esdt(&token_identifier.unwrap_esdt(), 0, &balance)
+        .transfer();
+    }
   }
 
   // ==========================================================
@@ -97,60 +111,81 @@ pub trait XcronHftVault {
   // ==========================================================
 
   /// Ejecuta un arbitraje circular atómico:
-  /// WEGLD → token_mid (Pool A) → WEGLD (Pool B)
+  /// token_in → token_mid (Pool A) → token_in (Pool B)
   ///
   /// Parámetros:
-  /// - token_in: El token base del Vault (ej: WEGLD-bd4d79)
+  /// - token_in: El token base del Vault (ej: WEGLD-bd4d79 o EGLD)
   /// - amount_in: Cantidad a usar en el primer swap
-  /// - pool_a: Dirección del par A en xExchange (ej: WEGLD/USDC pair)
+  /// - pool_a: Dirección del par A (ej: WEGLD/USDC pair)
+  /// - endpoint_a: Endpoint de intercambio para Pool A (ej: swapTokensFixedInput)
   /// - token_mid: TokenIdentifier intermedio (ej: USDC-c76f1f)
-  /// - pool_b: Dirección del par B en AshSwap o xExchange (ej: USDC/WEGLD pair)
-  /// - min_mid_amount: Mínimo aceptable del token intermedio en el primer swap (slippage protection)
+  /// - pool_b: Dirección del par B (ej: USDC/WEGLD pair)
+  /// - min_mid_amount: Mínimo aceptable del token intermedio (slippage protection)
   /// - min_final_amount: Mínimo aceptable de token_in al final del circuito
+  /// - endpoint_b: Endpoint de intercambio para Pool B
+  /// - min_net_profit: Beneficio neto mínimo esperado después del circuito
   #[endpoint(executeFlashArbitrage)]
   fn execute_flash_arbitrage(
     &self,
-    token_in: TokenIdentifier,
+    token_in: EgldOrEsdtTokenIdentifier<Self::Api>,
     amount_in: BigUint,
     pool_a: ManagedAddress,
+    endpoint_a: ManagedBuffer,
     token_mid: TokenIdentifier,
     pool_b: ManagedAddress,
     min_mid_amount: BigUint,
     min_final_amount: BigUint,
     endpoint_b: ManagedBuffer,
+    min_net_profit: BigUint,
   ) {
     // ========== SEGURIDAD (Capa 1): Circuit Breaker ==========
     require!(!self.is_paused().get(), "Vault pausado por el Owner");
 
-    // ========== SEGURIDAD (Capa 2): Solo el Bot o el Owner ==========
+    // ========== SEGURIDAD (Capa 2): Solo el Bot, el Owner o el Scheduler autorizado ==========
     let caller = self.blockchain().get_caller();
-    require!(
-      caller == self.authorized_bot().get()
-        || caller == self.blockchain().get_owner_address(),
-      "Caller no autorizado"
-    );
+    let is_owner = caller == self.blockchain().get_owner_address();
+    let is_bot = caller == self.authorized_bot().get();
+    let is_scheduler = !self.scheduler_address().is_empty() && caller == self.scheduler_address().get();
+
+    require!(is_owner || is_bot || is_scheduler, "Caller no autorizado");
+
+    // Si llama el Scheduler, verificamos de forma sincrónica que el dueño de la tarea sea el dueño de este Vault
+    if is_scheduler {
+      let raw_results = self.tx()
+        .to(&caller)
+        .raw_call("getExecutingTaskOwner")
+        .returns(multiversx_sc::types::ReturnsRawResult)
+        .sync_call();
+      require!(!raw_results.is_empty(), "Failed to query executing task owner");
+      let executing_owner = ManagedAddress::top_decode(raw_results.get(0).to_boxed_bytes().as_slice())
+        .unwrap_or_else(|_| sc_panic!("Failed to decode executing task owner"));
+      require!(executing_owner == self.blockchain().get_owner_address(), "Task owner is not the Vault owner");
+    }
 
     // ========== CHECKPOINT: Balance antes de operar ==========
-    let sc_address = self.blockchain().get_sc_address();
-    let balance_start = self
-      .blockchain()
-      .get_esdt_balance(&sc_address, &token_in, 0);
+    let balance_start = self.blockchain().get_sc_balance(&token_in, 0);
     require!(balance_start >= amount_in, "Liquidez insuficiente en Vault");
 
     // ========== PASO 1: Swap token_in → token_mid en Pool A ==========
-    // Llamada sincrónica (mismo shard). Enviamos el ESDT como pago.
-    // xExchange endpoint: swapTokensFixedInput(token_wanted, min_amount_out)
-    let bt_step1 = self
+    // Llamada sincrónica (mismo shard). Enviamos el token_in como pago.
+    let tx_step1 = self
       .tx()
       .to(&pool_a)
-      .raw_call("swapTokensFixedInput")
+      .raw_call(endpoint_a)
       .argument(&token_mid)
-      .argument(&min_mid_amount)
-      .single_esdt(&token_in, 0, &amount_in)
-      .returns(ReturnsBackTransfersReset)
-      .sync_call();
+      .argument(&min_mid_amount);
 
-    // Extraemos explícitamente el token intermedio del back-transfer (ignorando posbile 'dust')
+    let bt_step1 = if token_in.is_egld() {
+      tx_step1.egld(&amount_in)
+        .returns(ReturnsBackTransfersReset)
+        .sync_call()
+    } else {
+      tx_step1.single_esdt(&token_in.clone().unwrap_esdt(), 0, &amount_in)
+        .returns(ReturnsBackTransfersReset)
+        .sync_call()
+    };
+
+    // Extraemos el token intermedio del back-transfer
     let mid_payments = bt_step1.payments;
     require!(!mid_payments.is_empty(), "Pool A no devolvio tokens");
 
@@ -165,15 +200,12 @@ pub trait XcronHftVault {
     let legacy_payment =
       mid_payment_opt.unwrap_or_else(|| sc_panic!("Pool A no devolvio el token_mid"));
 
-    // Parche de Seguridad (Legacy Debt Migration)
-    // Convertimos explícitamente a NonZeroBigUint. Si el Pool devuelve '0' de amount (Ataque flash o dust de redondeo),
-    // el contrato aborta aquí mismo evitando inyectar una transacción sin fondos que infle el estado.
     let amount_nz = NonZeroBigUint::new(legacy_payment.amount).unwrap_or_else(|| {
       sc_panic!("Zero value back-transfer recibida (Dust exploit detedted)")
     });
 
     let safe_mid_payment = Payment::new(
-      TokenId::from(legacy_payment.token_identifier.into_managed_buffer()),
+      TokenId::from(legacy_payment.token_identifier.clone()),
       legacy_payment.token_nonce,
       amount_nz,
     );
@@ -194,28 +226,14 @@ pub trait XcronHftVault {
 
     // ========== SEGURIDAD (Capa 3): FUSIBLE ATÓMICO ("Cero Riesgo") ==========
     // Verificamos el balance REAL del contrato después de toda la operación.
-    let balance_end = self
-      .blockchain()
-      .get_esdt_balance(&sc_address, &token_in, 0);
+    let balance_end = self.blockchain().get_sc_balance(&token_in, 0);
 
-    // Si el balance final NO es ESTRICTAMENTE MAYOR al inicial,
-    // toda la transacción se destruye.
+    // Si el balance final NO supera el inicial por al menos min_net_profit, toda la tx se revierte
+    require!(min_net_profit > 0, "min_net_profit must be greater than zero");
     require!(
-      balance_end > balance_start,
-      "ABORT: Operacion no rentable. Capital protegido."
-    );
-
-    // ️ XCRON-PROTECT: Economic Fuse Hardening (PP-11)
-    // Enforce that the vault actually made a net profit >= min_final_amount - amount_in.
-    // This prevents low-profit dust transactions from consuming gas.
-    let expected_min_end = &balance_start - &amount_in + &min_final_amount;
-    require!(
-      balance_end >= expected_min_end,
+      balance_end >= &balance_start + &min_net_profit,
       "ABORT: Ganancia neta por debajo del umbral economico minimo."
     );
-
-    // Si llegamos aquí: la ganancia está asegurada y almacenada en el contrato.
-    // El Owner puede retirarla con withdraw() cuando quiera.
   }
 
   // ==========================================================
@@ -223,8 +241,7 @@ pub trait XcronHftVault {
   // ==========================================================
 
   #[view(getBalance)]
-  fn get_balance(&self, token: TokenIdentifier) -> BigUint {
-    let sc_address = self.blockchain().get_sc_address();
-    self.blockchain().get_esdt_balance(&sc_address, &token, 0)
+  fn get_balance(&self, token: EgldOrEsdtTokenIdentifier<Self::Api>) -> BigUint {
+    self.blockchain().get_sc_balance(&token, 0)
   }
 }

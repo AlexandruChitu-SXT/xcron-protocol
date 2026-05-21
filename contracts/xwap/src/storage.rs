@@ -46,8 +46,8 @@ pub trait StorageModule {
     #[storage_mapper("alpha_x1000")]
     fn alpha_x1000(&self) -> SingleValueMapper<u64>;
 
-    #[storage_mapper("price_history")]
-    fn price_history(&self, idx: u64) -> SingleValueMapper<BigUint>;
+    #[storage_mapper("price_history_vec")]
+    fn price_history_vec(&self) -> SingleValueMapper<ManagedVec<BigUint>>;
 
     #[storage_mapper("price_history_idx")]
     fn price_history_idx(&self) -> SingleValueMapper<u64>;
@@ -98,4 +98,23 @@ pub trait StorageModule {
 
     #[storage_mapper("owner_address")]
     fn owner_address(&self) -> SingleValueMapper<ManagedAddress>;
+
+    // Caching for Scheduler Optimization
+    #[storage_mapper("cached_median")]
+    fn cached_median(&self) -> SingleValueMapper<BigUint>;
+
+    #[storage_mapper("cached_consensus_ok")]
+    fn cached_consensus_ok(&self) -> SingleValueMapper<bool>;
+
+    #[storage_mapper("cached_gate_open")]
+    fn cached_gate_open(&self) -> SingleValueMapper<bool>;
+
+    #[storage_mapper("cached_last_update_block")]
+    fn cached_last_update_block(&self) -> SingleValueMapper<u64>;
+
+    #[storage_mapper("price_scale_multiplier")]
+    fn price_scale_multiplier(&self) -> SingleValueMapper<BigUint>;
+
+    #[storage_mapper("price_scale_divisor")]
+    fn price_scale_divisor(&self) -> SingleValueMapper<BigUint>;
 }

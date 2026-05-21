@@ -23,7 +23,9 @@
             "tx": {
                 "from": "address:owner",
                 "contractCode": "mxsc:../output/xcron-hft-vault.mxsc.json",
-                "arguments": [],
+                "arguments": [
+                    "address:owner"
+                ],
                 "gasLimit": "5,000,000",
                 "gasPrice": "0"
             },

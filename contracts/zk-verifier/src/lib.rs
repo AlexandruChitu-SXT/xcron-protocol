@@ -124,13 +124,16 @@ pub trait ZkVerifierContract {
         let mut proof = self.proofs(task_id).get();
         require!(!proof.verified, "Already verified");
 
-        // Phase 1 simplified verification:
-        // Recompute commitment = SHA-256(block_nonce_bytes || claimed_value_bytes || salt)
+        // Verify that the block hash is registered
+        let block_nonce = proof.block_nonce;
+        let block_hash_mapper = self.block_hashes(block_nonce);
+        require!(!block_hash_mapper.is_empty(), "Block hash not registered");
+        let block_hash = block_hash_mapper.get();
+
+        // Recompute commitment = SHA-256(block_hash || claimed_value_bytes || salt)
         // and compare with submitted commitment.
         let mut hash_input = ManagedBuffer::new();
-        hash_input.append(&ManagedBuffer::from(
-            &proof.block_nonce.to_be_bytes()[..],
-        ));
+        hash_input.append(block_hash.as_managed_buffer());
         hash_input.append(&proof.claimed_value.to_bytes_be_buffer());
         hash_input.append(&salt);
 
@@ -144,6 +147,13 @@ pub trait ZkVerifierContract {
         proof.verified = true;
         self.proofs(task_id).set(&proof);
         self.proof_verified_event(task_id, true);
+    }
+
+    /// Admin endpoint to register a trusted block hash for a given block nonce.
+    #[only_owner]
+    #[endpoint(registerBlockHash)]
+    fn register_block_hash(&self, block_nonce: u64, hash: ManagedByteArray<Self::Api, 32>) {
+        self.block_hashes(block_nonce).set(&hash);
     }
 
     // ═════════════════════════════════════════════════════════
@@ -172,6 +182,9 @@ pub trait ZkVerifierContract {
 
     #[storage_mapper("proofs")]
     fn proofs(&self, task_id: u64) -> SingleValueMapper<ProofData<Self::Api>>;
+
+    #[storage_mapper("blockHashes")]
+    fn block_hashes(&self, block_nonce: u64) -> SingleValueMapper<ManagedByteArray<Self::Api, 32>>;
 
     #[storage_mapper("schedulerAddr")]
     fn scheduler_addr(&self) -> SingleValueMapper<ManagedAddress>;

@@ -1378,7 +1378,7 @@ fn test_is_job_verified_view() {
     state.validation_response(
         &VALIDATOR,
         b"req-verify-view",
-        1,
+        80,
         b"https://oracle.example.com/result",
         b"resp-verify-view",
         b"approved",
@@ -1583,7 +1583,7 @@ fn test_validation_response_progressive() {
         b"resp-partial",
         b"partial",
     );
-    assert!(state.query_is_job_verified(b"job_progressive"));
+    assert!(!state.query_is_job_verified(b"job_progressive"));
 
     // Second (progressive) validation_response — updated score
     state.validation_response(

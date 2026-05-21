@@ -12,13 +12,7 @@ pub trait HelpersModule: crate::storage::StorageModule {
     /// Supernova targets 88ms latency. If we truncate to seconds, we destroy the HFT window.
     /// This function ensures the internal contract clock always operates in milliseconds.
     fn get_timestamp_ms(&self) -> u64 {
-        let raw_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
-        // Fallback detection: if time exceeds 100 Billion, it is already injected as MS.
-        if raw_time > 100_000_000_000u64 {
-            raw_time // It's already in milliseconds (Supernova future)
-        } else {
-            raw_time * 1000 // It's in seconds (Barnard/Legacy), up-convert to milliseconds
-        }
+        self.blockchain().get_block_timestamp_millis().as_u64_millis()
     }
 
     // calculate_protocol_fee, index_task, remove_from_indices, reindex_task, and reschedule_recurring

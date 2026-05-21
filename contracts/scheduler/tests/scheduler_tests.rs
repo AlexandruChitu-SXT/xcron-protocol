@@ -193,3 +193,8 @@ fn clone_key_expired() {
 fn clone_key_revoke() {
     world().run("scenarios/clone_key_revoke.scen.json");
 }
+
+#[test]
+fn execute_quantum_sealed_crib() {
+    world().run("scenarios/execute_quantum_sealed_crib.scen.json");
+}

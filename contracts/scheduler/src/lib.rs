@@ -26,7 +26,7 @@ multiversx_sc::imports!();
 
 pub mod admin;
 pub mod clone_keys;
-    // pub mod commit_reveal; // Archived: Replaced by Quantum Hash Seal
+pub mod commit_reveal;
 pub mod config;
 pub mod events;
 pub mod execution;
@@ -48,7 +48,7 @@ pub trait SchedulerContract:
     + intents::IntentsModule
     + scheduling::SchedulingModule
     + execution::ExecutionModule
-    // + commit_reveal::CommitRevealModule // Archived: Replaced by Quantum Hash Seal
+    + commit_reveal::CommitRevealModule
     + clone_keys::CloneKeysModule
     + admin::AdminModule
     + common::pausable::PausableModule
@@ -100,5 +100,14 @@ pub trait SchedulerContract:
         self.reveal_window()
             .set_if_empty(common::constants::DEFAULT_REVEAL_WINDOW_SECONDS);
         self.accrued_protocol_fees().set_if_empty(BigUint::zero());
+    }
+
+    /// Claim EGLD refunds accumulated via task cancel/fail/refund callbacks (Pull-Payment model).
+    #[endpoint(claimRefund)]
+    fn claim_refund(&self) {
+        let caller = self.blockchain().get_caller();
+        let amount = self.claimable_refunds(&caller).take();
+        require!(amount > BigUint::zero(), "Nothing to claim");
+        self.send().direct_egld(&caller, &amount);
     }
 }

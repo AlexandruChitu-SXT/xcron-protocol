@@ -112,18 +112,24 @@ pub trait KeeperRegistryContract:
   fn request_unstake(&self) {
     self.require_not_paused();
     let caller = self.blockchain().get_caller();
+    require!(!self.keepers(&caller).is_empty(), "Keeper not registered");
+    require!(
+      self.unstake_request_time(&caller).is_empty(),
+      "Unstake already requested"
+    );
+
     let mut info = self.keepers(&caller).get();
+    if info.active {
+      info.active = false;
+      self.active_keeper_set().swap_remove(&caller);
+    }
 
-    require!(info.active, "Keeper not active");
-
-    info.active = false;
-    self.keepers(&caller).set(&info);
-    self.active_keeper_set().swap_remove(&caller);
     self.unstake_request_time(&caller)
       .set(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
     
     // V3/V5 FIX: Track committed cooldown EGLD atomically
     self.total_committed_cooldown_egld().update(|total| *total += &info.stake);
+    self.keepers(&caller).set(&info);
   }
 
   /// Withdraw stake after cooldown period has elapsed.
@@ -132,8 +138,13 @@ pub trait KeeperRegistryContract:
   #[endpoint(withdrawStake)]
   fn withdraw_stake(&self) {
     let caller = self.blockchain().get_caller();
-    let info = self.keepers(&caller).get();
+    require!(!self.keepers(&caller).is_empty(), "Keeper not registered");
+    require!(
+      !self.unstake_request_time(&caller).is_empty(),
+      "Must request unstake first"
+    );
 
+    let info = self.keepers(&caller).get();
     require!(!info.active, "Must request unstake first");
 
     let request_time = self.unstake_request_time(&caller).get();

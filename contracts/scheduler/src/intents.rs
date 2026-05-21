@@ -377,7 +377,12 @@ pub trait IntentsModule:
     // 1. Build the Leaf Hash off the parameters
     let mut encoded_leaf = ManagedBuffer::new();
     let _ = target_contract.top_encode(&mut encoded_leaf);
+    
+    // Prefix target_endpoint with 4-byte BE length
+    let endpoint_len_bytes = (target_endpoint.len() as u32).to_be_bytes();
+    encoded_leaf.append(&ManagedBuffer::from(&endpoint_len_bytes[..]));
     let _ = target_endpoint.top_encode(&mut encoded_leaf);
+
     for arg in target_args.iter() {
       // ️ XCRON-PROTECT: Boundary Collision Fix (Sync con pcit.rs)
       // Se inyecta el tamaño exacto del argumento en 4 bytes para blindar el Merkle Tree.
@@ -385,7 +390,12 @@ pub trait IntentsModule:
       encoded_leaf.append(&ManagedBuffer::from(&len_bytes[..]));
       encoded_leaf.append(&arg);
     }
+
+    // Prefix expected_token_out with 4-byte BE length
+    let token_out_len_bytes = (expected_token_out.as_managed_buffer().len() as u32).to_be_bytes();
+    encoded_leaf.append(&ManagedBuffer::from(&token_out_len_bytes[..]));
     let _ = expected_token_out.top_encode(&mut encoded_leaf);
+
     let _ = min_return.top_encode(&mut encoded_leaf);
     
     let leaf_hash: ManagedByteArray<Self::Api, 32> = self.crypto().sha256(&encoded_leaf).into();

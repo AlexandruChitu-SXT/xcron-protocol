@@ -8,6 +8,7 @@ pub mod events;
 pub mod storage;
 
 use storage::{EscrowData, EscrowStatus};
+use errors::*;
 
 /// ️ Agent Shield (Security Vault)
 /// Defines strict mathematical boundaries for Autonomous AI Agents to ensure absolute fund security.
@@ -141,16 +142,14 @@ pub trait XcronAgentShield:
       raw_time
     };
     let current_day = safe_time / 86400; // Epoch Days
-
     let mut spent_today = self.daily_spent(&token_id, current_day).get();
     spent_today += &amount;
 
     if spent_today > limit {
       // AUTOMATIC FREEZE
       self.is_paused().set(true);
-      sc_panic!(
-        "Threshold exceeded: Spend exceeds daily shield limits! VAULT FROZEN."
-      );
+      self.shield_frozen_event(&token_id, &spent_today);
+      return;
     }
 
     // Update tracking
@@ -214,6 +213,129 @@ pub trait XcronAgentShield:
         spent_today -= &amount;
         self.daily_spent(&token_id, current_day).set(&spent_today);
       }
+    }
+  }
+
+  // ==========================================================
+  // ESCROW ENDPOINTS (deposit, release, refund)
+  // ==========================================================
+
+  #[payable("*")]
+  #[endpoint(deposit)]
+  fn deposit(
+    &self,
+    job_id: ManagedBuffer,
+    receiver: ManagedAddress,
+    poa_hash: ManagedBuffer,
+    deadline: u64,
+  ) {
+    let payment = self.call_value().egld_or_single_esdt();
+    let amount = payment.amount;
+    let token_id = payment.token_identifier;
+    let token_nonce = payment.token_nonce;
+
+    require!(amount > 0, ERR_ZERO_DEPOSIT);
+
+    require!(
+      self.escrow_data(&job_id).is_empty(),
+      ERR_ESCROW_ALREADY_EXISTS
+    );
+
+    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    require!(deadline > current_time, ERR_DEADLINE_IN_PAST);
+
+    let employer = self.blockchain().get_caller();
+    let escrow_data = EscrowData {
+      employer: employer.clone(),
+      receiver,
+      token_id,
+      token_nonce,
+      amount: amount.clone(),
+      poa_hash,
+      deadline: TimestampSeconds::new(deadline),
+      status: EscrowStatus::Active,
+    };
+
+    self.escrow_data(&job_id).set(&escrow_data);
+
+    self.escrow_deposited_event(&job_id, &employer, amount);
+  }
+
+  #[endpoint(release)]
+  fn release(&self, job_id: ManagedBuffer) {
+    require!(
+      !self.escrow_data(&job_id).is_empty(),
+      ERR_ESCROW_NOT_FOUND
+    );
+
+    let mut escrow = self.escrow_data(&job_id).get();
+    require!(
+      escrow.status == EscrowStatus::Active,
+      ERR_ALREADY_SETTLED
+    );
+
+    let caller = self.blockchain().get_caller();
+    require!(
+      caller == escrow.employer,
+      ERR_NOT_EMPLOYER
+    );
+
+    let validation_addr = self.validation_contract_address().get();
+    let external_job_mapper = self.external_job_data(validation_addr, &job_id);
+    require!(!external_job_mapper.is_empty(), ERR_ESCROW_NOT_FOUND);
+
+    let job_data = external_job_mapper.get();
+    require!(
+      job_data.status == common::structs::JobStatus::Verified,
+      ERR_JOB_NOT_VERIFIED
+    );
+
+    escrow.status = EscrowStatus::Released;
+    self.escrow_data(&job_id).set(&escrow);
+
+    self.escrow_released_event(&job_id, &escrow.receiver, escrow.amount.clone());
+
+    if escrow.token_id.is_egld() {
+      self.send().direct_egld(&escrow.receiver, &escrow.amount);
+    } else {
+      self.tx()
+        .to(&escrow.receiver)
+        .single_esdt(&escrow.token_id.unwrap_esdt(), escrow.token_nonce, &escrow.amount)
+        .transfer();
+    }
+  }
+
+  #[endpoint(refund)]
+  fn refund(&self, job_id: ManagedBuffer) {
+    require!(
+      !self.escrow_data(&job_id).is_empty(),
+      ERR_ESCROW_NOT_FOUND
+    );
+
+    let mut escrow = self.escrow_data(&job_id).get();
+    require!(
+      escrow.status == EscrowStatus::Active,
+      ERR_ALREADY_SETTLED
+    );
+
+    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    require!(
+      current_time > escrow.deadline.as_u64_seconds(),
+      ERR_DEADLINE_NOT_PASSED
+    );
+
+    escrow.status = EscrowStatus::Refunded;
+    self.escrow_data(&job_id).set(&escrow);
+
+    self.escrow_refunded_event(&job_id, &escrow.employer, escrow.amount.clone());
+
+    if escrow.token_id.is_egld() {
+      self.send().direct_egld(&escrow.employer, &escrow.amount);
+    } else {
+      self.tx()
+        .to(&escrow.employer)
+        .single_esdt(&escrow.token_id.unwrap_esdt(), escrow.token_nonce, &escrow.amount)
+        .transfer();
     }
   }
 

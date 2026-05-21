@@ -1,0 +1,11 @@
+[package]
+name = "zk-verifier-meta"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies.zk-verifier]
+path = ".."
+
+[dependencies.multiversx-sc-meta-lib]
+workspace = true

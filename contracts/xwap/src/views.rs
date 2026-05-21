@@ -30,13 +30,49 @@ pub trait ViewsModule:
     /// All four XWAP signals.
     #[view(getSignals)]
     fn get_signals(&self) -> crate::storage::XwapSignals {
-        self.compute_signals()
+        let current_block = self.blockchain().get_block_nonce();
+        let last_update = self.cached_last_update_block().get();
+        let max_age = self.freshness_blocks().get();
+        
+        let freshness_ok = current_block.saturating_sub(last_update) <= max_age;
+        let gate_open = self.cached_gate_open().get();
+        let consensus_ok = self.cached_consensus_ok().get();
+        
+        let xwap = self.xwap_price().get();
+        let prev = self.prev_xwap_price().get();
+        let stability_permille: u64 = if prev == BigUint::zero() || xwap == BigUint::zero() {
+            0u64
+        } else {
+            let diff = if xwap > prev { &xwap - &prev } else { &prev - &xwap };
+            let half_prev = &prev / 2u64;
+            let stability = (diff * 1000u64 + &half_prev) / &prev;
+            stability.to_u64().unwrap_or(999u64)
+        };
+
+        let safe = gate_open && consensus_ok && freshness_ok;
+
+        crate::storage::XwapSignals {
+            gate_open,
+            consensus_ok,
+            freshness_ok,
+            stability_permille,
+            safe,
+        }
     }
 
     /// True if all critical signals are green.
     #[view(isSafeToExecute)]
     fn is_safe_to_execute(&self) -> bool {
-        self.compute_signals().safe
+        let current_block = self.blockchain().get_block_nonce();
+        let last_update = self.cached_last_update_block().get();
+        let max_age = self.freshness_blocks().get();
+        
+        let freshness_ok = current_block.saturating_sub(last_update) <= max_age;
+        if !freshness_ok {
+            return false;
+        }
+        
+        self.cached_gate_open().get() && self.cached_consensus_ok().get()
     }
 
     /// Current gate status: true = open (prices aligned).
@@ -67,5 +103,11 @@ pub trait ViewsModule:
     #[view(getAlphaBounds)]
     fn get_alpha_bounds(&self) -> MultiValue2<u64, u64> {
         (self.alpha_min_x1000().get(), self.alpha_max_x1000().get()).into()
+    }
+
+    /// Last update block nonce.
+    #[view(getLastUpdateBlock)]
+    fn get_last_update_block(&self) -> u64 {
+        self.cached_last_update_block().get()
     }
 }

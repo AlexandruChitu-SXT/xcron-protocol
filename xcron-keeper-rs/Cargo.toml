@@ -39,3 +39,11 @@ pqcrypto-dilithium = "0.5.0"
 pqcrypto-traits = "0.3.5"
 xse-protocol = { path = "../xse-protocol" }
 
+[[bin]]
+name = "testnet_schedule_e2e"
+path = "src/bin/testnet_schedule_e2e.rs"
+
+[[bin]]
+name = "deploy_ping_cross_shard"
+path = "src/bin/deploy_ping_cross_shard.rs"
+

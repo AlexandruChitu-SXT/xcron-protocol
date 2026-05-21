@@ -7,3 +7,4 @@ pub mod dispatcher;
 pub mod tui;
 pub mod mempool_sniper;
 pub mod drip_funder;
+pub mod session_db;

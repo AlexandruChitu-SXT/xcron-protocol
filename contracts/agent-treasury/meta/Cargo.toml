@@ -1,0 +1,10 @@
+[package]
+name = "agent-treasury-meta"
+version = "0.1.0"
+authors = ["XCron Protocol <admin@xcron.com>"]
+edition = "2021"
+publish = false
+
+[dependencies]
+agent-treasury = { path = ".." }
+multiversx-sc-meta = "0.66.0"

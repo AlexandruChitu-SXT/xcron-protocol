@@ -22,7 +22,7 @@ pub trait TestNft {
     #[payable("EGLD")]
     #[endpoint(mint)]
     fn mint(&self, _count: u64) {
-        let payment = self.call_value().egld_value().clone_value();
+        let payment = self.call_value().egld().clone_value();
         require!(payment > 0u64, "No EGLD sent");
 
         self.mint_count().update(|c| *c += 1);

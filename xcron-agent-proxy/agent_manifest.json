@@ -1,0 +1,40 @@
+{
+  "agent_id": "xcron_master_proxy",
+  "version": "1.0.0",
+  "identity": {
+    "name": "XCron Proxy Agent",
+    "description": "High-Frequency AI Agent Orchestrator for XCron Protocol",
+    "type": "orchestrator",
+    "capabilities": [
+      "smart_contract_interaction",
+      "pre_cognitive_intents",
+      "flash_arbitrage",
+      "mcp_simulation"
+    ]
+  },
+  "communication": {
+    "protocols": ["x402_facilitator", "https"],
+    "endpoints": {
+      "discovery": "https://api.xcron.io/agent/discovery",
+      "rpc": "https://api.xcron.io/agent/rpc"
+    }
+  },
+  "economics": {
+    "accepted_tokens": [
+      {
+        "ticker": "EGLD",
+        "type": "native"
+      },
+      {
+        "ticker": "USDC-c76f1f",
+        "type": "esdt"
+      }
+    ],
+    "fee_model": "pay_per_execution"
+  },
+  "security": {
+    "shield_contract": "erd1qqqqqqqqqqqqqpgqxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "auth_type": "dynamic_nft",
+    "nft_collection": "MXAGENT-xxxxx"
+  }
+}

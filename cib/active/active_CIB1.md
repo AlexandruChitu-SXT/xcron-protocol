@@ -1,18 +1,14 @@
-# CIB1 — Brainstorming (Ciclo 004)
+# CIB1 — Brainstorming (Red Team fixes for Agent Treasury & Escrow)
 
-* **Ciclo ID**: 004
-* **Nombre del Ciclo**: Pendiente (Definición por el Usuario)
-* **Fecha**: 2026-05-21
+* **Objetivo**: Corregir vulnerabilidades críticas reportadas en `escrow` y `agent-treasury` y blindarlas matemáticamente.
 
-## 1. Entrada de Usuario (Input Crudo)
-* Esperando instrucciones o especificaciones del usuario para definir la dirección de la siguiente iteración de desarrollo (e.g., telemetría, integración de pruebas ZK u otra característica del protocolo).
+## Vulnerabilidades Reportadas
+1. **Escrow (`deposit`)**: Permite depositar *fake tokens* porque no se valida el `token_id` aceptado contra una whitelist, engañando a los trabajadores.
+2. **Agent-Treasury (`payForService`)**: Pérdida de precisión al calcular `reward_addition`. `(payment_amount * 1e18) / total_staked` puede resultar en truncamiento a `0` si el dividendo es muy bajo frente a `total_staked`.
+3. **Agent-Treasury (`unstakeSfts`)**: Robo/Locking de SFTs reales. Al hacer stake, se acepta cualquier nonce, pero el unstake fuerza el envío de `nonce = 0`, bloqueando el SFT original.
 
-## 2. Contexto del Entorno
-* **Entrada desde EEB Ciclo 003**: La modularización extrema de `AiChat.tsx` a submódulos en `/chat/` finalizó exitosamente sin romper la lógica Web3.
-* El frontend de Next.js compila limpio (`npm run build`).
-
-## 3. Señales Extraídas (Signals)
-* Pendiente de definición.
-
-## 4. Salida Proyectada (Output CIB2)
-* Esquema de diseño técnico para el Ciclo 004.
+## Dirección (Fixes Propuestos)
+- **Escrow**: Añadir un storage mapper `accepted_payment_tokens` configurado por el admin, y verificar en `deposit` que el token es válido.
+- **Agent-Treasury**:
+  - Precision: Modificar la constante `REWARD_SCALE` (ej. llevarla a `1e24`) O rediseñar el cálculo.
+  - SFT Lock: Guardar el nonce del SFT depositado en `UserInfo` para poder retirarlo correctamente en `unstakeSfts`.

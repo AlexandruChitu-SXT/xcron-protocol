@@ -1,0 +1,27 @@
+from multiversx_sdk import *
+import time
+
+def main():
+    provider = ProxyNetworkProvider("https://testnet-gateway.multiversx.com")
+    wallet = Address.new_from_bech32("erd1sp9lge3qk80qmvf2qectnluugtzfrd46mmgpps20yqy0tdrk3e6q47qm7m")
+    signer = UserSigner.from_pem_file("../../.secrets/e2e_user.pem")
+    keeper_signer = UserSigner.from_pem_file("../../.secrets/e2e_keeper.pem")
+    contract = Address.new_from_bech32("erd1qqqqqqqqqqqqqpgqg49x0pq93549gt0nvds7fjaxslxc9lpt7k8sc6d263")
+    ping_addr = Address.new_from_bech32("erd1qqqqqqqqqqqqqpgq5nywkk07w37j8579v3uhayp6n78ppq8q7k8s2grq2r")
+    
+    # 1. Standard scheduleTask
+    target_time = int(time.time() * 1000)
+    args1 = [ping_addr, "ping", [], [1], [target_time], 10000000, 3]
+    tx_std = Transaction(
+        sender=wallet.to_bech32(),
+        receiver=contract.to_bech32(),
+        gas_limit=20000000,
+        value=100000000000000000,
+        chain_id="T",
+        data=b"scheduleTask@" + ping_addr.get_public_key().hex().encode() + b"@70696e67@@01@" + target_time.to_bytes(8, 'big').hex().encode() + b"@00989680@03"
+    )
+    # Just print the exact payload length of standard vs quantum to see storage costs
+    print(f"Standard schedule tx size: {len(tx_std.data)} bytes")
+
+if __name__ == "__main__":
+    main()

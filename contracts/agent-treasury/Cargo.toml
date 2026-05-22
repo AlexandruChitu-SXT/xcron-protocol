@@ -1,0 +1,15 @@
+[package]
+name = "agent-treasury"
+version = "0.1.0"
+authors = ["XCron Protocol <admin@xcron.com>"]
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+multiversx-sc = "0.66.0"
+
+[dev-dependencies]
+multiversx-sc-scenario = "0.66.0"

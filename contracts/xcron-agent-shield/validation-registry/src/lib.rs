@@ -132,7 +132,8 @@ pub trait ValidationRegistry:
         let job_mapper = self.job_data(&job_id);
         require!(!job_mapper.is_empty(), ERR_JOB_NOT_FOUND);
 
-        let payment = self.call_value().single_esdt();
+        let payment = self.call_value().single();
+        let payment_token: EsdtTokenIdentifier<Self::Api> = payment.token_identifier.clone().into();
         let job_data = job_mapper.get();
 
         // Security Check: Ensure job is in correct state
@@ -145,7 +146,7 @@ pub trait ValidationRegistry:
         let identity_addr = self.identity_registry_address().get();
         let expected_token_id = self.external_agent_token_id(identity_addr).get();
         require!(
-            payment.token_identifier == expected_token_id,
+            payment_token == expected_token_id,
             ERR_INVALID_AGENT_NFT
         );
         require!(
@@ -160,12 +161,13 @@ pub trait ValidationRegistry:
 
         // Return NFT to caller
         let caller = self.blockchain().get_caller();
+        let payment_amount: BigUint<Self::Api> = payment.amount.clone().into_big_uint();
         self.tx()
             .to(&caller)
             .single_esdt(
-                &payment.token_identifier,
+                &payment_token,
                 payment.token_nonce,
-                &payment.amount,
+                &payment_amount,
             )
             .transfer();
     }

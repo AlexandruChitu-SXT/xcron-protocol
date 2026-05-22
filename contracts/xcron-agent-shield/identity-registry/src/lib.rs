@@ -123,9 +123,10 @@ pub trait IdentityRegistry:
     ) {
         require!(!self.agent_token_id().is_empty(), ERR_TOKEN_NOT_ISSUED);
 
-        let payment = self.call_value().single_esdt();
+        let payment = self.call_value().single();
+        let payment_token: EsdtTokenIdentifier<Self::Api> = payment.token_identifier.clone().into();
         let token_id = self.agent_token_id().get_token_id();
-        require!(payment.token_identifier == token_id, ERR_INVALID_NFT);
+        require!(payment_token == token_id, ERR_INVALID_NFT);
 
         let nonce = payment.token_nonce;
         let caller = self.blockchain().get_caller();
@@ -166,9 +167,10 @@ pub trait IdentityRegistry:
     fn sync_ownership(&self) {
         require!(!self.agent_token_id().is_empty(), ERR_TOKEN_NOT_ISSUED);
 
-        let payment = self.call_value().single_esdt();
+        let payment = self.call_value().single();
+        let payment_token: EsdtTokenIdentifier<Self::Api> = payment.token_identifier.clone().into();
         let token_id = self.agent_token_id().get_token_id();
-        require!(payment.token_identifier == token_id, ERR_INVALID_NFT);
+        require!(payment_token == token_id, ERR_INVALID_NFT);
 
         let nonce = payment.token_nonce;
         let caller = self.blockchain().get_caller();

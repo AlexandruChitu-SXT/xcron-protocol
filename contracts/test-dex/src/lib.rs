@@ -22,7 +22,7 @@ pub trait TestDex {
     #[payable("EGLD")]
     #[endpoint(swapTokensFixedInput)]
     fn swap_tokens_fixed_input(&self, _min_amount_out: BigUint) {
-        let payment = self.call_value().egld_value().clone_value();
+        let payment = self.call_value().egld().clone_value();
         require!(payment > 0u64, "No EGLD sent");
 
         self.swap_count().update(|c| *c += 1);

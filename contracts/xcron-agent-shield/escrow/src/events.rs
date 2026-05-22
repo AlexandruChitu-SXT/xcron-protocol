@@ -29,7 +29,7 @@ pub trait EventsModule {
     #[event("shield_frozen")]
     fn shield_frozen_event(
         &self,
-        #[indexed] token_id: &TokenIdentifier,
+        #[indexed] token_id: &EgldOrEsdtTokenIdentifier,
         spent: &BigUint,
     );
 }

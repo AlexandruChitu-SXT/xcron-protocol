@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "chemistry_agent",
+    "admin_agent"
+]
+resolver = "2"

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # The AI Inference Engine running vLLM with PagedAttention
+  vllm-engine:
+    image: vllm/vllm-openai:latest
+    command: >
+      --model qwen/Qwen2.5-7B-Instruct 
+      --quantization bitsandbytes 
+      --load-format safetensors 
+      --gpu-memory-utilization 0.70 
+      --max-model-len 8192
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    restart: always
+
+  # The Keeper validation script that runs before allowing the node to participate
+  keeper-validator:
+    build: 
+      context: .
+      dockerfile: Dockerfile.validator
+    depends_on:
+      - vllm-engine
+    environment:
+      - LLM_API_URL=http://vllm-engine:8000/v1/chat/completions
+    restart: on-failure
+
+  # The actual Rust/Python node that submits intents to the blockchain
+  # keeper-core:
+  #   image: xcron/keeper-core:latest
+  #   depends_on:
+  #     - keeper-validator

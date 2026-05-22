@@ -85,7 +85,7 @@ pub trait XcronHftVault {
     } else {
       self.tx()
         .to(&caller)
-        .single_esdt(&token_identifier.unwrap_esdt(), 0, &amount)
+        .single_esdt(&token_identifier.clone().unwrap_esdt(), 0, &amount)
         .transfer();
     }
   }
@@ -101,7 +101,7 @@ pub trait XcronHftVault {
     } else {
       self.tx()
         .to(&caller)
-        .single_esdt(&token_identifier.unwrap_esdt(), 0, &balance)
+        .single_esdt(&token_identifier.clone().unwrap_esdt(), 0, &balance)
         .transfer();
     }
   }

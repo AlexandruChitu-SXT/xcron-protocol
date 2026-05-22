@@ -16,10 +16,10 @@ path = "src/interact.rs"
 path = ".."
 
 [dependencies.multiversx-sc-snippets]
-version = "0.64.1"
+version = "0.66.0"
 
 [dependencies.multiversx-sc]
-version = "0.64.1"
+version = "0.66.0"
 
 [dependencies]
 clap = { version = "4.4.7", features = ["derive"] }

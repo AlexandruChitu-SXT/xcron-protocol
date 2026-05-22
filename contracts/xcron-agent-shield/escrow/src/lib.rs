@@ -48,19 +48,19 @@ pub trait XcronAgentShield:
 
   #[view(getShieldDailyLimit)]
   #[storage_mapper("shield_daily_limit")]
-  fn shield_daily_limit(&self, token_identifier: &TokenIdentifier) -> SingleValueMapper<BigUint>;
+  fn shield_daily_limit(&self, token_identifier: &EgldOrEsdtTokenIdentifier) -> SingleValueMapper<BigUint>;
 
   #[view(getDailySpent)]
   #[storage_mapper("daily_spent")]
   fn daily_spent(
     &self,
-    token_identifier: &TokenIdentifier,
+    token_identifier: &EgldOrEsdtTokenIdentifier,
     day_epoch: u64,
   ) -> SingleValueMapper<BigUint>;
 
   #[endpoint(setShieldLimit)]
   #[only_owner]
-  fn set_shield_limit(&self, token_identifier: TokenIdentifier, max_daily_amount: BigUint) {
+  fn set_shield_limit(&self, token_identifier: EgldOrEsdtTokenIdentifier, max_daily_amount: BigUint) {
     self.shield_daily_limit(&token_identifier)
       .set(max_daily_amount);
   }
@@ -97,7 +97,7 @@ pub trait XcronAgentShield:
   fn agent_propose_execution(
     &self,
     target_contract: ManagedAddress,
-    token_id: TokenIdentifier,
+    token_id: EgldOrEsdtTokenIdentifier,
     amount: BigUint,
     func_name: ManagedBuffer,
     args: MultiValueEncoded<ManagedBuffer>,
@@ -105,7 +105,7 @@ pub trait XcronAgentShield:
     require!(!self.is_paused().get(), "Shield is Paused (Breaker Active)");
 
     // Structural Validation: Ensure valid Token Identifier
-    require!(token_id.is_valid_esdt_identifier(), "Invalid Token Format");
+    require!(token_id.is_valid(), "Invalid Token Format");
 
     let caller = self.blockchain().get_caller();
     require!(
@@ -173,7 +173,7 @@ pub trait XcronAgentShield:
       self.tx()
         .to(target_contract.clone())
         .raw_call(func_name.clone())
-        .single_esdt(&token_id, 0, &amount)
+        .egld_or_single_esdt(&token_id, 0, &amount)
         .arguments_raw(args.to_arg_buffer())
         .gas(gas_for_call)
         .callback(
@@ -200,7 +200,7 @@ pub trait XcronAgentShield:
   #[promises_callback]
   fn agent_execution_callback(
     &self,
-    token_id: TokenIdentifier,
+    token_id: EgldOrEsdtTokenIdentifier,
     current_day: u64,
     amount: BigUint,
     #[call_result] result: ManagedAsyncCallResult<IgnoreValue>,
@@ -229,12 +229,17 @@ pub trait XcronAgentShield:
     poa_hash: ManagedBuffer,
     deadline: u64,
   ) {
-    let payment = self.call_value().egld_or_single_esdt();
-    let amount = payment.amount;
-    let token_id = payment.token_identifier;
+    let payment = self.call_value().single();
+    let amount: BigUint<Self::Api> = payment.amount.clone().into_big_uint();
+    let token_id = payment.token_identifier.clone().into();
     let token_nonce = payment.token_nonce;
 
     require!(amount > 0, ERR_ZERO_DEPOSIT);
+
+    require!(
+      self.accepted_payment_tokens(&token_id).get(),
+      "Token is not whitelisted for payments"
+    );
 
     require!(
       self.escrow_data(&job_id).is_empty(),
@@ -345,11 +350,31 @@ pub trait XcronAgentShield:
 
   #[endpoint(emergencyWithdraw)]
   #[only_owner]
-  fn emergency_withdraw(&self, token_identifier: TokenIdentifier, amount: BigUint) {
+  fn emergency_withdraw(&self, token_identifier: EgldOrEsdtTokenIdentifier, amount: BigUint) {
     let caller = self.blockchain().get_caller();
     self.tx()
       .to(&caller)
-      .single_esdt(&token_identifier, 0, &amount)
+      .egld_or_single_esdt(&token_identifier, 0, &amount)
       .transfer();
+  }
+
+  // ==========================================================
+  // WHITELIST MANAGEMENT
+  // ==========================================================
+
+  #[view(getAcceptedPaymentTokens)]
+  #[storage_mapper("acceptedPaymentTokens")]
+  fn accepted_payment_tokens(&self, token_identifier: &EgldOrEsdtTokenIdentifier) -> SingleValueMapper<bool>;
+
+  #[endpoint(whitelistToken)]
+  #[only_owner]
+  fn whitelist_token(&self, token_identifier: EgldOrEsdtTokenIdentifier) {
+    self.accepted_payment_tokens(&token_identifier).set(true);
+  }
+
+  #[endpoint(removeWhitelistToken)]
+  #[only_owner]
+  fn remove_whitelist_token(&self, token_identifier: EgldOrEsdtTokenIdentifier) {
+    self.accepted_payment_tokens(&token_identifier).set(false);
   }
 }

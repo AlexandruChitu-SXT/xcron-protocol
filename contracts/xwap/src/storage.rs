@@ -2,7 +2,8 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 /// A keeper's off-chain price report.
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct KeeperReport<M: ManagedTypeApi> {
     /// Off-chain price scaled x1e18 (e.g. $15.00 = 15_000_000_000_000_000_000)
     pub price: BigUint<M>,
@@ -11,7 +12,8 @@ pub struct KeeperReport<M: ManagedTypeApi> {
 }
 
 /// Aggregated XWAP signal set returned by views.
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct XwapSignals {
     /// Gate: pool spot vs off-chain median divergence < threshold
     pub gate_open: bool,

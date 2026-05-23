@@ -36,6 +36,7 @@ pub mod scheduling;
 pub mod storage;
 pub mod validation;
 pub mod views;
+pub mod desci_validator;
 
 #[multiversx_sc::contract]
 pub trait SchedulerContract:
@@ -51,6 +52,7 @@ pub trait SchedulerContract:
     + commit_reveal::CommitRevealModule
     + clone_keys::CloneKeysModule
     + admin::AdminModule
+    + desci_validator::DesciValidatorModule
     + common::pausable::PausableModule
 {
     /// Initialize the Scheduler with protocol parameters.

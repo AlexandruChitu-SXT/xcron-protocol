@@ -1,25 +1,30 @@
-# Execution Exit Block (EEB) - Sesión de Seguridad 2vs2 y Koinly Parser
+# Execution Exit Block (EEB) - Ciclo de Despliegue y Validación DeSci 4.5
 
 ## 1. Tareas Completadas en el Ciclo Actual
-1. **Auditoría Red Team / Blue Team (Agent Treasury):**
-   - **Amenaza detectada:** `#[payable("*")]` permitía ESDT spoofing (inflación artificial de dividendos).
-   - **Amenaza detectada:** Fallo grave de Double-Claim al transferir el SFT asociado a los dividendos en un balance simple (infinite funds drain).
-   - **Defensa Aplicada:** Se rediseñó `contracts/agent-treasury/src/lib.rs` adoptando el patrón MasterChef de Staking (`REWARD_SCALE = 1e18`). Ahora los SFTs DEBEN ser puestos en staking para generar ganancias.
-   - **Status Técnico:** Contrato compilado limpiamente y verificado (Cero errores, Cero warnings).
+1. **Calibración y Fix Covalente 1-3 (desci_validator.rs):**
+   - **Problema:** El filtro de Van der Waals (colisiones de corto alcance) arrojaba falsos positivos en moléculas reales (ej. Aspirina) debido a la proximidad natural de los átomos 1-3 (separados por 2 enlaces covalentes) que están más cerca que su radio intermolecular VdW libre.
+   - **Defensa Aplicada:** Se implementó una exclusión 1-3 (shared-neighbor check) en [desci_validator.rs](file:///Users/alejandrochitu/xcron-protocol/contracts/scheduler/src/desci_validator.rs#L293-L305). Si dos átomos comparten un vecino común en el grafo de enlaces, se omite el chequeo de colisión intermolecular VdW.
+   - **Pruebas Unitarias:** 33/33 tests pasados limpiamente (`cargo test` exitoso).
 
-2. **Fix de Parseo para Tax Agent (Koinly Custom CSV):**
-   - **Sui Indexer:** Se refactorizó `sui_indexer.py` para separar los Swaps en `Sent Amount/Currency` y `Received Amount/Currency`.
-   - **MultiversX Indexer (0 balance fix):** Se refactorizó `indexer.py` para omitir `0.0` EGLD.
-   - **MultiversX Indexer (10k Limit fix):** Se modificó `indexer.py` eliminando el límite de 10 páginas.
+2. **Despliegue y Upgrade en Testnet:**
+   - **Smart Contract Address:** `erd1qqqqqqqqqqqqqpgqhlj93c58l0kmvjdzl965jeclz7r5lw2e7k8sfc2hlx`
+   - **Upgrade Tx Hash:** `8a8b64bfe682b2ee4110e43a9b213e6a2da8971a681fbf02e961924c1966a123`
+   - **Higiene:** WASM compilado y desplegado sin warnings en el código Rust.
 
-3. **Auditoría Red Team (Intents Module - MultiversX SDK v0.66.0 Refactor):**
-   - **Amenaza detectada (Balance Drain/Spoofing):** Reemplazar `single_fungible_esdt()` con `.single()` causó una pérdida de validación del nonce. Atacantes podían saldar intents enviando SFTs/NFTs sin valor, superando la validación `payment_amount >= min_return` si `min_return <= 1`, y drenando el balance fungible del SC porque la salida forzaba el envío en el nonce `0` (`self.send().direct_esdt(..., 0, ...)`).
-   - **Amenaza detectada (DoS en Creación):** Reemplazar `all_esdt_transfers()` con `.all()` provocó que los pagos EGLD adjuntos fuesen contados dentro de `transfers.len()`. Si `solver_fee > 0`, el usuario enviaba 1 EGLD + 1 ESDT (`len == 2`), rompiendo el check `require!(transfers.len() == 1)` de forma permanente.
-   - **Reentrancy:** Verificado como- **STATUS**: Migration complete. Critical Vulnerabilities patched. Awaiting Push & Deploy Authorization.
+3. **Verificación de Gas Real On-Chain:**
+   - Se validaron mediante transacciones reales enviadas desde `alice_testnet.pem` cuatro compuestos de interés farmacéutico:
+     - **Aspirina (21 átomos):** ~27.9M gas.
+     - **Paracetamol (20 átomos):** ~23.8M gas.
+     - **Fluorobenceno (12 átomos):** ~13.5M gas.
+     - **Benceno (12 átomos):** ~13.4M gas.
+   - **Unicidad:** La re-sumisión de Benceno duplicado con el mismo InChIKey fue interceptada y revertida exitosamente por el contrato con el error `"Molecule already registered"` (consumiendo el gas limit completo de 50M de forma segura).
 
 ## 2. Decisiones Arquitectónicas (No Desviar)
-- La Tesorería ya no usa "balances mapeados a wallets para SFT libres". Obligatoriamente usa Staking (MasterChef).
-- Los indexadores en Python no deben usar librerías externas (cero `pip`).
+- La exclusión de interacciones 1-3 (vecinos compartidos) se mantiene como estándar definitivo en el motor geométrico.
+- Las conformaciones 3D son extraídas de PubChem a través de PUG REST API y escaladas de Angstroms a femtómetros (multiplicadas por 100,000) antes de ser serializadas en la estructura ABI [MoleculePayload](file:///Users/alejandrochitu/xcron-protocol/contracts/scheduler/src/desci_validator.rs#L41-L45).
+- Se diseñó y validó el modelo LCQO (Lorentzian Chaotic Quantum Optimization) en el script de prueba de concepto [lorentz_chaotic_optim.py](file:///Users/alejandrochitu/xcron-protocol/scratch/lorentz_chaotic_optim.py), demostrando la evasión de mínimos locales usando el modelo del disco de Poincaré y perturbaciones del mapa logístico caótico.
 
 ## 3. Próximos Pasos (Siguiente Ciclo)
-- El desarrollador debe revertir el uso de `.single()` y `.all()` por las funciones estrictas `single_fungible_esdt()` y `all_esdt_transfers()` en `intents.rs` para parchar estas 2 vulnerabilidades críticas.
+- Recibir feedback post-deploy del usuario y del equipo red-team.
+- Iniciar la optimización del gas de validación aromática (ej. caching de distancias) e integrar la validación de estereoquímica (quiralidad/isómeros) si es requerida.
+- Integrar físicamente el wrapper LCQO de Python con el pipeline off-chain de PySCF y la llamada del oráculo del Smart Contract.

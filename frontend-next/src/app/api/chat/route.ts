@@ -76,6 +76,7 @@ export async function POST(req: Request) {
           messages: [
             { role: 'system', content: groqSystemPrompt },
             ...history.map((m: any) => ({ role: m.role === 'model' ? 'assistant' : m.role, content: m.content })),
+            { role: 'user', content: text }
           ],
           temperature: 0.8,
           max_tokens: 1024,
@@ -97,13 +98,19 @@ export async function POST(req: Request) {
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${devApiKey}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Referer': 'https://xcron.io'
+          },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: history.map((m: any) => ({
-              role: m.role === 'user' ? 'user' : 'model',
-              parts: [{ text: m.content }],
-            })),
+            contents: [
+              ...history.map((m: any) => ({
+                role: m.role === 'user' ? 'user' : 'model',
+                parts: [{ text: m.content }],
+              })),
+              { role: 'user', parts: [{ text }] }
+            ],
             tools: [{ function_declarations: [
               {
                 name: 'schedule_task',

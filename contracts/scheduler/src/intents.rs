@@ -26,25 +26,11 @@ pub trait IntentsModule:
   ) -> u64 {
     self.require_not_paused();
 
-    let all_payments = self.call_value().all();
-    let mut egld_payment = BigUint::zero();
-    let mut esdt_transfer = None;
-
-    for payment in all_payments.iter() {
-        if payment.token_identifier.is_native() {
-            egld_payment += payment.amount.as_big_uint();
-        } else {
-            require!(esdt_transfer.is_none(), "Must receive exactly 1 ESDT token");
-            esdt_transfer = Some(payment);
-        }
-    }
-    
+    let egld_payment = self.call_value().egld().clone_value();
     require!(egld_payment == solver_fee, "XCRON-PROTECT: EGLD adjunto debe coincidir exactamente con el solver_fee");
-    require!(esdt_transfer.is_some(), "Must receive exactly 1 ESDT token");
-    
-    let esdt = esdt_transfer.unwrap();
-    let token_in: EsdtTokenIdentifier<Self::Api> = esdt.token_identifier.clone().into();
-    let amount_in: BigUint<Self::Api> = esdt.amount.clone().into_big_uint();
+    let (token_ref, amount_ref) = self.call_value().single_fungible_esdt();
+    let token_in = token_ref.clone_value();
+    let amount_in = amount_ref.clone_value();
     require!(amount_in > 0, "Amount in must be greater than 0");
     
     // ️ XCRON-PROTECT: Vector 4 Fix - Block Poisoned Tokens (ESDT Callback Griefing)
@@ -127,12 +113,9 @@ pub trait IntentsModule:
       "XCRON-PROTECT: Intent expired"
     );
 
-    // PURE ATOMIC VERIFICATION: Verificamos que el Solver haya adjuntado los tokens requeridos por la IA/Usuario
-    let payment = self.call_value().single();
-    let payment_token: EsdtTokenIdentifier<Self::Api> = payment.token_identifier.clone().into();
-    let payment_amount: BigUint<Self::Api> = payment.amount.clone().into_big_uint();
-
-    require!(payment.token_nonce == 0, "XCRON-PROTECT: Payment must be fungible (nonce 0)");
+    let (token_ref, amount_ref) = self.call_value().single_fungible_esdt();
+    let payment_token = token_ref.clone_value();
+    let payment_amount = amount_ref.clone_value();
     require!(payment_token == intent.token_out, "XCRON-PROTECT: Token invalido aportado por el Solver");
     require!(payment_amount >= intent.min_return, "XCRON-PROTECT: Slippage no cumplido (Zero-Score Hack evitado)");
 
@@ -166,25 +149,11 @@ pub trait IntentsModule:
   ) -> u64 {
     self.require_not_paused();
 
-    let all_payments = self.call_value().all();
-    let mut egld_payment = BigUint::zero();
-    let mut esdt_transfer = None;
-
-    for payment in all_payments.iter() {
-        if payment.token_identifier.is_native() {
-            egld_payment += payment.amount.as_big_uint();
-        } else {
-            require!(esdt_transfer.is_none(), "Must receive exactly 1 ESDT token as input");
-            esdt_transfer = Some(payment);
-        }
-    }
-    
+    let egld_payment = self.call_value().egld().clone_value();
     require!(egld_payment == solver_fee, "XCRON-PROTECT: EGLD payment must match solver_fee");
-    require!(esdt_transfer.is_some(), "Must receive exactly 1 ESDT token as input");
-    
-    let esdt = esdt_transfer.unwrap();
-    let token_in: EsdtTokenIdentifier<Self::Api> = esdt.token_identifier.clone().into();
-    let amount_in: BigUint<Self::Api> = esdt.amount.clone().into_big_uint();
+    let (token_ref, amount_ref) = self.call_value().single_fungible_esdt();
+    let token_in = token_ref.clone_value();
+    let amount_in = amount_ref.clone_value();
     
     require!(
       self.accepted_payment_tokens(&token_in).get(), 
@@ -264,14 +233,14 @@ pub trait IntentsModule:
       "XCRON-PROTECT: Intent expired"
     );
 
-    let payments = self.call_value().all();
+    let payments = self.call_value().all_esdt_transfers();
     require!(payments.len() == intent.outcomes.len(), "XCRON-PROTECT: Number of tokens doesn't match requirements");
 
     // Verify each token matches the intent requirements in order
     for (i, outcome) in intent.outcomes.iter().enumerate() {
       let payment = payments.get(i);
       let payment_token: EsdtTokenIdentifier<Self::Api> = payment.token_identifier.clone().into();
-      let payment_amount: BigUint<Self::Api> = payment.amount.clone().into_big_uint();
+      let payment_amount: BigUint<Self::Api> = payment.amount.clone();
       
       require!(payment.token_nonce == 0, "XCRON-PROTECT: Payment must be fungible (nonce 0)");
       require!(payment_token == outcome.token_out, "XCRON-PROTECT: Token mismatch at index {}", i);
@@ -287,7 +256,7 @@ pub trait IntentsModule:
     // Distribute tokens to user
     for payment in payments.iter() {
        let payment_token: EsdtTokenIdentifier<Self::Api> = payment.token_identifier.clone().into();
-       let payment_amount: BigUint<Self::Api> = payment.amount.clone().into_big_uint();
+       let payment_amount: BigUint<Self::Api> = payment.amount.clone();
        self.send().direct_esdt(&intent.owner, &payment_token, 0, &payment_amount);
     }
 
@@ -314,25 +283,11 @@ pub trait IntentsModule:
   ) -> u64 {
     self.require_not_paused();
 
-    let all_payments = self.call_value().all();
-    let mut egld_payment = BigUint::zero();
-    let mut esdt_transfer = None;
-
-    for payment in all_payments.iter() {
-        if payment.token_identifier.is_native() {
-            egld_payment += payment.amount.as_big_uint();
-        } else {
-            require!(esdt_transfer.is_none(), "Must receive exactly 1 ESDT token");
-            esdt_transfer = Some(payment);
-        }
-    }
-    
+    let egld_payment = self.call_value().egld().clone_value();
     require!(egld_payment == keeper_fee, "XCRON-PROTECT: EGLD adjunto debe coincidir exactamente con el keeper_fee");
-    require!(esdt_transfer.is_some(), "Must receive exactly 1 ESDT token");
-    
-    let esdt = esdt_transfer.unwrap();
-    let token_in: EsdtTokenIdentifier<Self::Api> = esdt.token_identifier.clone().into();
-    let amount_in: BigUint<Self::Api> = esdt.amount.clone().into_big_uint();
+    let (token_ref, amount_ref) = self.call_value().single_fungible_esdt();
+    let token_in = token_ref.clone_value();
+    let amount_in = amount_ref.clone_value();
     require!(amount_in > 0, "Amount in must be greater than 0");
     
     let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
@@ -446,11 +401,9 @@ pub trait IntentsModule:
     );
 
     // 3. Atomicity & Safety Checks
-    let payment = self.call_value().single();
-    let payment_token: EsdtTokenIdentifier<Self::Api> = payment.token_identifier.clone().into();
-    let payment_amount: BigUint<Self::Api> = payment.amount.clone().into_big_uint();
-    
-    require!(payment.token_nonce == 0, "XCRON-PROTECT: Payment must be fungible (nonce 0)");
+    let (token_ref, amount_ref) = self.call_value().single_fungible_esdt();
+    let payment_token = token_ref.clone_value();
+    let payment_amount = amount_ref.clone_value();
     require!(payment_token == expected_token_out, "XCRON-PROTECT: Invalid execution outcome token");
     require!(payment_amount >= min_return, "XCRON-PROTECT: Slippage condition not matched");
 

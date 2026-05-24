@@ -65,13 +65,31 @@ pub trait ZkVerifierContract {
     }
 
     // ═════════════════════════════════════════════════════════
+    //  KEEPER WHITELIST
+    // ═════════════════════════════════════════════════════════
+
+    #[only_owner]
+    #[endpoint(addKeeper)]
+    fn add_keeper(&self, keeper: ManagedAddress) {
+        self.whitelisted_keepers().insert(keeper);
+    }
+
+    #[only_owner]
+    #[endpoint(removeKeeper)]
+    fn remove_keeper(&self, keeper: ManagedAddress) {
+        self.whitelisted_keepers().swap_remove(&keeper);
+    }
+
+    // ═════════════════════════════════════════════════════════
     //  PROOF SUBMISSION
     // ═════════════════════════════════════════════════════════
 
     /// Keeper submits a ZK proof (hash-based commitment) for a task.
     ///
-    /// The commitment is: SHA-256(block_hash || claimed_value_bytes || salt)
+    /// The commitment is structured to prevent hash collisions using MultiversX serialization:
+    /// SHA-256(top_encode((block_hash, claimed_value, salt, prover_address)))
     /// where block_hash is the hash of the referenced historical block.
+    #[payable("EGLD")]
     #[endpoint(submitProof)]
     fn submit_proof(
         &self,
@@ -81,17 +99,25 @@ pub trait ZkVerifierContract {
         claimed_value: BigUint,
     ) {
         let caller = self.blockchain().get_caller();
+        require!(self.whitelisted_keepers().contains(&caller), "Not an authorized keeper");
+
+        let payment = self.call_value().egld_value().clone_value();
+        let min_stake = BigUint::from(10_000_000_000_000_000u64);
+        require!(payment >= min_stake, "Insufficient stake for proof submission");
+        let now = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
 
         // Prevent overwriting existing verified proofs
         if !self.proofs(task_id).is_empty() {
             let existing = self.proofs(task_id).get();
             require!(!existing.verified, "Proof already verified — cannot overwrite");
+            require!(
+                existing.prover == caller || now >= existing.submitted_at + 3600,
+                "Proof already submitted and unverified by another prover"
+            );
         }
-
-        let now = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
 
         let proof = ProofData {
             commitment,
@@ -112,7 +138,7 @@ pub trait ZkVerifierContract {
 
     /// Verify a submitted proof against the on-chain block hash.
     ///
-    /// The verifier recomputes: expected = SHA-256(block_hash || value_bytes || salt)
+    /// The verifier recomputes: expected = SHA-256(top_encode((block_hash, claimed_value, salt, prover_address)))
     /// and checks it matches the submitted commitment.
     ///
     /// For Phase 1, we use a simplified verification: we trust the commitment
@@ -120,6 +146,9 @@ pub trait ZkVerifierContract {
     /// Full cryptographic verification requires the Prover SDK (Phase 2).
     #[endpoint(verifyProof)]
     fn verify_proof(&self, task_id: u64, salt: ManagedBuffer) {
+        let caller = self.blockchain().get_caller();
+        require!(self.whitelisted_keepers().contains(&caller), "Not an authorized keeper");
+
         require!(!self.proofs(task_id).is_empty(), "No proof submitted");
         let mut proof = self.proofs(task_id).get();
         require!(!proof.verified, "Already verified");
@@ -130,12 +159,10 @@ pub trait ZkVerifierContract {
         require!(!block_hash_mapper.is_empty(), "Block hash not registered");
         let block_hash = block_hash_mapper.get();
 
-        // Recompute commitment = SHA-256(block_hash || claimed_value_bytes || salt)
-        // and compare with submitted commitment.
+        // Recompute commitment using structured serialization to prevent hash collisions.
+        // The nested encode adds length prefixes for dynamic types (BigUint, ManagedBuffer).
         let mut hash_input = ManagedBuffer::new();
-        hash_input.append(block_hash.as_managed_buffer());
-        hash_input.append(&proof.claimed_value.to_bytes_be_buffer());
-        hash_input.append(&salt);
+        let _ = (block_hash, &proof.claimed_value, &salt, &proof.prover).top_encode(&mut hash_input);
 
         let computed_hash = self.crypto().sha256(&hash_input);
 
@@ -160,6 +187,12 @@ pub trait ZkVerifierContract {
     //  QUERY ENDPOINTS
     // ═════════════════════════════════════════════════════════
 
+    /// Check if a keeper is authorized.
+    #[view(isKeeperWhitelisted)]
+    fn is_keeper_whitelisted(&self, keeper: ManagedAddress) -> bool {
+        self.whitelisted_keepers().contains(&keeper)
+    }
+
     /// Check if a proof for a task is valid (used by Scheduler before execution).
     #[view(isProofValid)]
     fn is_proof_valid(&self, task_id: u64) -> bool {
@@ -179,6 +212,9 @@ pub trait ZkVerifierContract {
     // ═════════════════════════════════════════════════════════
     //  STORAGE
     // ═════════════════════════════════════════════════════════
+
+    #[storage_mapper("whitelisted_keepers")]
+    fn whitelisted_keepers(&self) -> UnorderedSetMapper<ManagedAddress>;
 
     #[storage_mapper("proofs")]
     fn proofs(&self, task_id: u64) -> SingleValueMapper<ProofData<Self::Api>>;

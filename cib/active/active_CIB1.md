@@ -1,14 +1,10 @@
-# CIB1 — Brainstorming (Red Team fixes for Agent Treasury & Escrow)
+# CIB1 - Brainstorming (Auditoría Avanzada)
 
-* **Objetivo**: Corregir vulnerabilidades críticas reportadas en `escrow` y `agent-treasury` y blindarlas matemáticamente.
+**Objetivo:** Realizar una auditoría avanzada de seguridad sobre los contratos de XCron Protocol, específicamente los MOATs matemáticos, ZK-Verifier, XWAP y Scheduler, e iniciar el ciclo de corrección.
 
-## Vulnerabilidades Reportadas
-1. **Escrow (`deposit`)**: Permite depositar *fake tokens* porque no se valida el `token_id` aceptado contra una whitelist, engañando a los trabajadores.
-2. **Agent-Treasury (`payForService`)**: Pérdida de precisión al calcular `reward_addition`. `(payment_amount * 1e18) / total_staked` puede resultar en truncamiento a `0` si el dividendo es muy bajo frente a `total_staked`.
-3. **Agent-Treasury (`unstakeSfts`)**: Robo/Locking de SFTs reales. Al hacer stake, se acepta cualquier nonce, pero el unstake fuerza el envío de `nonce = 0`, bloqueando el SFT original.
+**Hallazgos en Revisión Inicial:**
+1. Mismatch de Endpoints: El Scheduler intenta llamar a `verifyZkProof` en el ZK Verifier, pero el ZK Verifier solo expone `verifyProof`.
+2. Vulnerabilidad de Front-Running: En `submit_proof` (ZK Verifier), la ausencia de bloqueo contra sobrescritura de pruebas *no verificadas* permite secuestrar la identidad del prover.
+3. Configuraciones Faltantes en XWAP: `price_scale_multiplier` y `price_scale_divisor` existen en el storage pero no tienen getters/setters expuestos en `config.rs`.
 
-## Dirección (Fixes Propuestos)
-- **Escrow**: Añadir un storage mapper `accepted_payment_tokens` configurado por el admin, y verificar en `deposit` que el token es válido.
-- **Agent-Treasury**:
-  - Precision: Modificar la constante `REWARD_SCALE` (ej. llevarla a `1e24`) O rediseñar el cálculo.
-  - SFT Lock: Guardar el nonce del SFT depositado en `UserInfo` para poder retirarlo correctamente en `unstakeSfts`.
+**Escape Hatch Activado:** El usuario requiere lenguaje "exhaustivo, detallado y en español" para la explicación de las vulnerabilidades.

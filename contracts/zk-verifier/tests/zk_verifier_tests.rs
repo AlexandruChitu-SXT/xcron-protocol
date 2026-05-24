@@ -3,6 +3,7 @@ use multiversx_sc::contract_base::ContractBase;
 use multiversx_sc_scenario::{ScenarioWorld, ScenarioTxRun, ScenarioTxWhitebox};
 use multiversx_sc_scenario::imports::{MxscPath, ExpectError};
 use multiversx_sc_scenario::api::StaticApi;
+use multiversx_sc::codec::TopEncode;
 use zk_verifier::ZkVerifierContract;
 
 const ZK_VERIFIER_CODE: MxscPath = MxscPath::new("output/zk-verifier.mxsc.json");
@@ -25,7 +26,7 @@ fn test_zk_verifier_flow() {
     let mut world = world();
 
     world.account(OWNER_ADDRESS).nonce(1).balance(0u64);
-    world.account(KEEPER_ADDRESS).nonce(1).balance(0u64);
+    world.account(KEEPER_ADDRESS).nonce(1).balance(100_000_000_000_000_000u64);
 
     // 1. Deploy
     let _zk_verifier_addr = world
@@ -44,6 +45,11 @@ fn test_zk_verifier_flow() {
         assert_eq!(sc.scheduler_addr().get(), SCHEDULER_ADDRESS.to_managed_address());
     });
 
+    // Whitelist Keeper
+    world.tx().from(OWNER_ADDRESS).to(ZK_VERIFIER_SC_ADDRESS).whitebox(zk_verifier::contract_obj, |sc| {
+        sc.add_keeper(KEEPER_ADDRESS.to_managed_address());
+    });
+
     // 2. Try verifying or submitting when no block hash is registered
     let block_nonce = 100u64;
     let block_hash_bytes = [3u8; 32];
@@ -53,22 +59,21 @@ fn test_zk_verifier_flow() {
 
     let mut commitment_bytes = [0u8; 32];
     world.tx().from(OWNER_ADDRESS).to(ZK_VERIFIER_SC_ADDRESS).whitebox(zk_verifier::contract_obj, |sc| {
-        let block_hash = ManagedByteArray::new_from_bytes(&block_hash_bytes);
-        let claimed_value = BigUint::from(claimed_value_raw);
-        let salt = ManagedBuffer::from(salt_raw);
+        let block_hash = ManagedByteArray::<StaticApi, 32>::new_from_bytes(&block_hash_bytes);
+        let claimed_value = BigUint::<StaticApi>::from(claimed_value_raw);
+        let salt = ManagedBuffer::<StaticApi>::from(salt_raw);
 
-        // Compute commitment off-chain: commitment = SHA-256(block_hash || claimed_value || salt)
+        // Compute commitment off-chain using top_encode for structured serialization
         let mut hash_input = ManagedBuffer::new();
-        hash_input.append(block_hash.as_managed_buffer());
-        hash_input.append(&claimed_value.to_bytes_be_buffer());
-        hash_input.append(&salt);
+        let prover: multiversx_sc::types::ManagedAddress<StaticApi> = KEEPER_ADDRESS.to_managed_address();
+        let _ = (block_hash, &claimed_value, &salt, &prover).top_encode(&mut hash_input);
 
         let computed = sc.crypto().sha256(&hash_input);
         let _ = computed.as_managed_buffer().load_slice(0, &mut commitment_bytes);
     });
 
     // Submit proof as Keeper (does not check block hash on submission, only on verification)
-    world.tx().from(KEEPER_ADDRESS).to(ZK_VERIFIER_SC_ADDRESS).whitebox(zk_verifier::contract_obj, |sc| {
+    world.tx().from(KEEPER_ADDRESS).to(ZK_VERIFIER_SC_ADDRESS).egld(10_000_000_000_000_000u64).whitebox(zk_verifier::contract_obj, |sc| {
         let commitment = ManagedByteArray::new_from_bytes(&commitment_bytes);
         let claimed_value = BigUint::from(claimed_value_raw);
         sc.submit_proof(task_id, commitment, block_nonce, claimed_value);

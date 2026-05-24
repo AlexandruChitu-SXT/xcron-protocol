@@ -8,3 +8,4 @@ pub mod tui;
 pub mod mempool_sniper;
 pub mod drip_funder;
 pub mod session_db;
+pub mod privacy_flow;

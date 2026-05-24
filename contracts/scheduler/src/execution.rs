@@ -128,7 +128,7 @@ pub trait ExecutionModule:
     if !zk_verifier.is_zero() {
       let raw_result = self.tx()
         .to(&zk_verifier)
-        .raw_call("verifyZkProof")
+        .raw_call("verifyProof")
         .argument(&task_hash.as_managed_buffer())
         .argument(&zk_proof)
         .returns(ReturnsRawResult)

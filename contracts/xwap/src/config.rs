@@ -66,6 +66,19 @@ pub trait ConfigModule: crate::storage::StorageModule + crate::events::EventsMod
         self.pool_address().set(pool);
     }
 
+    #[endpoint(setPriceScaleMultiplier)]
+    fn set_price_scale_multiplier(&self, multiplier: BigUint) {
+        self.require_owner();
+        self.price_scale_multiplier().set(multiplier);
+    }
+
+    #[endpoint(setPriceScaleDivisor)]
+    fn set_price_scale_divisor(&self, divisor: BigUint) {
+        self.require_owner();
+        require!(divisor > 0, "divisor cannot be zero");
+        self.price_scale_divisor().set(divisor);
+    }
+
     fn require_owner(&self) {
         let caller = self.blockchain().get_caller();
         let owner = self.owner_address().get();

@@ -1,17 +1,9 @@
-# CIB2 — Diseño Arquitectónico (Red Team fixes)
+# CIB2 - Diseño (Iteración 3 - Red Team Feedback)
 
-* **Objetivo**: Corregir vulnerabilidades críticas sin romper el Safety Loop (cero errores/warnings en compilación).
+**Vulnerabilidad Adicional: Proof Forgery y Hash Collision**
+- **Causa:** `submit_proof` no verifica que el caller sea un Keeper autorizado. Además, la concatenación `claimed_value` + `salt` permite colisiones de hash (ej. `12` + `34` vs `1` + `234`).
+- **Diseño de Solución (Red Team):**
+  1. Integrar validación de Keeper: Solo direcciones autorizadas (o comunicándose con el KeeperRegistry) pueden enviar y verificar pruebas. Para no complicar llamadas síncronas excesivas, el ZK-Verifier puede tener un mapper `whitelist_keepers` administrado por el owner/scheduler.
+  2. Hash Delimiter: Añadir un delimitador estricto (`|` o similar) o serialización segura (byte length prefix) al calcular el hash para prevenir colisiones.
 
-## 1. Escrow (Fake Tokens Fix)
-- Añadir un endpoint `whitelist_token(token_identifier: TokenIdentifier)` con `#[only_owner]`.
-- Añadir un storage mapper: `accepted_payment_tokens(token_identifier: &TokenIdentifier) -> SingleValueMapper<bool>`.
-- En `deposit`, verificar: `require!(self.accepted_payment_tokens(&token_id).get(), "Token no aceptado para pagos");`
-
-## 2. Agent-Treasury (Precision & SFT Fixes)
-- **Precisión**: Reemplazar `REWARD_SCALE` por una variable dinámica o simplemente aumentar su valor. Un estándar más seguro es usar `1e24` para tokens ESDT, pero para evitar truncamiento total incluso si hay overflow futuro, vamos a asegurar que el multiplicador escale apropiadamente. Sin embargo, dado el límite, usaremos `BigUint` math real. Cambiaremos el orden a `(payment_amount * REWARD_SCALE_BIGUINT) / total_staked`. En lugar de `u64`, definiremos una constante string o crearemos un `BigUint` en tiempo de ejecución.
-- **SFT Lock**:
-  - Modificar el struct `UserInfo`: añadir `pub staked_nonce: u64`.
-  - En `stake_sfts`: Capturar `payment.token_nonce` y guardarlo en `user_info.staked_nonce`.
-  - En `unstake_sfts`: Usar `user_info.staked_nonce` en lugar de `0` en la llamada de envío `self.send().direct_esdt(..., user_info.staked_nonce, ...)`.
-
-Estas correciones cierran brechas letales manteniendo total compatibilidad con SpaceCraft `v0.66.0`.
+**Regla Aplicable:** Safety Development Loop.

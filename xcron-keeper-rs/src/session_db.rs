@@ -5,14 +5,16 @@ use crate::network::MultiversXNetwork;
 use crate::drip_funder::DripFunder;
 use crate::wallet::KeeperWallet;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SessionStatus {
   Dripped,
   Swept,
   FailedSweep,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrivacySession {
   pub stealth_address: String,
   pub user_address: String,
@@ -23,7 +25,7 @@ pub struct PrivacySession {
 }
 
 pub struct PrivacySessionManager {
-  sessions: RwLock<HashMap<String, PrivacySession>>,
+  pub sessions: RwLock<HashMap<String, PrivacySession>>,
   pub global_float_limit: u128,       // e.g. 5.0 EGLD (5_000_000_000_000_000_000)
   pub max_active_drips_per_user: usize, // e.g. 3 active sessions concurrently
   pub retry_queue: Mutex<Vec<String>>,  // List of stealth addresses to retry sweep

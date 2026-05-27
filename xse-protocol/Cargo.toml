@@ -24,3 +24,24 @@ clap = { version = "4.5.4", features = ["derive"] }
 chrono = "0.4.38"
 pqcrypto-dilithium = "0.5.0"
 pqcrypto-traits = "0.3.5"
+
+# ── PRODUCTION CRYPTOGRAPHIC INTEGRATIONS ──────────────────────────────────
+# VDF: Class Groups of Imaginary Quadratic Fields (same as Chia Network's VDF)
+# Eliminates trusted setup requirement and supports discriminants > 2^1024
+classgroup = "0.1.0"
+
+# BabyJubjub: Twisted Edwards curve native over BN254 scalar field (254-bit)
+# Replaces the portable 127-bit Mersenne simulator
+ark-ed-on-bn254 = "0.4.0"
+ark-ff = "0.4.0"
+ark-ec = "0.4.0"
+ark-serialize = "0.4.0"
+
+# AWS Nitro Enclave NSM: Real CBOR/COSE attestation document parser
+# Only functional inside an actual Nitro Enclave EC2 instance
+aws-nitro-enclaves-nsm-api = { version = "0.4.0", optional = true }
+
+[features]
+default = []
+# Enable only when compiling inside an AWS Nitro Enclave
+nitro-enclave = ["aws-nitro-enclaves-nsm-api"]

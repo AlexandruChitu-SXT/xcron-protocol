@@ -107,12 +107,16 @@ pub trait ExecutionModule:
     self.dispatch_task_execution(task_hash, task_payload, keeper, virtual_state);
   }
 
-  /// Settle a Confidential Task executed inside an XSE Sovereign Enclave.
+  /// Settle a Confidential Task executed inside an XSE Sovereign Enclave (Hardened v2.7).
   #[endpoint(settleXseTask)]
   fn settle_xse_task(
     &self,
     task_hash: ManagedByteArray<Self::Api, 32>,
     zk_proof: ManagedBuffer,
+    ephemeral_pubkey: ManagedByteArray<Self::Api, 32>,
+    target_contract: ManagedAddress,
+    target_endpoint: ManagedBuffer,
+    target_args: MultiValueEncoded<ManagedBuffer>,
   ) {
     self.require_not_paused();
     let enforcer = self.blockchain().get_caller();
@@ -125,26 +129,38 @@ pub trait ExecutionModule:
     require!(quantum_state.status == common::types::TaskStatus::Executing, "XSE: Task not in execution state");
 
     let zk_verifier = self.zk_verifier_addr().get();
-    if !zk_verifier.is_zero() {
-      let raw_result = self.tx()
-        .to(&zk_verifier)
-        .raw_call("verifyProof")
-        .argument(&task_hash.as_managed_buffer())
-        .argument(&zk_proof)
-        .returns(ReturnsRawResult)
-        .sync_call();
+    // ERR-12 Fix: Obligar a que la dirección del ZK-Verifier esté configurada
+    require!(!zk_verifier.is_zero(), "XSE: ZK Verifier address not configured");
 
-      let is_proof_valid = if raw_result.is_empty() {
-        false
-      } else {
-        bool::top_decode(raw_result.get(0).to_boxed_bytes().as_slice()).unwrap_or(false)
-      };
+    let raw_result = self.tx()
+      .to(&zk_verifier)
+      .raw_call("verifyProof")
+      .argument(&task_hash.as_managed_buffer())
+      .argument(&zk_proof)
+      .argument(&ephemeral_pubkey.as_managed_buffer())
+      .returns(ReturnsRawResult)
+      .sync_call();
 
-      require!(is_proof_valid, "XSE: Invalid Enclave ZK-Proof");
-    }
+    let is_proof_valid = if raw_result.is_empty() {
+      false
+    } else {
+      bool::top_decode(raw_result.get(0).to_boxed_bytes().as_slice()).unwrap_or(false)
+    };
 
-    self.finalize_successful_execution(task_hash, ManagedAddress::zero(), enforcer, quantum_state.deposit, quantum_state.owner);
+    require!(is_proof_valid, "XSE: Invalid Enclave ZK-Proof");
+
+    // ERR-13 Fix: Ejecución del asentamiento real del payload de destino en L1
+    self.tx()
+      .to(&target_contract)
+      .raw_call(target_endpoint)
+      .arguments_raw(target_args.to_arg_buffer())
+      .sync_call();
+
+
+    self.finalize_successful_execution(task_hash, target_contract, enforcer, quantum_state.deposit, quantum_state.owner);
   }
+
+
 
   fn dispatch_task_execution(
     &self,

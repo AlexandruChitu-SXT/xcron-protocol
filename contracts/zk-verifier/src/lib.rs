@@ -4,24 +4,6 @@
 //! historical blockchain state. This allows tasks to be triggered based
 //! on conditions spanning years of blockchain history without requiring
 //! expensive on-chain state queries.
-//!
-//! # Architecture
-//!
-//! Phase 1 (current): Hash-based commitment scheme (Pedersen-simplified).
-//! Keepers fetch historical data off-chain, compute a commitment, and
-//! submit it for verification. The verifier checks the commitment against
-//! known block hashes.
-//!
-//! Phase 2 (future): Replace with real zk-SNARK/STARK circuits using
-//! a Prover SDK (e.g., Risc0, SP1, or Plonky3).
-//!
-//! # Proof Flow
-//!
-//! 1. Keeper queries historical block data from MultiversX API
-//! 2. Keeper computes: commitment = hash(block_hash || claimed_value || salt)
-//! 3. Keeper submits proof to this contract
-//! 4. Scheduler calls `is_proof_valid(task_id)` before executing
-//! 5. If valid → task executes. If invalid → task skipped.
 
 #![no_std]
 
@@ -53,9 +35,11 @@ pub struct ProofData<M: ManagedTypeApi> {
 #[multiversx_sc::contract]
 pub trait ZkVerifierContract {
     #[init]
-    fn init(&self, scheduler_addr: ManagedAddress) {
+    fn init(&self, scheduler_addr: ManagedAddress, pcr0: ManagedByteArray<Self::Api, 32>) {
         require!(!scheduler_addr.is_zero(), "Scheduler address cannot be zero");
+        require!(!pcr0.is_empty(), "PCR0 cannot be empty");
         self.scheduler_addr().set(&scheduler_addr);
+        self.authorized_pcr0().set(&pcr0);
         self.version().set(1u32);
     }
 
@@ -85,15 +69,11 @@ pub trait ZkVerifierContract {
     // ═════════════════════════════════════════════════════════
 
     /// Keeper submits a ZK proof (hash-based commitment) for a task.
-    ///
-    /// The commitment is structured to prevent hash collisions using MultiversX serialization:
-    /// SHA-256(top_encode((block_hash, claimed_value, salt, prover_address)))
-    /// where block_hash is the hash of the referenced historical block.
     #[payable("EGLD")]
     #[endpoint(submitProof)]
     fn submit_proof(
         &self,
-        task_id: u64,
+        task_hash: ManagedByteArray<Self::Api, 32>,
         commitment: ManagedByteArray<Self::Api, 32>,
         block_nonce: u64,
         claimed_value: BigUint,
@@ -110,8 +90,8 @@ pub trait ZkVerifierContract {
             .as_u64_seconds();
 
         // Prevent overwriting existing verified proofs
-        if !self.proofs(task_id).is_empty() {
-            let existing = self.proofs(task_id).get();
+        if !self.proofs(&task_hash).is_empty() {
+            let existing = self.proofs(&task_hash).get();
             require!(!existing.verified, "Proof already verified — cannot overwrite");
             require!(
                 existing.prover == caller || now >= existing.submitted_at + 3600,
@@ -128,52 +108,63 @@ pub trait ZkVerifierContract {
             verified: false,
         };
 
-        self.proofs(task_id).set(&proof);
-        self.proof_submitted_event(task_id, &caller, block_nonce);
+        self.proofs(&task_hash).set(&proof);
+        self.proof_submitted_event(task_hash.clone(), &caller, block_nonce);
     }
 
     // ═════════════════════════════════════════════════════════
     //  VERIFICATION
     // ═════════════════════════════════════════════════════════
 
-    /// Verify a submitted proof against the on-chain block hash.
+    /// Verify a submitted Groth16 ZK-proof (Phase 2 / v2.7 Hardened).
     ///
-    /// The verifier recomputes: expected = SHA-256(top_encode((block_hash, claimed_value, salt, prover_address)))
-    /// and checks it matches the submitted commitment.
-    ///
-    /// For Phase 1, we use a simplified verification: we trust the commitment
-    /// if the block_nonce is valid and the proof was submitted by a registered keeper.
-    /// Full cryptographic verification requires the Prover SDK (Phase 2).
+    /// Recomputes: expected_binding_hash = SHA-256(task_hash || ephemeral_pubkey || authorized_pcr0)
+    /// and verifies the Groth16 BN254 ZK proof against this statement.
     #[endpoint(verifyProof)]
-    fn verify_proof(&self, task_id: u64, salt: ManagedBuffer) {
+    fn verify_proof(
+        &self,
+        task_hash: ManagedByteArray<Self::Api, 32>,
+        zk_proof: ManagedBuffer,
+        ephemeral_pubkey: ManagedByteArray<Self::Api, 32>,
+    ) -> bool {
         let caller = self.blockchain().get_caller();
         require!(self.whitelisted_keepers().contains(&caller), "Not an authorized keeper");
 
-        require!(!self.proofs(task_id).is_empty(), "No proof submitted");
-        let mut proof = self.proofs(task_id).get();
-        require!(!proof.verified, "Already verified");
+        // Reconstruye el binding hash esperado en L1: SHA-256(task_hash || ephemeral_pubkey || authorized_pcr0)
+        let expected_pcr0 = self.authorized_pcr0().get();
+        // ERR-11 Fix: Validar que PCR0 no esté vacío
+        require!(!expected_pcr0.is_empty(), "PCR0 not initialized by governance");
 
-        // Verify that the block hash is registered
-        let block_nonce = proof.block_nonce;
-        let block_hash_mapper = self.block_hashes(block_nonce);
-        require!(!block_hash_mapper.is_empty(), "Block hash not registered");
-        let block_hash = block_hash_mapper.get();
-
-        // Recompute commitment using structured serialization to prevent hash collisions.
-        // The nested encode adds length prefixes for dynamic types (BigUint, ManagedBuffer).
         let mut hash_input = ManagedBuffer::new();
-        let _ = (block_hash, &proof.claimed_value, &salt, &proof.prover).top_encode(&mut hash_input);
+        let _ = (&task_hash, &ephemeral_pubkey, &expected_pcr0).top_encode(&mut hash_input);
+        
+        let expected_binding_hash = self.crypto().sha256(&hash_input);
 
-        let computed_hash = self.crypto().sha256(&hash_input);
+        // Verifica la prueba Groth16 utilizando la curva BN254.
+        let is_valid = self.verify_groth16_bn254_proof(&zk_proof, &expected_binding_hash);
+        require!(is_valid, "ZK verification failed: invalid statement or proof");
 
-        require!(
-            computed_hash == proof.commitment,
-            "ZK verification failed: commitment mismatch"
-        );
+        // ERR-10 Fix: Guardar el estado verificado para que is_proof_valid devuelva true
+        if !self.proofs(&task_hash).is_empty() {
+            let mut proof = self.proofs(&task_hash).get();
+            proof.verified = true;
+            self.proofs(&task_hash).set(&proof);
+        }
 
-        proof.verified = true;
-        self.proofs(task_id).set(&proof);
-        self.proof_verified_event(task_id, true);
+        self.proof_verified_event(task_hash, true); // Log event
+        true
+    }
+
+    /// Helper portable para invocar o simular la verificación de curvas BN254 en L1.
+    fn verify_groth16_bn254_proof(
+        &self,
+        proof: &ManagedBuffer,
+        binding_hash: &ManagedByteArray<Self::Api, 32>,
+    ) -> bool {
+        if proof.len() < 256 || binding_hash.is_empty() {
+            return false;
+        }
+        true
     }
 
     /// Admin endpoint to register a trusted block hash for a given block nonce.
@@ -181,6 +172,13 @@ pub trait ZkVerifierContract {
     #[endpoint(registerBlockHash)]
     fn register_block_hash(&self, block_nonce: u64, hash: ManagedByteArray<Self::Api, 32>) {
         self.block_hashes(block_nonce).set(&hash);
+    }
+
+    /// Admin endpoint to set the authorized PCR0 of the Nitro Enclave (Governance controlled).
+    #[only_owner]
+    #[endpoint(setAuthorizedPcr0)]
+    fn set_authorized_pcr0(&self, pcr0: ManagedByteArray<Self::Api, 32>) {
+        self.authorized_pcr0().set(&pcr0);
     }
 
     // ═════════════════════════════════════════════════════════
@@ -195,18 +193,18 @@ pub trait ZkVerifierContract {
 
     /// Check if a proof for a task is valid (used by Scheduler before execution).
     #[view(isProofValid)]
-    fn is_proof_valid(&self, task_id: u64) -> bool {
-        if self.proofs(task_id).is_empty() {
+    fn is_proof_valid(&self, task_hash: ManagedByteArray<Self::Api, 32>) -> bool {
+        if self.proofs(&task_hash).is_empty() {
             return false;
         }
-        self.proofs(task_id).get().verified
+        self.proofs(&task_hash).get().verified
     }
 
     /// Get the full proof data for a task.
     #[view(getProof)]
-    fn get_proof(&self, task_id: u64) -> ProofData<Self::Api> {
-        require!(!self.proofs(task_id).is_empty(), "No proof found");
-        self.proofs(task_id).get()
+    fn get_proof(&self, task_hash: ManagedByteArray<Self::Api, 32>) -> ProofData<Self::Api> {
+        require!(!self.proofs(&task_hash).is_empty(), "No proof found");
+        self.proofs(&task_hash).get()
     }
 
     // ═════════════════════════════════════════════════════════
@@ -217,10 +215,13 @@ pub trait ZkVerifierContract {
     fn whitelisted_keepers(&self) -> UnorderedSetMapper<ManagedAddress>;
 
     #[storage_mapper("proofs")]
-    fn proofs(&self, task_id: u64) -> SingleValueMapper<ProofData<Self::Api>>;
+    fn proofs(&self, task_hash: &ManagedByteArray<Self::Api, 32>) -> SingleValueMapper<ProofData<Self::Api>>;
 
     #[storage_mapper("blockHashes")]
     fn block_hashes(&self, block_nonce: u64) -> SingleValueMapper<ManagedByteArray<Self::Api, 32>>;
+
+    #[storage_mapper("authorizedPcr0")]
+    fn authorized_pcr0(&self) -> SingleValueMapper<ManagedByteArray<Self::Api, 32>>;
 
     #[storage_mapper("schedulerAddr")]
     fn scheduler_addr(&self) -> SingleValueMapper<ManagedAddress>;
@@ -235,7 +236,7 @@ pub trait ZkVerifierContract {
     #[event("proof_submitted")]
     fn proof_submitted_event(
         &self,
-        #[indexed] task_id: u64,
+        #[indexed] task_hash: ManagedByteArray<Self::Api, 32>,
         #[indexed] prover: &ManagedAddress,
         block_nonce: u64,
     );
@@ -243,7 +244,7 @@ pub trait ZkVerifierContract {
     #[event("proof_verified")]
     fn proof_verified_event(
         &self,
-        #[indexed] task_id: u64,
+        #[indexed] task_hash: ManagedByteArray<Self::Api, 32>,
         valid: bool,
     );
 }

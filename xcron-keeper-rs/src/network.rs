@@ -53,6 +53,23 @@ pub struct SendTxMultipleData {
   pub txs_hashes: std::collections::HashMap<String, String>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct QueryVmResponse {
+  pub data: Option<QueryVmData>,
+  #[serde(default)]
+  pub error: Option<String>,
+  #[serde(default)]
+  pub code: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct QueryVmData {
+  #[serde(rename = "returnData")]
+  pub return_data: Option<Vec<String>>,
+  #[serde(rename = "returnCode")]
+  pub return_code: String,
+}
+
 pub struct MultiversXNetwork {
   pub client: Client,
   pub base_urls: Vec<String>,
@@ -310,5 +327,78 @@ impl MultiversXNetwork {
       Err(e) => Err(format!("Hedged Batch Broadcast Failed. Last Error: {}", e).into())
     }
   }
-}
 
+  /// Performs a VM query to a smart contract on-chain from a single node
+  async fn query_vm_single_node(&self, sc_address: &str, func_name: &str, args: &[String], base_url: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    if !base_url.starts_with("https://") && !base_url.contains("127.0.0.1") && !base_url.contains("localhost") {
+      log::warn!(" [XCRON-PROTECT] Insecure HTTP RPC gateway used in production: {}", base_url);
+    }
+
+    let url = format!("{}/query", base_url);
+    let payload = serde_json::json!({
+      "scAddress": sc_address,
+      "funcName": func_name,
+      "args": args
+    });
+
+    let resp = self.client.post(&url)
+      .header("Content-Type", "application/json")
+      .body(serde_json::to_string(&payload)?)
+      .send()
+      .await?;
+
+    if resp.status() != StatusCode::OK {
+      return Err(format!("Query VM status failed: {}", resp.status()).into());
+    }
+
+    let body = resp.text().await?;
+    let query_resp: QueryVmResponse = serde_json::from_str(&body)?;
+
+    if let Some(data) = query_resp.data {
+      if data.return_code != "ok" {
+        return Err(format!("Query VM returned error code: {}", data.return_code).into());
+      }
+      Ok(data.return_data.unwrap_or_default())
+    } else {
+      let err_msg = query_resp.error.unwrap_or_else(|| "Unknown query error".to_string());
+      Err(format!("Query VM API Error: {}", err_msg).into())
+    }
+  }
+
+  /// Performs a VM query to a smart contract on-chain using RPC Triangulation (Eclipse Attack Defense)
+  pub async fn query_vm(&self, sc_address: &str, func_name: &str, args: Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
+    let max_nodes_to_ping = std::cmp::min(self.base_urls.len(), 3);
+    
+    if max_nodes_to_ping <= 1 {
+      return self.query_vm_single_node(sc_address, func_name, &args, &self.base_urls[0]).await;
+    }
+
+    let mut results_collected = Vec::new();
+    
+    for i in 0..max_nodes_to_ping {
+      let base_url = &self.base_urls[(self.current_index.load(Ordering::Relaxed) + i) % self.base_urls.len()];
+      if let Ok(res) = self.query_vm_single_node(sc_address, func_name, &args, base_url).await {
+        results_collected.push(res);
+      }
+    }
+    
+    // Consensus check
+    if results_collected.len() >= 2 {
+      if results_collected[0] == results_collected[1] {
+        return Ok(results_collected[0].clone());
+      } else if results_collected.len() == 3 {
+        if results_collected[0] == results_collected[2] {
+          return Ok(results_collected[0].clone());
+        } else if results_collected[1] == results_collected[2] {
+          return Ok(results_collected[1].clone());
+        }
+      }
+      eprintln!(" [XCRON-PROTECT] Eclipse Attack Detected during VM Query! RPC nodes reported conflicting results.");
+      return Err("Eclipse Attack or Severe Network Desync Detected. VM query consensus failed.".into());
+    } else if results_collected.len() == 1 {
+      return Ok(results_collected[0].clone());
+    }
+    
+    Err("All RPC nodes failed to answer the VM query.".into())
+  }
+}

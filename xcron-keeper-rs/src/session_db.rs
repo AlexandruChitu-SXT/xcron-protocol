@@ -22,6 +22,12 @@ pub struct PrivacySession {
   pub status: SessionStatus,
   pub retry_count: u32,
   pub created_at: u64,
+  pub task_hash: Option<String>,
+  pub target_contract: Option<String>,
+  pub execution_tx_hash: Option<String>,
+  pub sweep_tx_hash: Option<String>,
+  pub execution_success: Option<bool>,
+  pub nonce: Option<u64>,
 }
 
 pub struct PrivacySessionManager {
@@ -49,6 +55,9 @@ impl PrivacySessionManager {
     user_address: &str,
     stealth_address: &str,
     drip_amount: u128,
+    task_hash: Option<String>,
+    target_contract: Option<String>,
+    nonce: Option<u64>,
   ) -> Result<(), String> {
     let now = SystemTime::now()
       .duration_since(UNIX_EPOCH)
@@ -95,10 +104,39 @@ impl PrivacySessionManager {
       status: SessionStatus::Dripped,
       retry_count: 0,
       created_at: now,
+      task_hash,
+      target_contract,
+      execution_tx_hash: None,
+      sweep_tx_hash: None,
+      execution_success: None,
+      nonce,
     };
 
     sessions_guard.insert(stealth_address.to_string(), new_session);
     Ok(())
+  }
+
+  /// Sets the execution transaction hash and success status for a session.
+  pub fn set_execution_result(&self, stealth_address: &str, tx_hash: String, success: bool) -> Result<(), String> {
+    let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions".to_string())?;
+    if let Some(session) = sessions_guard.get_mut(stealth_address) {
+      session.execution_tx_hash = Some(tx_hash);
+      session.execution_success = Some(success);
+      Ok(())
+    } else {
+      Err(format!("Session for stealth address {} not found", stealth_address))
+    }
+  }
+
+  /// Sets the sweep transaction hash for a session.
+  pub fn set_sweep_hash(&self, stealth_address: &str, tx_hash: String) -> Result<(), String> {
+    let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions".to_string())?;
+    if let Some(session) = sessions_guard.get_mut(stealth_address) {
+      session.sweep_tx_hash = Some(tx_hash);
+      Ok(())
+    } else {
+      Err(format!("Session for stealth address {} not found", stealth_address))
+    }
   }
 
   /// Marks a session as successfully swept and resolved.
@@ -141,6 +179,7 @@ impl PrivacySessionManager {
     drip_funder: &DripFunder,
     drip_wallet: &KeeperWallet,
     stealth_wallets: &HashMap<String, KeeperWallet>,
+    enclave_seed: Option<&[u8; 32]>,
   ) -> Result<(), String> {
     let mut queue = self.retry_queue.lock().map_err(|_| "Failed to lock retry queue")?;
     if queue.is_empty() {
@@ -150,17 +189,45 @@ impl PrivacySessionManager {
     let mut successfully_swept = Vec::new();
 
     for stealth_addr in queue.iter() {
-      if let Some(stealth_wallet) = stealth_wallets.get(stealth_addr) {
+      let mut stealth_wallet_opt = stealth_wallets.get(stealth_addr).cloned();
+      
+      if stealth_wallet_opt.is_none() {
+        if let Some(seed) = enclave_seed {
+          // Reconstruct key deterministically from enclave seed
+          if let Some(session) = self.sessions.read().ok().and_then(|g| g.get(stealth_addr).cloned()) {
+            if let Some(nonce) = session.nonce {
+              let user_hex = KeeperWallet::bech32_to_hex(&session.user_address);
+              if let Ok(user_bytes) = hex::decode(&user_hex) {
+                if user_bytes.len() == 32 {
+                  let mut user_pubkey = [0u8; 32];
+                  user_pubkey.copy_from_slice(&user_bytes);
+                  if let Ok(keypair) = xse_protocol::crypto::derive_ephemeral_stealth_key(seed, &user_pubkey, nonce) {
+                    let signing_key = ed25519_dalek::SigningKey::from_bytes(&keypair.private_key);
+                    stealth_wallet_opt = Some(KeeperWallet {
+                      signing_key,
+                      bech32_address: stealth_addr.clone(),
+                    });
+                    log::info!(" [SESSION-DB] Deterministically reconstructed ephemeral stealth key from enclave seed for {}", stealth_addr);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if let Some(stealth_wallet) = stealth_wallet_opt {
         log::info!(" [SESSION-DB] Retrying sweep for stealth address {}...", stealth_addr);
-        match drip_funder.sweep_residual(network, stealth_wallet, drip_wallet).await {
+        match drip_funder.sweep_residual(network, &stealth_wallet, drip_wallet).await {
           Ok(tx_hash) => {
             log::info!(" [SESSION-DB] Retry sweep success! Hash: {}", tx_hash);
+            let _ = self.set_sweep_hash(stealth_addr, tx_hash);
             successfully_swept.push(stealth_addr.clone());
           }
           Err(e) => {
             log::error!(" [SESSION-DB] Retry sweep failed for {}: {}", stealth_addr, e);
             // Increment the retry count
-            let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions")?;
+            let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions".to_string())?;
             if let Some(session) = sessions_guard.get_mut(stealth_addr) {
               session.retry_count += 1;
               if session.retry_count > self.max_retry_limit {
@@ -171,7 +238,7 @@ impl PrivacySessionManager {
           }
         }
       } else {
-        log::error!(" [SESSION-DB] Private key for stealth wallet {} not found in local memory", stealth_addr);
+        log::error!(" [SESSION-DB] Private key for stealth wallet {} not found in local memory and cannot be reconstructed", stealth_addr);
         successfully_swept.push(stealth_addr.clone()); // Discard from queue if we don't have the keys
       }
     }
@@ -220,20 +287,20 @@ mod tests {
     let stealth_4 = "erd1stealth4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
     // 1. Authorize session 1 for user A (5_000_000_000_000_000 wei)
-    assert!(manager.authorize_session(user_a, stealth_1, 5_000_000_000_000_000).is_ok());
+    assert!(manager.authorize_session(user_a, stealth_1, 5_000_000_000_000_000, None, None, None).is_ok());
     assert_eq!(manager.active_session_count(), 1);
 
     // 2. Authorize session 2 for user A (5_000_000_000_000_000 wei) - OK
-    assert!(manager.authorize_session(user_a, stealth_2, 5_000_000_000_000_000).is_ok());
+    assert!(manager.authorize_session(user_a, stealth_2, 5_000_000_000_000_000, None, None, None).is_ok());
     assert_eq!(manager.active_session_count(), 2);
 
     // 3. Authorize session 3 for user A - should fail (per-user limit = 2)
-    let res_user_limit = manager.authorize_session(user_a, stealth_3, 5_000_000_000_000_000);
+    let res_user_limit = manager.authorize_session(user_a, stealth_3, 5_000_000_000_000_000, None, None, None);
     assert!(res_user_limit.is_err());
     assert!(res_user_limit.unwrap_err().contains("Per-user active session limit reached"));
 
     // 4. Authorize session for user B (6_000_000_000_000_000 wei) - should fail (global limit = 15_000_000_000_000_000, requested would put total at 16_000_000_000_000_000)
-    let res_global_limit = manager.authorize_session(user_b, stealth_4, 6_000_000_000_000_000);
+    let res_global_limit = manager.authorize_session(user_b, stealth_4, 6_000_000_000_000_000, None, None, None);
     assert!(res_global_limit.is_err());
     assert!(res_global_limit.unwrap_err().contains("Global outstanding float limit reached"));
 
@@ -242,7 +309,7 @@ mod tests {
     assert_eq!(manager.active_session_count(), 1);
 
     // 6. Now session for user B should succeed since outstanding is 5_000_000_000_000_000 and total with new will be 10_000_000_000_000_000 <= 15_000_000_000_000_000
-    assert!(manager.authorize_session(user_b, stealth_4, 5_000_000_000_000_000).is_ok());
+    assert!(manager.authorize_session(user_b, stealth_4, 5_000_000_000_000_000, None, None, None).is_ok());
     assert_eq!(manager.active_session_count(), 2);
   }
 
@@ -252,7 +319,7 @@ mod tests {
     let user = "erd1userAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
     let stealth = "erd1stealth1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
-    assert!(manager.authorize_session(user, stealth, 5_000_000_000_000_000).is_ok());
+    assert!(manager.authorize_session(user, stealth, 5_000_000_000_000_000, None, None, None).is_ok());
 
     // Register failure
     assert!(manager.register_failed_sweep(stealth).is_ok());
@@ -279,7 +346,7 @@ mod tests {
     let user = "erd1userAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
     let stealth = "erd1stealth1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
-    assert!(manager.authorize_session(user, stealth, 5_000_000_000_000_000).is_ok());
+    assert!(manager.authorize_session(user, stealth, 5_000_000_000_000_000, None, None, None).is_ok());
     assert!(manager.register_failed_sweep(stealth).is_ok());
 
     // Setup dummy network pointing to a dummy local address to trigger failure fast
@@ -294,7 +361,7 @@ mod tests {
     stealth_wallets.insert(stealth.to_string(), stealth_wallet);
 
     // Run process_retry_queue. It will fail to sweep because there is no endpoint, so it should increment retry count
-    let res = manager.process_retry_queue(&network, &drip_funder, &drip_wallet, &stealth_wallets).await;
+    let res = manager.process_retry_queue(&network, &drip_funder, &drip_wallet, &stealth_wallets, None).await;
     // It returns Ok(()) because it logs errors and continues
     assert!(res.is_ok());
 
@@ -312,7 +379,7 @@ mod tests {
       session.retry_count = manager.max_retry_limit; // 5
     }
 
-    let res = manager.process_retry_queue(&network, &drip_funder, &drip_wallet, &stealth_wallets).await;
+    let res = manager.process_retry_queue(&network, &drip_funder, &drip_wallet, &stealth_wallets, None).await;
     assert!(res.is_ok());
 
     // It should have been discarded from the queue

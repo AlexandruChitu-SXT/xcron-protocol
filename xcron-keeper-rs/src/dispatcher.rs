@@ -76,13 +76,13 @@ impl SettlementDispatcher for MultiversXDispatcher {
     tx.sign(&wallet.signing_key)?;
     let tx_hash = self.network.broadcast_tx(&tx).await?;
     
-    // ️ XCRON-PROTECT: Vector 8 Fix - Supernova Finality Watcher (Sub-second Rollback Defense)
-    // Since Supernova provides ~88ms finality, we DO NOT need a heavy RocksDB database to track 12-second windows.
-    // We can confidently use an asynchronous RAM loop to verify finality before generating the Receipt.
+    // 🛡️ XCRON-PROTECT: Vector 8 Fix - Supernova Finality Watcher (Sub-second Rollback Defense)
+    // Supernova block time is 600ms. Transactions take 1-3 blocks to reach intra-shard or cross-shard finality (600ms - 1800ms).
+    // Polling 25 times with 200ms sleep (up to 5.0 seconds) ensures we correctly capture finality without timing out.
     let mut is_finalized = false;
-    for attempt in 1..=5 {
-      // Wait for Supernova consensus (100ms per ping)
-      tokio::time::sleep(Duration::from_millis(100)).await;
+    for _attempt in 1..=25 {
+      // Wait for Supernova consensus (200ms per ping)
+      tokio::time::sleep(Duration::from_millis(200)).await;
       
       // Poll the status from the network
       if let Ok(status) = self.network.fetch_tx_status(&tx_hash).await {

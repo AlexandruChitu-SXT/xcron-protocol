@@ -51,7 +51,7 @@ pub struct Cli {
   pub target_contract: String,
 
   /// PBFT Block Period in milliseconds (6000 for Pre-Supernova, 600 or 88 for Supernova)
-  #[arg(long, default_value_t = 6000)]
+  #[arg(long, default_value_t = 600)]
   pub block_period_ms: u64,
 
   /// Max number of wallets to use (0 = all)

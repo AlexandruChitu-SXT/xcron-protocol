@@ -4,3 +4,6 @@ pub mod schema;
 pub mod validator;
 pub mod relayer;
 pub mod observer_listener;
+pub mod vdf;
+pub mod zk_prover;
+

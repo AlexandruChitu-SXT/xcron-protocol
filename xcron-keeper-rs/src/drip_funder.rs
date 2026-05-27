@@ -142,16 +142,24 @@ impl DripFunder {
     match network.broadcast_tx(&funding_tx).await {
       Ok(tx_hash) => {
         log::info!("  Trie registration transaction broadcasted: {}", tx_hash);
-        log::info!("  Waiting for block finalization (10 seconds)...");
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        log::info!("  Waiting for block finalization (Supernova polling)...");
+        let mut status = "pending".to_string();
+        for _attempt in 1..=25 {
+          tokio::time::sleep(Duration::from_millis(200)).await;
+          if let Ok(st) = network.fetch_tx_status(&tx_hash).await {
+            status = st;
+            if status == "success" || status == "invalid" || status == "dropped" || status == "fail" {
+              break;
+            }
+          }
+        }
         
         // Confirm registration
-        let status = network.fetch_tx_status(&tx_hash).await.unwrap_or_else(|_| "pending".to_string());
         if status == "success" {
           log::info!("  Stealth address registered in MultiversX Trie successfully.");
           Ok(true)
         } else {
-          log::warn!("  ️ Trie registration transaction pending or failed on-chain. Status: {}", status);
+          log::warn!("  ⚠️ Trie registration transaction pending or failed on-chain. Status: {}", status);
           Ok(true) // Return true to allow attempt, but log warning
         }
       }
@@ -210,8 +218,25 @@ impl DripFunder {
     sweep_tx.to_relayed_v3(&drip_wallet.bech32_address, &drip_wallet.signing_key)?;
 
     let tx_hash = network.broadcast_tx(&sweep_tx).await?;
-    log::info!("  Residual swept successfully via Relayed V3. Tx: {}", tx_hash);
-    Ok(tx_hash)
+    log::info!("  Residual sweep transaction broadcasted: {}", tx_hash);
+    log::info!("  Waiting for block finalization (Supernova polling)...");
+    let mut status = "pending".to_string();
+    for _attempt in 1..=25 {
+      tokio::time::sleep(Duration::from_millis(200)).await;
+      if let Ok(st) = network.fetch_tx_status(&tx_hash).await {
+        status = st;
+        if status == "success" || status == "invalid" || status == "dropped" || status == "fail" {
+          break;
+        }
+      }
+    }
+
+    if status == "success" {
+      log::info!("  Residual swept successfully via Relayed V3. Tx: {}", tx_hash);
+      Ok(tx_hash)
+    } else {
+      Err(format!("Sweep transaction execution failed with status: {}", status).into())
+    }
   }
 }
 

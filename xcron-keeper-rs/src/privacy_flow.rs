@@ -17,6 +17,8 @@ use crate::transaction::Transaction;
 /// Encapsulates the entire production lifecycle of the XCron Native Privacy Flow:
 /// 1. Session authorization (enforcing user and global limits via SessionDB)
 /// 2. Durable state persistence (surviving restarts)
+use std::sync::Mutex;
+
 /// 3. Ephemeral account drip-funding
 /// 4. Execution / Relayed V3 dispatching
 /// 5. Relayed V3 sweep recovery
@@ -26,6 +28,7 @@ pub struct IntegratedPrivacyFlow {
   pub drip_funder: Arc<DripFunder>,
   pub network: Arc<MultiversXNetwork>,
   pub db_path: String,
+  pub persist_lock: Mutex<()>,
 }
 
 impl IntegratedPrivacyFlow {
@@ -45,6 +48,7 @@ impl IntegratedPrivacyFlow {
       drip_funder,
       network,
       db_path: db_path.to_string(),
+      persist_lock: Mutex::new(()),
     };
 
     // Load initial persisted state if file exists
@@ -92,6 +96,7 @@ impl IntegratedPrivacyFlow {
 
   /// Persists current sessions to a local JSON file (resolves crash-survivability).
   pub fn persist_sessions(&self) -> Result<(), Box<dyn Error>> {
+    let _lock = self.persist_lock.lock().map_err(|_| "Failed to lock persistence mutex")?;
     let sessions_guard = self.session_manager.sessions.read()
       .map_err(|_| "Failed to lock sessions for reading")?;
     
@@ -120,6 +125,9 @@ impl IntegratedPrivacyFlow {
     execution_payload: &[u8],
     target_contract: &str,
     gas_limit: u64,
+    scheduler_address: &str,
+    task_hash: Option<[u8; 32]>,
+    nonce: Option<u64>,
   ) -> Result<String, Box<dyn Error>> {
     let stealth_bech32 = &stealth_wallet.bech32_address;
 
@@ -128,14 +136,81 @@ impl IntegratedPrivacyFlow {
     log::info!(" User: {}, Stealth: {}", user_address, stealth_bech32);
     log::info!("==================================================");
 
+    let task_hash_str = task_hash.map(|h| hex::encode(h));
+    let target_contract_str = Some(target_contract.to_string());
+
     // 1. Authorize session & check outstanding float limits (admission control)
     log::info!(" [STEP 1/6] Authorizing session in SessionDB...");
-    self.session_manager.authorize_session(user_address, stealth_bech32, drip_amount)
-      .map_err(|e| format!("Session Authorization Failed: {}", e))?;
+    self.session_manager.authorize_session(
+      user_address,
+      stealth_bech32,
+      drip_amount,
+      task_hash_str,
+      target_contract_str,
+      nonce,
+    )
+    .map_err(|e| format!("Session Authorization Failed: {}", e))?;
     
     // Persist immediately to reflect the outstanding float registration
     self.persist_sessions()?;
     log::info!("   Admission Granted. Session persisted.");
+
+    // 1.5 Verify Quantum Task on-chain before activating (drip funding)
+    if let Some(hash) = task_hash {
+      log::info!("   [Verification] Querying Scheduler for Quantum Task: {}", hex::encode(hash));
+      let args = vec![hex::encode(hash)];
+      let query_res = self.network.query_vm(scheduler_address, "getQuantumTask", args).await?;
+      if query_res.is_empty() || query_res[0].is_empty() {
+        // Clean up session in db on immediate failure
+        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
+        sessions_guard.remove(stealth_bech32);
+        drop(sessions_guard);
+        let _ = self.persist_sessions();
+        return Err("Quantum Task does not exist on-chain".into());
+      }
+      
+      let decoded_bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &query_res[0])?;
+      if decoded_bytes.len() < 37 {
+        // Clean up session in db on immediate failure
+        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
+        sessions_guard.remove(stealth_bech32);
+        drop(sessions_guard);
+        let _ = self.persist_sessions();
+        return Err("Invalid QuantumTaskState payload returned from Scheduler VM".into());
+      }
+      
+      let deposit_len = u32::from_be_bytes(decoded_bytes[32..36].try_into()?) as usize;
+      if decoded_bytes.len() < 37 + deposit_len {
+        // Clean up session in db on immediate failure
+        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
+        sessions_guard.remove(stealth_bech32);
+        drop(sessions_guard);
+        let _ = self.persist_sessions();
+        return Err("Invalid QuantumTaskState payload: length mismatch".into());
+      }
+      
+      let deposit_bytes = &decoded_bytes[36..(36 + deposit_len)];
+      let is_prepaid = deposit_bytes.iter().any(|&b| b != 0);
+      if !is_prepaid {
+        // Clean up session in db on immediate failure
+        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
+        sessions_guard.remove(stealth_bech32);
+        drop(sessions_guard);
+        let _ = self.persist_sessions();
+        return Err("Quantum Task is not prepaid (deposit is zero)".into());
+      }
+      
+      let status_byte = decoded_bytes[36 + deposit_len];
+      if status_byte != 0 {
+        // Clean up session in db on immediate failure
+        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
+        sessions_guard.remove(stealth_bech32);
+        drop(sessions_guard);
+        let _ = self.persist_sessions();
+        return Err(format!("Quantum Task status is not Pending. On-chain status discriminant: {}", status_byte).into());
+      }
+      log::info!("   [Verification] Task successfully validated: prepaid and pending.");
+    }
 
     // 2. Drip activation float (if stealth account is fresh in State Trie)
     log::info!(" [STEP 2/6] Activating Ephemeral Stealth Address on L1...");
@@ -178,16 +253,31 @@ impl IntegratedPrivacyFlow {
     let exec_hash = self.network.broadcast_tx(&inner_tx).await?;
     log::info!("   Relayed V3 Execution Tx broadcasted: {}", exec_hash);
     
-    log::info!("   Waiting for Supernova finality (10 seconds)...");
-    tokio::time::sleep(Duration::from_secs(10)).await;
+    log::info!("   Waiting for Supernova finality (Supernova polling)...");
+    let mut status = "pending".to_string();
+    for _attempt in 1..=25 {
+      tokio::time::sleep(Duration::from_millis(200)).await;
+      if let Ok(st) = self.network.fetch_tx_status(&exec_hash).await {
+        status = st;
+        if status == "success" || status == "invalid" || status == "dropped" || status == "fail" {
+          break;
+        }
+      }
+    }
 
     // Confirm finality
-    let status = self.network.fetch_tx_status(&exec_hash).await.unwrap_or_else(|_| "pending".to_string());
-    if status != "success" {
-      log::warn!("   ️ Execution transaction pending or failed: {}", status);
+    let exec_success = status == "success";
+    if !exec_success {
+      log::warn!("   ⚠️ Execution transaction pending or failed: {}", status);
     } else {
       log::info!("   Execution Tx confirmed successfully.");
     }
+
+    // Save execution result to DB
+    if let Err(e) = self.session_manager.set_execution_result(stealth_bech32, exec_hash.clone(), exec_success) {
+      log::error!("   Failed to set execution result: {}", e);
+    }
+    let _ = self.persist_sessions();
 
     // 4. Relayed V3 Sweep (reclaiming residual balance to Drip Wallet)
     log::info!(" [STEP 4/6] Initializing Relayed V3 sweep recovery...");
@@ -196,6 +286,11 @@ impl IntegratedPrivacyFlow {
     match sweep_result {
       Ok(sweep_hash) => {
         log::info!("   Sweep successful. Hash: {}", sweep_hash);
+        
+        // Save sweep hash to DB
+        if let Err(e) = self.session_manager.set_sweep_hash(stealth_bech32, sweep_hash.clone()) {
+          log::error!("   Failed to set sweep hash: {}", e);
+        }
         
         // 5. Complete session (decrement outstanding float)
         log::info!(" [STEP 5/6] Completing session and closing accounting...");
@@ -242,7 +337,7 @@ mod tests {
     let stealth = "erd1stealth1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
     // 1. Authorize session
-    assert!(flow.session_manager.authorize_session(user, stealth, 5_000_000_000_000_000).is_ok());
+    assert!(flow.session_manager.authorize_session(user, stealth, 5_000_000_000_000_000, None, None, None).is_ok());
     assert!(flow.persist_sessions().is_ok());
 
     // 2. Create another instance pointing to the same db to test load

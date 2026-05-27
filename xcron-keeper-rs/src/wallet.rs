@@ -16,6 +16,7 @@ struct HydraWalletJson {
   publicKey: String,
 }
 
+#[derive(Clone)]
 pub struct KeeperWallet {
   pub signing_key: SigningKey,
   pub bech32_address: String,

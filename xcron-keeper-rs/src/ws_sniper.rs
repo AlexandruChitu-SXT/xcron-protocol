@@ -1,8 +1,60 @@
 use std::collections::HashSet;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use serde_json::Value;
+
+pub struct ShardedSeenHashes {
+  shards: Vec<std::sync::Mutex<(HashSet<String>, HashSet<String>, HashSet<String>)>>,
+}
+
+impl ShardedSeenHashes {
+  pub fn new() -> Self {
+    let mut shards = Vec::with_capacity(16);
+    for _ in 0..16 {
+      shards.push(std::sync::Mutex::new((
+        HashSet::with_capacity(5000),
+        HashSet::with_capacity(5000),
+        HashSet::with_capacity(5000),
+      )));
+    }
+    Self { shards }
+  }
+
+  /// Checks if a hash is already seen. If not seen, inserts it.
+  /// Returns `true` if already seen, `false` if newly inserted.
+  pub fn check_and_insert(&self, hash: &str) -> bool {
+    if hash.is_empty() {
+      return true;
+    }
+    // Route to one of the 16 shards based on the first character of the hex hash
+    let shard_idx = if let Some(first_char) = hash.chars().next() {
+      if let Some(digit) = first_char.to_digit(16) {
+        (digit % 16) as usize
+      } else {
+        0
+      }
+    } else {
+      0
+    };
+
+    if let Ok(mut lock) = self.shards[shard_idx].lock() {
+      if lock.0.contains(hash) || lock.1.contains(hash) || lock.2.contains(hash) {
+        return true;
+      }
+      lock.0.insert(hash.to_string());
+      // Rotation cap per-shard: total limit ~ 20,000 hashes across 16 shards is ~ 1250 per shard
+      if lock.0.len() > 1250 {
+        lock.2 = std::mem::take(&mut lock.1);
+        lock.1 = std::mem::take(&mut lock.0);
+      }
+      false
+    } else {
+      // In case of PoisonError, fallback safely to true to prevent double trigger
+      true
+    }
+  }
+}
 
 #[derive(Clone, Debug)]
 pub struct ArbitrageOpportunity {
@@ -28,12 +80,8 @@ pub async fn start_websocket_sniper(
   println!(" [HFT Global Poller] Quad-Core Engine Activated!");
   
   // Shared state to avoid duplicate triggers across shards (current, mid, old)
-  // ️ SECURITY PATCH: 3-Phase Buffer (Zero Gap Memory)
-  let global_seen_hashes = Arc::new(Mutex::new((
-    HashSet::with_capacity(25_000), 
-    HashSet::with_capacity(25_000), 
-    HashSet::with_capacity(25_000)
-  )));
+  // ️ SECURITY PATCH: 3-Phase Buffer (Zero Gap Memory) sharded for performance
+  let global_seen_hashes = Arc::new(ShardedSeenHashes::new());
 
   for (node_name, pool_url) in nodes {
     let sender_clone = tx_sender.clone();
@@ -72,18 +120,9 @@ pub async fn start_websocket_sniper(
                     let hash = tx.get("hash").or_else(|| tx.get("txHash")).and_then(|v| v.as_str()).unwrap_or("");
                       if hash.is_empty() { continue; }
 
-                      // Filtro de duplicados (Lock ultra rápido para coordinar Shards)
-                      {
-                        let mut lock = hashes_clone.lock().await;
-                        if lock.0.contains(hash) || lock.1.contains(hash) || lock.2.contains(hash) {
-                          continue;
-                        }
-                        lock.0.insert(hash.to_string());
-                        if lock.0.len() > 20_000 {
-                          // ️ SECURITY PATCH: Rotación en 3 fases sin re-disparo (Zero GAP)
-                          lock.2 = std::mem::take(&mut lock.1);
-                          lock.1 = std::mem::take(&mut lock.0);
-                        }
+                      // Filtro de duplicados (Lock ultra rápido particionado por Shards en memoria)
+                      if hashes_clone.check_and_insert(hash) {
+                        continue;
                       }
 
                       let receiver = tx.get("receiver").and_then(|v| v.as_str()).unwrap_or("");
@@ -168,5 +207,50 @@ pub async fn start_websocket_sniper(
   // Keep the main thread alive since we spawned tokio tasks
   loop {
     sleep(Duration::from_secs(60)).await;
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_sharded_seen_hashes() {
+    let sharded = ShardedSeenHashes::new();
+    let hash1 = "0a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f6789";
+    let hash2 = "fa1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f6789";
+    let hash3 = "0a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f6789"; // same as hash1
+
+    // First time, should not be seen
+    assert!(!sharded.check_and_insert(hash1));
+    // Second time, should be seen
+    assert!(sharded.check_and_insert(hash3));
+    // Different hash, should not be seen
+    assert!(!sharded.check_and_insert(hash2));
+    
+    // Empty hash should play safe and return true (seen)
+    assert!(sharded.check_and_insert(""));
+  }
+
+  #[test]
+  fn test_sharded_seen_hashes_rotation() {
+    let sharded = ShardedSeenHashes::new();
+    
+    // We insert 1300 hashes into the same shard. Let's make sure they all route to shard 0 by starting with "0"
+    for i in 0..1300 {
+      let hash = format!("0{:063x}", i);
+      sharded.check_and_insert(&hash);
+    }
+    
+    // Since rotation cap per shard is 1250:
+    // When lock.0 size exceeds 1250 (which happened at index 1251):
+    // lock.2 = lock.1 (empty)
+    // lock.1 = lock.0 (contained hashes 0 to 1250)
+    // lock.0 = new empty hash set
+    // Then 1251 to 1299 were added to lock.0 (which now has size ~49)
+    // So hash "0000000000000000000000000000000000000000000000000000000000000000" (index 0)
+    // is in lock.1, which is still checked during queries.
+    let hash_first = format!("0{:063x}", 0);
+    assert!(sharded.check_and_insert(&hash_first)); // should still be seen (in lock.1)
   }
 }

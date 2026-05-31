@@ -28,7 +28,7 @@ pub struct IntegratedPrivacyFlow {
   pub drip_funder: Arc<DripFunder>,
   pub network: Arc<MultiversXNetwork>,
   pub db_path: String,
-  pub persist_lock: Mutex<()>,
+  pub persist_lock: tokio::sync::Mutex<()>,
 }
 
 impl IntegratedPrivacyFlow {
@@ -48,7 +48,7 @@ impl IntegratedPrivacyFlow {
       drip_funder,
       network,
       db_path: db_path.to_string(),
-      persist_lock: Mutex::new(()),
+      persist_lock: tokio::sync::Mutex::new(()),
     };
 
     // Load initial persisted state if file exists
@@ -72,19 +72,25 @@ impl IntegratedPrivacyFlow {
     file.read_to_string(&mut contents)?;
 
     let persisted: HashMap<String, PrivacySession> = serde_json::from_str(&contents)?;
-    let mut sessions_guard = self.session_manager.sessions.write()
-      .map_err(|_| "Failed to lock sessions for writing")?;
-    
-    *sessions_guard = persisted;
-    log::info!(" [INTEGRATED-FLOW] Successfully loaded {} persisted sessions.", sessions_guard.len());
+    {
+      let mut sessions_guard = self.session_manager.sessions.write()
+        .map_err(|_| "Failed to lock sessions for writing")?;
+      *sessions_guard = persisted;
+    }
+    let _ = self.session_manager.recalculate_outstanding_float();
     
     // Repopulate the retry queue for failed sweeps on restart
     let mut queue_guard = self.session_manager.retry_queue.lock()
       .map_err(|_| "Failed to lock retry queue")?;
     queue_guard.clear();
-    for (addr, session) in sessions_guard.iter() {
-      if session.status == SessionStatus::FailedSweep && session.retry_count <= self.session_manager.max_retry_limit {
-        queue_guard.push(addr.clone());
+    {
+      let sessions_read = self.session_manager.sessions.read()
+        .map_err(|_| "Failed to lock sessions for reading")?;
+      log::info!(" [INTEGRATED-FLOW] Successfully loaded {} persisted sessions.", sessions_read.len());
+      for (addr, session) in sessions_read.iter() {
+        if session.status == SessionStatus::FailedSweep && session.retry_count <= self.session_manager.max_retry_limit {
+          queue_guard.push(addr.clone());
+        }
       }
     }
     if !queue_guard.is_empty() {
@@ -95,20 +101,18 @@ impl IntegratedPrivacyFlow {
   }
 
   /// Persists current sessions to a local JSON file (resolves crash-survivability).
-  pub fn persist_sessions(&self) -> Result<(), Box<dyn Error>> {
-    let _lock = self.persist_lock.lock().map_err(|_| "Failed to lock persistence mutex")?;
-    let sessions_guard = self.session_manager.sessions.read()
-      .map_err(|_| "Failed to lock sessions for reading")?;
-    
-    let serialized = serde_json::to_string_pretty(&*sessions_guard)?;
+  pub async fn persist_sessions(&self) -> Result<(), Box<dyn Error>> {
+    let _lock = self.persist_lock.lock().await;
+    let serialized = {
+      let sessions_guard = self.session_manager.sessions.read()
+        .map_err(|_| "Failed to lock sessions for reading")?;
+      serde_json::to_string_pretty(&*sessions_guard)?
+    };
     
     // Write atomically using a temporary file
     let tmp_path = format!("{}.tmp", self.db_path);
-    {
-      let mut file = File::create(&tmp_path)?;
-      file.write_all(serialized.as_bytes())?;
-    }
-    std::fs::rename(tmp_path, &self.db_path)?;
+    tokio::fs::write(&tmp_path, serialized.as_bytes()).await?;
+    tokio::fs::rename(tmp_path, &self.db_path).await?;
 
     Ok(())
   }
@@ -152,7 +156,7 @@ impl IntegratedPrivacyFlow {
     .map_err(|e| format!("Session Authorization Failed: {}", e))?;
     
     // Persist immediately to reflect the outstanding float registration
-    self.persist_sessions()?;
+    self.persist_sessions().await?;
     log::info!("   Admission Granted. Session persisted.");
 
     // 1.5 Verify Quantum Task on-chain before activating (drip funding)
@@ -161,52 +165,37 @@ impl IntegratedPrivacyFlow {
       let args = vec![hex::encode(hash)];
       let query_res = self.network.query_vm(scheduler_address, "getQuantumTask", args).await?;
       if query_res.is_empty() || query_res[0].is_empty() {
-        // Clean up session in db on immediate failure
-        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
-        sessions_guard.remove(stealth_bech32);
-        drop(sessions_guard);
-        let _ = self.persist_sessions();
+        let _ = self.session_manager.abort_session(stealth_bech32);
+        let _ = self.persist_sessions().await;
         return Err("Quantum Task does not exist on-chain".into());
       }
       
       let decoded_bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &query_res[0])?;
       if decoded_bytes.len() < 37 {
-        // Clean up session in db on immediate failure
-        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
-        sessions_guard.remove(stealth_bech32);
-        drop(sessions_guard);
-        let _ = self.persist_sessions();
+        let _ = self.session_manager.abort_session(stealth_bech32);
+        let _ = self.persist_sessions().await;
         return Err("Invalid QuantumTaskState payload returned from Scheduler VM".into());
       }
       
       let deposit_len = u32::from_be_bytes(decoded_bytes[32..36].try_into()?) as usize;
       if decoded_bytes.len() < 37 + deposit_len {
-        // Clean up session in db on immediate failure
-        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
-        sessions_guard.remove(stealth_bech32);
-        drop(sessions_guard);
-        let _ = self.persist_sessions();
+        let _ = self.session_manager.abort_session(stealth_bech32);
+        let _ = self.persist_sessions().await;
         return Err("Invalid QuantumTaskState payload: length mismatch".into());
       }
       
       let deposit_bytes = &decoded_bytes[36..(36 + deposit_len)];
       let is_prepaid = deposit_bytes.iter().any(|&b| b != 0);
       if !is_prepaid {
-        // Clean up session in db on immediate failure
-        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
-        sessions_guard.remove(stealth_bech32);
-        drop(sessions_guard);
-        let _ = self.persist_sessions();
+        let _ = self.session_manager.abort_session(stealth_bech32);
+        let _ = self.persist_sessions().await;
         return Err("Quantum Task is not prepaid (deposit is zero)".into());
       }
       
       let status_byte = decoded_bytes[36 + deposit_len];
       if status_byte != 0 {
-        // Clean up session in db on immediate failure
-        let mut sessions_guard = self.session_manager.sessions.write().unwrap();
-        sessions_guard.remove(stealth_bech32);
-        drop(sessions_guard);
-        let _ = self.persist_sessions();
+        let _ = self.session_manager.abort_session(stealth_bech32);
+        let _ = self.persist_sessions().await;
         return Err(format!("Quantum Task status is not Pending. On-chain status discriminant: {}", status_byte).into());
       }
       log::info!("   [Verification] Task successfully validated: prepaid and pending.");
@@ -218,11 +207,8 @@ impl IntegratedPrivacyFlow {
     
     if let Err(e) = dripped {
       log::error!("   Drip funding failed: {}", e);
-      // Clean up session in db on immediate failure
-      let mut sessions_guard = self.session_manager.sessions.write().unwrap();
-      sessions_guard.remove(stealth_bech32);
-      drop(sessions_guard);
-      let _ = self.persist_sessions();
+      let _ = self.session_manager.abort_session(stealth_bech32);
+      let _ = self.persist_sessions().await;
       return Err(e);
     }
     log::info!("   Account activated successfully.");
@@ -255,8 +241,8 @@ impl IntegratedPrivacyFlow {
     
     log::info!("   Waiting for Supernova finality (Supernova polling)...");
     let mut status = "pending".to_string();
-    for _attempt in 1..=25 {
-      tokio::time::sleep(Duration::from_millis(200)).await;
+    for _attempt in 1..=30 {
+      tokio::time::sleep(Duration::from_millis(600)).await;
       if let Ok(st) = self.network.fetch_tx_status(&exec_hash).await {
         status = st;
         if status == "success" || status == "invalid" || status == "dropped" || status == "fail" {
@@ -277,7 +263,7 @@ impl IntegratedPrivacyFlow {
     if let Err(e) = self.session_manager.set_execution_result(stealth_bech32, exec_hash.clone(), exec_success) {
       log::error!("   Failed to set execution result: {}", e);
     }
-    let _ = self.persist_sessions();
+    let _ = self.persist_sessions().await;
 
     // 4. Relayed V3 Sweep (reclaiming residual balance to Drip Wallet)
     log::info!(" [STEP 4/6] Initializing Relayed V3 sweep recovery...");
@@ -298,7 +284,7 @@ impl IntegratedPrivacyFlow {
         
         // 6. Persist final resolved state
         log::info!(" [STEP 6/6] Persisting accounting state...");
-        self.persist_sessions()?;
+        self.persist_sessions().await?;
         
         log::info!("==================================================");
         log::info!(" NATIVE PRIVACY FLOW COMPLETED SUCCESSFULLY");
@@ -311,7 +297,7 @@ impl IntegratedPrivacyFlow {
         
         // Register failure in database so it is retried asynchronously
         self.session_manager.register_failed_sweep(stealth_bech32)?;
-        let _ = self.persist_sessions();
+        let _ = self.persist_sessions().await;
         
         log::warn!("==================================================");
         log::warn!(" FLOW CLOSED WITH UNRESOLVED DEBT (QUEUED)");
@@ -327,8 +313,8 @@ impl IntegratedPrivacyFlow {
 mod tests {
   use super::*;
 
-  #[test]
-  fn test_persist_and_load_flow() {
+  #[tokio::test]
+  async fn test_persist_and_load_flow() {
     let temp_db = "./temp_test_db.json";
     let network = Arc::new(MultiversXNetwork::new("http://127.0.0.1:8080"));
     let flow = IntegratedPrivacyFlow::new(temp_db, 10_000_000_000_000_000, 2, "5000000000000000", 0.001, network);
@@ -338,7 +324,7 @@ mod tests {
 
     // 1. Authorize session
     assert!(flow.session_manager.authorize_session(user, stealth, 5_000_000_000_000_000, None, None, None).is_ok());
-    assert!(flow.persist_sessions().is_ok());
+    assert!(flow.persist_sessions().await.is_ok());
 
     // 2. Create another instance pointing to the same db to test load
     let network2 = Arc::new(MultiversXNetwork::new("http://127.0.0.1:8080"));

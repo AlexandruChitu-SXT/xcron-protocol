@@ -36,6 +36,7 @@ pub struct PrivacySessionManager {
   pub max_active_drips_per_user: usize, // e.g. 3 active sessions concurrently
   pub retry_queue: Mutex<Vec<String>>,  // List of stealth addresses to retry sweep
   pub max_retry_limit: u32,             // e.g. 5 attempts
+  pub global_outstanding_float: Mutex<u128>, // Track outstanding float in O(1)
 }
 
 impl PrivacySessionManager {
@@ -46,6 +47,7 @@ impl PrivacySessionManager {
       max_active_drips_per_user,
       retry_queue: Mutex::new(Vec::new()),
       max_retry_limit: 5,
+      global_outstanding_float: Mutex::new(0),
     }
   }
 
@@ -64,21 +66,28 @@ impl PrivacySessionManager {
       .map_err(|e| format!("SystemTime error: {}", e))?
       .as_secs();
 
-    let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions".to_string())?;
-
-    // 1. Enforce global outstanding float cap
-    let current_outstanding: u128 = sessions_guard
-      .values()
-      .filter(|s| s.status == SessionStatus::Dripped || s.status == SessionStatus::FailedSweep)
-      .map(|s| s.amount_dripped)
-      .sum();
-
-    if current_outstanding + drip_amount > self.global_float_limit {
-      return Err(format!(
-        "Admission Denied: Global outstanding float limit reached. Limit: {} wei, Current: {} wei, Requested: {} wei",
-        self.global_float_limit, current_outstanding, drip_amount
-      ));
+    // 1. Enforce global outstanding float cap in O(1) atomically (prevents TOCTOU)
+    {
+      let mut float_guard = self.global_outstanding_float.lock().map_err(|_| "Failed to lock float".to_string())?;
+      if *float_guard + drip_amount > self.global_float_limit {
+        return Err(format!(
+          "Admission Denied: Global outstanding float limit reached. Limit: {} wei, Current: {} wei, Requested: {} wei",
+          self.global_float_limit, *float_guard, drip_amount
+        ));
+      }
+      *float_guard += drip_amount;
     }
+
+    let mut sessions_guard = match self.sessions.write() {
+      Ok(guard) => guard,
+      Err(_) => {
+        // Revert float allocation on lock failure
+        if let Ok(mut float_guard) = self.global_outstanding_float.lock() {
+          *float_guard = float_guard.saturating_sub(drip_amount);
+        }
+        return Err("Failed to lock sessions".to_string());
+      }
+    };
 
     // 2. Enforce per-user active session limits (anti-sybil control)
     let active_user_sessions = sessions_guard
@@ -90,6 +99,10 @@ impl PrivacySessionManager {
       .count();
 
     if active_user_sessions >= self.max_active_drips_per_user {
+      // Revert outstanding float increment
+      if let Ok(mut float_guard) = self.global_outstanding_float.lock() {
+        *float_guard = float_guard.saturating_sub(drip_amount);
+      }
       return Err(format!(
         "Admission Denied: Per-user active session limit reached ({} active sessions)",
         active_user_sessions
@@ -143,11 +156,40 @@ impl PrivacySessionManager {
   pub fn complete_session(&self, stealth_address: &str) -> Result<(), String> {
     let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions".to_string())?;
     if let Some(session) = sessions_guard.get_mut(stealth_address) {
+      if session.status == SessionStatus::Dripped || session.status == SessionStatus::FailedSweep {
+        let mut float_guard = self.global_outstanding_float.lock().map_err(|_| "Failed to lock float".to_string())?;
+        *float_guard = float_guard.saturating_sub(session.amount_dripped);
+      }
       session.status = SessionStatus::Swept;
       Ok(())
     } else {
       Err(format!("Session for stealth address {} not found", stealth_address))
     }
+  }
+
+  /// Aborts a session, removes it from memory, and decrements outstanding float if active.
+  pub fn abort_session(&self, stealth_address: &str) -> Result<(), String> {
+    let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions".to_string())?;
+    if let Some(session) = sessions_guard.remove(stealth_address) {
+      if session.status == SessionStatus::Dripped || session.status == SessionStatus::FailedSweep {
+        let mut float_guard = self.global_outstanding_float.lock().map_err(|_| "Failed to lock float".to_string())?;
+        *float_guard = float_guard.saturating_sub(session.amount_dripped);
+      }
+    }
+    Ok(())
+  }
+
+  /// Recalculates the global outstanding float from scratch.
+  pub fn recalculate_outstanding_float(&self) -> Result<(), String> {
+    let sessions_guard = self.sessions.read().map_err(|_| "Failed to lock sessions".to_string())?;
+    let current_outstanding: u128 = sessions_guard
+      .values()
+      .filter(|s| s.status == SessionStatus::Dripped || s.status == SessionStatus::FailedSweep)
+      .map(|s| s.amount_dripped)
+      .sum();
+    let mut float_guard = self.global_outstanding_float.lock().map_err(|_| "Failed to lock float".to_string())?;
+    *float_guard = current_outstanding;
+    Ok(())
   }
 
   /// Registers a failed sweep, updates state, and queue for retry.
@@ -181,14 +223,17 @@ impl PrivacySessionManager {
     stealth_wallets: &HashMap<String, KeeperWallet>,
     enclave_seed: Option<&[u8; 32]>,
   ) -> Result<(), String> {
-    let mut queue = self.retry_queue.lock().map_err(|_| "Failed to lock retry queue")?;
-    if queue.is_empty() {
+    let pending_retries: Vec<String> = {
+      let queue = self.retry_queue.lock().map_err(|_| "Failed to lock retry queue")?;
+      queue.clone()
+    };
+    if pending_retries.is_empty() {
       return Ok(());
     }
 
     let mut successfully_swept = Vec::new();
 
-    for stealth_addr in queue.iter() {
+    for stealth_addr in pending_retries.iter() {
       let mut stealth_wallet_opt = stealth_wallets.get(stealth_addr).cloned();
       
       if stealth_wallet_opt.is_none() {
@@ -244,7 +289,10 @@ impl PrivacySessionManager {
     }
 
     // Remove successful or exhausted items
-    queue.retain(|addr| !successfully_swept.contains(addr));
+    {
+      let mut queue = self.retry_queue.lock().map_err(|_| "Failed to lock retry queue")?;
+      queue.retain(|addr| !successfully_swept.contains(addr));
+    }
 
     for addr in successfully_swept {
       let sessions_read = self.sessions.read().map_err(|_| "Failed to lock sessions")?;
@@ -257,6 +305,35 @@ impl PrivacySessionManager {
     }
 
     Ok(())
+  }
+
+  /// Prunes resolved (Swept) or permanently failed sessions that are older than expiration_seconds.
+  /// Returns the number of pruned sessions.
+  pub fn prune_expired_sessions(&self, expiration_seconds: u64) -> Result<usize, String> {
+    let now = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .map_err(|e| format!("SystemTime error: {}", e))?
+      .as_secs();
+
+    let mut sessions_guard = self.sessions.write().map_err(|_| "Failed to lock sessions".to_string())?;
+    
+    let mut to_remove = Vec::new();
+    for (stealth_addr, session) in sessions_guard.iter() {
+      let is_expired = now.saturating_sub(session.created_at) >= expiration_seconds;
+      let can_prune = session.status == SessionStatus::Swept
+        || (session.status == SessionStatus::FailedSweep && session.retry_count > self.max_retry_limit);
+      
+      if is_expired && can_prune {
+        to_remove.push(stealth_addr.clone());
+      }
+    }
+
+    let pruned_count = to_remove.len();
+    for addr in to_remove {
+      sessions_guard.remove(&addr);
+    }
+
+    Ok(pruned_count)
   }
 
   /// Helper to get current session count (mostly for unit testing)
@@ -386,6 +463,67 @@ mod tests {
     {
       let queue = manager.retry_queue.lock().unwrap();
       assert!(queue.is_empty());
+    }
+  }
+
+  #[test]
+  fn test_session_pruning() {
+    // Set up a session manager
+    let manager = PrivacySessionManager::new(20_000_000_000_000_000, 5);
+    let user = "erd1userAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    let stealth_swept = "erd1stealthsweptxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    let stealth_active = "erd1stealthactivexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    let stealth_exhausted = "erd1stealthexhaustedxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    let stealth_failed_active = "erd1stealthfailedactivexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+
+    // 1. Authorize sessions
+    assert!(manager.authorize_session(user, stealth_swept, 5_000_000_000_000_000, None, None, None).is_ok());
+    assert!(manager.authorize_session(user, stealth_active, 5_000_000_000_000_000, None, None, None).is_ok());
+    assert!(manager.authorize_session(user, stealth_exhausted, 5_000_000_000_000_000, None, None, None).is_ok());
+
+    // Complete the first session (state becomes Swept)
+    assert!(manager.complete_session(stealth_swept).is_ok());
+
+    // Make the third session fail and exceed limit (state becomes FailedSweep, retry_count > max_retry_limit)
+    for _ in 0..=manager.max_retry_limit {
+      assert!(manager.register_failed_sweep(stealth_exhausted).is_ok());
+    }
+
+    // Set up a fourth session that fails but has NOT exhausted retries
+    assert!(manager.authorize_session(user, stealth_failed_active, 5_000_000_000_000_000, None, None, None).is_ok());
+    assert!(manager.register_failed_sweep(stealth_failed_active).is_ok());
+
+    // Backdate the created_at timestamp for stealth_swept and stealth_exhausted to 2 hours ago (7200 seconds)
+    {
+      let mut sessions = manager.sessions.write().unwrap();
+      sessions.get_mut(stealth_swept).unwrap().created_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() - 7200;
+      sessions.get_mut(stealth_exhausted).unwrap().created_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() - 7200;
+      sessions.get_mut(stealth_failed_active).unwrap().created_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() - 7200;
+    }
+
+    // Prune sessions older than 3600 seconds (1 hour)
+    let prune_res = manager.prune_expired_sessions(3600);
+    assert!(prune_res.is_ok());
+    // Should prune exactly 2 sessions: stealth_swept and stealth_exhausted
+    // (stealth_active is active/Dripped, and stealth_failed_active has not exhausted retries, so they are not pruned)
+    assert_eq!(prune_res.unwrap(), 2);
+
+    // Verify sessions in DB
+    {
+      let sessions = manager.sessions.read().unwrap();
+      assert!(!sessions.contains_key(stealth_swept));
+      assert!(!sessions.contains_key(stealth_exhausted));
+      assert!(sessions.contains_key(stealth_active));
+      assert!(sessions.contains_key(stealth_failed_active));
     }
   }
 }

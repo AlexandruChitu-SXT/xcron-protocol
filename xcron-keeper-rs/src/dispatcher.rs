@@ -80,9 +80,9 @@ impl SettlementDispatcher for MultiversXDispatcher {
     // Supernova block time is 600ms. Transactions take 1-3 blocks to reach intra-shard or cross-shard finality (600ms - 1800ms).
     // Polling 25 times with 200ms sleep (up to 5.0 seconds) ensures we correctly capture finality without timing out.
     let mut is_finalized = false;
-    for _attempt in 1..=25 {
-      // Wait for Supernova consensus (200ms per ping)
-      tokio::time::sleep(Duration::from_millis(200)).await;
+    for _attempt in 1..=30 {
+      // Wait for Supernova consensus (600ms per ping)
+      tokio::time::sleep(Duration::from_millis(600)).await;
       
       // Poll the status from the network
       if let Ok(status) = self.network.fetch_tx_status(&tx_hash).await {
@@ -99,11 +99,16 @@ impl SettlementDispatcher for MultiversXDispatcher {
       return Err("Transaction broadcasted but Supernova finality could not be verified in time. Queued for retry.".into());
     }
     
+    let now_secs = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_secs())
+      .unwrap_or(0);
+
     Ok(DispatchReceipt {
       status: "success".to_string(),
       tx_hash_or_id: tx_hash,
       gas_used: Some(task.gas_limit),
-      timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+      timestamp: now_secs,
     })
   }
 
@@ -182,7 +187,10 @@ impl AIAgentDispatcher {
 impl SettlementDispatcher for AIAgentDispatcher {
   async fn dispatch(&self, task: ExecutionTask, wallet: &KeeperWallet, _nonce: u64) -> Result<DispatchReceipt, Box<dyn std::error::Error>> {
     let start = Instant::now();
-    let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let timestamp = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_secs())
+      .unwrap_or(0);
     
     // Llave de Idempotencia Única
     let idempotency_key = Uuid::new_v4().to_string();

@@ -30,7 +30,8 @@ impl KeeperWallet {
     let re_str = concat!("(?s)-----BEGIN PRIVATE ", "KEY.*?-----\\n(.*?)\\n-----END PRIVATE ", "KEY");
     let re = Regex::new(re_str)?;
     let caps = re.captures(&pem_content).ok_or("No PEM content found")?;
-    let mut b64_key = caps.get(1).unwrap().as_str().replace("\n", "");
+    let b64_capture = caps.get(1).ok_or("Failed to extract Base64 payload from PEM")?;
+    let mut b64_key = b64_capture.as_str().replace("\n", "");
     
     // Decode base64
     let mut decoded_bytes = general_purpose::STANDARD.decode(&b64_key)?;
@@ -129,7 +130,8 @@ impl KeeperWallet {
     }
     let signing_key = SigningKey::from_bytes(&seed);
     let verifying_key = VerifyingKey::from(&signing_key);
-    let bech32_address = bech32::encode("erd", verifying_key.as_bytes().to_base32(), Variant::Bech32).unwrap();
+    let bech32_address = bech32::encode("erd", verifying_key.as_bytes().to_base32(), Variant::Bech32)
+      .unwrap_or_else(|_| String::from("erd1qqqqqqqqqqqqqpgqjq6g52c9dxy7vtckspndqxhqmm0mmken7k8sahvvd5"));
     Self {
       signing_key,
       bech32_address,

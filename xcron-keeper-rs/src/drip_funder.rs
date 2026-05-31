@@ -45,8 +45,8 @@ impl DripFunder {
       .map_err(|e| format!("SystemTime before UNIX EPOCH: {}", e))?
       .as_secs();
 
-    let mut last_reset = self.last_reset_timestamp.lock().unwrap();
-    let mut current_accum = self.daily_accumulator.lock().unwrap();
+    let mut last_reset = self.last_reset_timestamp.lock().unwrap_or_else(|p| p.into_inner());
+    let mut current_accum = self.daily_accumulator.lock().unwrap_or_else(|p| p.into_inner());
 
     // Reset if 24 hours (86400 seconds) have elapsed or if it's the first time running
     if *last_reset == 0 || now >= *last_reset + 86400 {
@@ -116,7 +116,9 @@ impl DripFunder {
       return Ok(false);
     }
 
-    let drip_amt = self.activation_amount.parse::<u128>().unwrap_or(0);
+    let drip_amt = self.activation_amount.parse::<u128>().map_err(|e| {
+      format!("Invalid activation_amount format '{}': {}", self.activation_amount, e)
+    })?;
     self.check_and_increment_drip(drip_amt)?;
 
     // ️ XCRON-PROTECT: Execute the Drip Transfer from the Protocol Wallet
@@ -144,8 +146,8 @@ impl DripFunder {
         log::info!("  Trie registration transaction broadcasted: {}", tx_hash);
         log::info!("  Waiting for block finalization (Supernova polling)...");
         let mut status = "pending".to_string();
-        for _attempt in 1..=25 {
-          tokio::time::sleep(Duration::from_millis(200)).await;
+        for _attempt in 1..=30 {
+          tokio::time::sleep(Duration::from_millis(600)).await;
           if let Ok(st) = network.fetch_tx_status(&tx_hash).await {
             status = st;
             if status == "success" || status == "invalid" || status == "dropped" || status == "fail" {
@@ -165,10 +167,9 @@ impl DripFunder {
       }
       Err(e) => {
         // Revert daily accumulator on broadcast failure
-        if let Ok(mut accum) = self.daily_accumulator.lock() {
-          if *accum >= drip_amt {
-            *accum -= drip_amt;
-          }
+        let mut accum = self.daily_accumulator.lock().unwrap_or_else(|p| p.into_inner());
+        if *accum >= drip_amt {
+          *accum -= drip_amt;
         }
         log::error!("  Failed to broadcast Drip activation transaction: {}", e);
         Err(e)
@@ -221,8 +222,8 @@ impl DripFunder {
     log::info!("  Residual sweep transaction broadcasted: {}", tx_hash);
     log::info!("  Waiting for block finalization (Supernova polling)...");
     let mut status = "pending".to_string();
-    for _attempt in 1..=25 {
-      tokio::time::sleep(Duration::from_millis(200)).await;
+    for _attempt in 1..=30 {
+      tokio::time::sleep(Duration::from_millis(600)).await;
       if let Ok(st) = network.fetch_tx_status(&tx_hash).await {
         status = st;
         if status == "success" || status == "invalid" || status == "dropped" || status == "fail" {

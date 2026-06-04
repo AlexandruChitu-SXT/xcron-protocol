@@ -6,3 +6,4 @@ pub const ERR_DEADLINE_NOT_PASSED: &str = "Deadline has not passed yet";
 pub const ERR_DEADLINE_IN_PAST: &str = "Deadline must be in the future";
 pub const ERR_ALREADY_SETTLED: &str = "Escrow already settled";
 pub const ERR_ZERO_DEPOSIT: &str = "Deposit amount must be greater than zero";
+pub const ERR_DEADLINE_TOO_SHORT: &str = "Deposit deadline is too short";

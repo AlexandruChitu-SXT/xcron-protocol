@@ -241,6 +241,12 @@ pub trait XcronAgentShield:
     let current_time = common::time::get_safe_block_timestamp(&self.blockchain());
     require!(deadline > current_time, ERR_DEADLINE_IN_PAST);
 
+    const MIN_ESCROW_DURATION: u64 = 3600; // 1 hour minimum duration
+    require!(
+      deadline >= current_time + MIN_ESCROW_DURATION,
+      ERR_DEADLINE_TOO_SHORT
+    );
+
     let employer = self.blockchain().get_caller();
     let escrow_data = EscrowData {
       employer: employer.clone(),

@@ -4,9 +4,9 @@ use identity_registry::storage::StorageModule;
 use multiversx_sc::proxy_imports::MultiValue2;
 use multiversx_sc::proxy_imports::OptionalValue;
 use multiversx_sc::types::{
-    BigUint, EgldOrEsdtTokenPayment, EsdtTokenIdentifier, ManagedAddress, ManagedArgBuffer,
-    ManagedBuffer, MultiValueEncoded, ReturnsNewManagedAddress, ReturnsResult, TestEsdtTransfer,
-    TokenId,
+    BigUint, EgldOrEsdtTokenIdentifier, EgldOrEsdtTokenPayment, EsdtTokenIdentifier, ManagedAddress,
+    ManagedArgBuffer, ManagedBuffer, MultiValueEncoded, ReturnsNewManagedAddress, ReturnsResult,
+    TestEsdtTransfer, TokenId,
 };
 use multiversx_sc_scenario::{
     ScenarioTxRun, ScenarioTxWhitebox, ScenarioWorld, api::StaticApi, imports::ExpectMessage,
@@ -1374,6 +1374,24 @@ impl EscrowTestState {
             .new_address(ESCROW_SC_ADDRESS)
             .run();
 
+        // Whitelist payment tokens in escrow contract via raw calls
+        world
+            .tx()
+            .from(OWNER_ADDRESS)
+            .to(ESCROW_SC_ADDRESS)
+            .raw_call("whitelistToken")
+            .argument(&EgldOrEsdtTokenIdentifier::<StaticApi>::egld())
+            .run();
+
+        let payment_token_id = EsdtTokenIdentifier::from(PAYMENT_TOKEN);
+        world
+            .tx()
+            .from(OWNER_ADDRESS)
+            .to(ESCROW_SC_ADDRESS)
+            .raw_call("whitelistToken")
+            .argument(&EgldOrEsdtTokenIdentifier::<StaticApi>::esdt(payment_token_id))
+            .run();
+
         // Set up accounts
         world.account(AGENT_OWNER).nonce(1).balance(1_000_000u64);
         world
@@ -1602,6 +1620,38 @@ impl EscrowTestState {
                 token_nonce,
                 amount,
             ))
+            .run();
+    }
+
+    pub fn deposit_esdt_expect_err(
+        &mut self,
+        from: &multiversx_sc::types::TestAddress,
+        job_id: &[u8],
+        receiver: &multiversx_sc::types::TestAddress,
+        poa_hash: &[u8],
+        deadline: u64,
+        token: &str,
+        token_nonce: u64,
+        amount: u64,
+        err_msg: &str,
+    ) {
+        self.world
+            .tx()
+            .from(*from)
+            .to(ESCROW_SC_ADDRESS)
+            .typed(EscrowProxy)
+            .deposit(
+                ManagedBuffer::from(job_id),
+                receiver.to_managed_address(),
+                ManagedBuffer::from(poa_hash),
+                deadline,
+            )
+            .esdt(TestEsdtTransfer(
+                multiversx_sc_scenario::imports::TestTokenIdentifier::new(token),
+                token_nonce,
+                amount,
+            ))
+            .returns(ExpectMessage(err_msg))
             .run();
     }
 

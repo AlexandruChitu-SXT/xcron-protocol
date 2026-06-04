@@ -1,3 +1,4 @@
+pub use common::errors::ERR_AGENT_NOT_FOUND;
 pub use common::errors::ERR_JOB_NOT_FOUND;
 pub use common::errors::ERR_NOT_AGENT_OWNER;
 

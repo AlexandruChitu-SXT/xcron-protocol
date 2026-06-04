@@ -76,14 +76,33 @@ fn test_deposit_esdt() {
 fn test_deposit_zero_amount() {
     let mut state = EscrowTestState::new();
 
+    // 1. Zero EGLD maps to no transfer in the scenario framework, which yields incorrect number of transfers
     state.deposit_egld_expect_err(
         &EMPLOYER,
-        b"job_zero",
+        b"job_zero_egld",
         &AGENT_OWNER,
         b"poa_hash",
         1_000_000,
         0,
-        "Deposit amount must be greater than zero",
+        "incorrect number of transfers",
+    );
+}
+
+#[test]
+#[should_panic(expected = "zero value not allowed")]
+fn test_deposit_zero_esdt_amount() {
+    let mut state = EscrowTestState::new();
+
+    // 2. Zero ESDT transfers exactly 0 tokens, which triggers the VM/StaticApi panic
+    state.deposit_esdt(
+        &EMPLOYER,
+        b"job_zero_esdt",
+        &AGENT_OWNER,
+        b"poa_hash",
+        1_000_000,
+        "USDC-abcdef",
+        0,
+        0,
     );
 }
 
@@ -332,12 +351,12 @@ fn test_refund_after_deadline() {
         b"job_refund",
         &AGENT_OWNER,
         b"poa_hash",
-        200, // deadline at timestamp 200
+        4000, // deadline at timestamp 4000 (duration 3900 >= 3600)
         500_000,
     );
 
     // Advance time past deadline
-    state.world.current_block().block_timestamp_seconds(201);
+    state.world.current_block().block_timestamp_seconds(4001);
 
     // Anyone can refund (using CLIENT here to prove it)
     state.refund(&CLIENT, b"job_refund");
@@ -362,11 +381,11 @@ fn test_refund_before_deadline() {
         b"job_early_refund",
         &AGENT_OWNER,
         b"poa_hash",
-        500, // deadline at 500
+        4000, // deadline at 4000
         500_000,
     );
 
-    // Try refund at timestamp 100 (before 500 deadline)
+    // Try refund at timestamp 100 (before 4000 deadline)
     state.refund_expect_err(
         &EMPLOYER,
         b"job_early_refund",
@@ -389,11 +408,11 @@ fn test_refund_already_refunded() {
         b"job_double_ref",
         &AGENT_OWNER,
         b"poa_hash",
-        200,
+        4000,
         500_000,
     );
 
-    state.world.current_block().block_timestamp_seconds(201);
+    state.world.current_block().block_timestamp_seconds(4001);
 
     // First refund succeeds
     state.refund(&EMPLOYER, b"job_double_ref");
@@ -444,12 +463,12 @@ fn test_release_after_refund() {
         b"job_ref_then_rel",
         &AGENT_OWNER,
         b"poa_hash",
-        200,
+        4000,
         500_000,
     );
 
     // Refund first (deadline passed)
-    state.world.current_block().block_timestamp_seconds(201);
+    state.world.current_block().block_timestamp_seconds(4001);
     state.refund(&EMPLOYER, b"job_ref_then_rel");
 
     // Try release after refund → already settled
@@ -498,7 +517,7 @@ fn test_refund_after_release() {
         b"job_rel_then_ref",
         &AGENT_OWNER,
         b"poa_hash",
-        200,
+        4000,
         500_000,
     );
 
@@ -506,7 +525,7 @@ fn test_refund_after_release() {
     state.release(&EMPLOYER, b"job_rel_then_ref");
 
     // Advance past deadline and try refund → already settled
-    state.world.current_block().block_timestamp_seconds(201);
+    state.world.current_block().block_timestamp_seconds(4001);
     state.refund_expect_err(&CLIENT, b"job_rel_then_ref", "Escrow already settled");
 }
 

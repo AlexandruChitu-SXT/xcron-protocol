@@ -39,6 +39,12 @@ pub trait ValidationRegistry:
         let job_mapper = self.job_data(&job_id);
         require!(job_mapper.is_empty(), ERR_JOB_ALREADY_INITIALIZED);
 
+        let identity_addr = self.identity_registry_address().get();
+        require!(
+            self.external_agents(identity_addr).contains_id(&agent_nonce),
+            ERR_AGENT_NOT_FOUND
+        );
+
         let caller = self.blockchain().get_caller();
         job_mapper.set(JobData {
             status: JobStatus::New,

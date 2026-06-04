@@ -11,9 +11,9 @@ reputation-registry = { path = "../reputation-registry" }
 escrow = { path = "../escrow" }
 common = { path = "../common" }
 proxies = { path = "../proxies" }
-multiversx-sc = { version = "0.66.0" }
-multiversx-sc-scenario = { version = "0.66.0" }
-multiversx-sc-snippets = { version = "0.66.0" }
+multiversx-sc = { version = "0.66.1" }
+multiversx-sc-scenario = { version = "0.66.1" }
+multiversx-sc-snippets = { version = "0.66.1" }
 tokio = { version = "1.24" }
 serial_test = { version = "3.2.0" }
 serde = { version = "1.0", features = ["derive"] }

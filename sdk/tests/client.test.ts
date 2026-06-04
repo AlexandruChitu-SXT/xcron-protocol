@@ -118,6 +118,31 @@ describe("XCronClient — Transaction Builders", () => {
 
         expect(tx).toBeDefined();
     });
+
+    it("should build a scheduleSovereignTask transaction", () => {
+        const tx = xcron.scheduleSovereignTask({
+            encryptedPayloadHex: "aabbccddeeff",
+            depositEgld: "100000000000000000",
+            requestedDeposit: "100000000000000000",
+        });
+
+        expect(tx).toBeDefined();
+        expect(tx.getData().toString()).toContain("scheduleSovereignTask");
+        expect(tx.getData().toString()).toContain("aabbccddeeff");
+    });
+
+    it("should build a cancelQuantumTask transaction with legacy task ID", () => {
+        const tx = xcron.cancelQuantumTask(42);
+        expect(tx).toBeDefined();
+        expect(tx.getData().toString()).toContain("cancelQuantumTask");
+    });
+
+    it("should build a cancelQuantumTask transaction with task hash", () => {
+        const tx = xcron.cancelQuantumTask("aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899");
+        expect(tx).toBeDefined();
+        expect(tx.getData().toString()).toContain("cancelQuantumTask");
+        expect(tx.getData().toString()).toContain("aabbccddeeff");
+    });
 });
 
 describe("XCronClient — Utility Methods", () => {

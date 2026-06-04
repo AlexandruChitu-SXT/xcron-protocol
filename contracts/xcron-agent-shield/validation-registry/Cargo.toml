@@ -6,7 +6,7 @@ edition = "2024"
 publish = false
 
 [dependencies.multiversx-sc]
-version = "0.66.0"
+version = "0.66.1"
 
 [dependencies.proxies]
 path = "../proxies"
@@ -15,7 +15,7 @@ path = "../proxies"
 path = "../common"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.66.0"
+version = "0.66.1"
 
 [dev-dependencies.identity-registry]
 path = "../identity-registry"

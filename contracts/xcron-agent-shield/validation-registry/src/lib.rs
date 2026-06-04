@@ -252,7 +252,7 @@ pub trait ValidationRegistry:
             data.response = response;
             data.response_hash = response_hash;
             data.tag = tag;
-            data.last_update = self.blockchain().get_block_timestamp_seconds();
+            data.last_update = TimestampSeconds::new(common::time::get_safe_block_timestamp(&self.blockchain()));
         });
 
         let updated_data = request_mapper.get();

@@ -6,16 +6,16 @@ edition = "2024"
 publish = false
 
 [dependencies.multiversx-sc]
-version = "0.66.0"
+version = "0.66.1"
 
 [dependencies.multiversx-sc-modules]
-version = "0.66.0"
+version = "0.66.1"
 
 [dependencies.common]
 path = "../common"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.66.0"
+version = "0.66.1"
 
 [lib]
 path = "src/lib.rs"

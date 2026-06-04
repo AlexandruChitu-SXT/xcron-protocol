@@ -8,14 +8,14 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
-multiversx-sc = "0.66.0"
+multiversx-sc = "0.66.1"
 common = { path = "../common" }
 
 [dev-dependencies]
 sha2 = "0.11.0"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.66.0"
+version = "0.66.1"
 
 [dev-dependencies.keeper-registry]
 path = "../keeper-registry"

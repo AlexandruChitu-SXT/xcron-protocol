@@ -526,5 +526,36 @@ mod tests {
       assert!(sessions.contains_key(stealth_failed_active));
     }
   }
+
+  #[tokio::test]
+  async fn test_concurrent_session_db_stress() {
+    use std::sync::Arc;
+    let manager = Arc::new(PrivacySessionManager::new(100_000_000_000_000_000_000, 50));
+    let mut handles = Vec::new();
+
+    for i in 0..50 {
+      let m = manager.clone();
+      let h = tokio::spawn(async move {
+        let user = format!("erd1user{:056x}", i);
+        let stealth = format!("erd1stealth{:053x}", i);
+        
+        let res = m.authorize_session(&user, &stealth, 1_000_000_000_000_000, None, None, None);
+        assert!(res.is_ok());
+
+        let res_comp = m.complete_session(&stealth);
+        assert!(res_comp.is_ok());
+
+        let res_prune = m.prune_expired_sessions(0);
+        assert!(res_prune.is_ok());
+      });
+      handles.push(h);
+    }
+
+    for h in handles {
+      h.await.unwrap();
+    }
+
+    assert_eq!(manager.active_session_count(), 0);
+  }
 }
 

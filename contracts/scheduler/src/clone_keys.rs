@@ -98,7 +98,7 @@ pub trait CloneKeysModule:
         );
 
         // Calculate expiry
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
         let expiry = current_time + ttl_seconds;
 
         // Store clone key properties
@@ -176,7 +176,7 @@ pub trait CloneKeysModule:
         );
 
         // Check expiry — no point funding an expired key
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
         require!(
             current_time < props.expiry_timestamp,
             "Clone-Key has expired — revoke and create a new one"
@@ -243,7 +243,7 @@ pub trait CloneKeysModule:
         }
 
         let props = self.clone_key_props(&caller).get();
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
 
         // Expired clone keys are treated as non-existent
         if current_time >= props.expiry_timestamp {
@@ -261,7 +261,7 @@ pub trait CloneKeysModule:
         let mut props = self.clone_key_props(clone_address).get();
 
         // Check expiry
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self.get_safe_block_timestamp();
         require!(
             current_time < props.expiry_timestamp,
             "Clone-Key has expired"

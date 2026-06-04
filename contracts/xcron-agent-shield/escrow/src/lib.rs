@@ -132,15 +132,7 @@ pub trait XcronAgentShield:
     let limit = self.shield_daily_limit(&token_id).get();
 
     // Time Boundary Check: Safe Timestamp evaluation
-    let raw_time = self
-      .blockchain()
-      .get_block_timestamp_seconds()
-      .as_u64_seconds();
-    let safe_time = if raw_time > 100_000_000_000 {
-      raw_time / 1000
-    } else {
-      raw_time
-    };
+    let safe_time = common::time::get_safe_block_timestamp(&self.blockchain());
     let current_day = safe_time / 86400; // Epoch Days
     let mut spent_today = self.daily_spent(&token_id, current_day).get();
     spent_today += &amount;
@@ -246,7 +238,7 @@ pub trait XcronAgentShield:
       ERR_ESCROW_ALREADY_EXISTS
     );
 
-    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current_time = common::time::get_safe_block_timestamp(&self.blockchain());
     require!(deadline > current_time, ERR_DEADLINE_IN_PAST);
 
     let employer = self.blockchain().get_caller();
@@ -323,7 +315,7 @@ pub trait XcronAgentShield:
       ERR_ALREADY_SETTLED
     );
 
-    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current_time = common::time::get_safe_block_timestamp(&self.blockchain());
     require!(
       current_time > escrow.deadline.as_u64_seconds(),
       ERR_DEADLINE_NOT_PASSED

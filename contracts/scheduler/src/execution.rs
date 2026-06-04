@@ -200,7 +200,7 @@ pub trait ExecutionModule:
     require!(self.blockchain().get_gas_left() >= min_gas_needed, "Insufficient gas for full execution");
 
     quantum_state.status = common::types::TaskStatus::Executing;
-    quantum_state.executing_at = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    quantum_state.executing_at = self.get_safe_block_timestamp();
     self.quantum_tasks(&task_hash).set(&quantum_state);
 
     if task_payload.confidential {
@@ -418,7 +418,7 @@ pub trait ExecutionModule:
       "V12: Task is not in Executing state"
     );
 
-    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current_time = self.get_safe_block_timestamp();
     let stuck_threshold = 24 * 60 * 60; // 24 hours in seconds
     require!(
       current_time >= quantum_state.executing_at + stuck_threshold,
@@ -503,7 +503,7 @@ pub trait ExecutionModule:
       "Task not in Executing state"
     );
 
-    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current_time = self.get_safe_block_timestamp();
     let stuck_threshold = 24 * 60 * 60; // 24 hours
     require!(
       current_time >= quantum_state.executing_at + stuck_threshold,

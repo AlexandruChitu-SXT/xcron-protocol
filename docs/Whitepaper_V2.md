@@ -29,15 +29,21 @@ The protocol is composed of three core smart contracts and an off-chain executor
 * **TimeRecurring**: Triggers execution repeatedly based on a defined time interval.
 * **ConditionOnChain**: Triggers execution based on a query validation. The task remains locked until an on-chain view query matches target criteria (e.g., verifying a price ratio against an oracle).
 
-### C. Off-Chain Integration (Model Context Protocol)
-XCron V2 includes the `xcron-mcp-server`, which exposes blockchain scheduling endpoints to external agent frameworks. Through delegated execution contracts (Clone-Keys), external systems can authorize execution limits and deposit tasks without maintaining direct access to primary wallet keys.
+### C. Off-Chain Integration & Agent Marketplace
+XCron V2 includes the `xcron-mcp-server`, which exposes blockchain scheduling endpoints to external agent frameworks. Through a decentralized Agent Marketplace, developers and users can commercialize autonomous agents, creating an incentive loop where agents generate yield by executing user intents.
+
+### D. State Compression (XSC) & Agent Validation Shield (AVS)
+To achieve extreme efficiency, XCron integrates State Compression (XSC) and the Agent Validation Shield (AVS). This infrastructure allows the minting and management of thousands of compressed NFTs (cNFTs) and secure state NFTs (sNFTs) at near-zero costs on MultiversX, providing cryptographically secure identities for autonomous agents.
 
 ---
 
 ## 4. Security Framework
 
-The smart contracts follow the Checks-Effects-Interactions (CEI) pattern and implement specific security defenses:
+The smart contracts follow the Checks-Effects-Interactions (CEI) pattern and implement advanced cryptographic defenses:
 
+* **Quantum Shield & ML-DSA Signatures:** The protocol is future-proofed against quantum computing attacks by incorporating **Crystals-Dilithium (ML-DSA)** signatures (FIPS-204 standard) to verify keeper transactions and execution states.
+* **ZK-PQ Proof Compression:** Due to the large size of Crystals-Dilithium signatures (~2.5 KB), native L1 verification would cause state bloat and excessive gas transmission costs (~3.6M gas). XCron resolves this by verifying the Dilithium signature off-chain inside a secure Zero-Knowledge Virtual Machine (zkVM like SP1/Risc0). It generates a constant-size 250-byte Groth16 proof verified on-chain, yielding an **85.5% L1 gas saving**.
+* **Commit-Reveal MEV Protection:** Prevents front-running and MEV exploits by requiring keepers to submit a cryptographic hash-commit of their execution intention before revealing the actual transaction payload.
 * **State Clearing**: Executed, expired, or cancelled tasks are cleared from contract storage to minimize storage growth and limit state footprint on the blockchain database.
 * **Creation Fee Requirement**: Task creation requires locking a transaction fee deposit, raising the cost of denial-of-service (DoS) attempts through spam tasks.
 * **Atomic Callbacks**: Execution is conducted synchronously. If the target contract call fails or fails to meet slippage limits, the transaction reverts atomically, protecting keeper resources.
@@ -49,8 +55,10 @@ The smart contracts follow the Checks-Effects-Interactions (CEI) pattern and imp
 
 XCron operates as a self-sustaining coordination protocol:
 
-1. **Protocol Fee**: A percentage (typically 30%) of the execution fee is retained by the protocol treasury, while the remaining portion (70%) is paid to the executing keeper.
-2. **Gas Royalties**: Smart contract gas royalties supported by the MultiversX protocol are directed to the treasury.
+1. **Dynamic Task Pricing:** Task execution fees are calculated dynamically based on a professional cost study of each automation type, aligning rewards for Keepers with real computational costs.
+2. **XCRON Expansion Token:** The protocol plans to deploy the native **XCRON** token in the future to decentralize governance, incentivize the Keeper network, and facilitate payments in the Agent Marketplace.
+3. **cNFT/sNFT Minting Revenues:** The integration of XSC enables near-zero cost minting of compressed assets, creating secondary marketplace revenue streams for developers and creators.
+4. **Gas Royalties**: Smart contract gas royalties supported natively by the MultiversX protocol (30%) are directed to the treasury.
 
 ### Keeper Slashing Rules
 Keepers who register for tasks but fail to execute within their designated windows face progressive slashing penalties:
@@ -65,5 +73,6 @@ Slashed funds are permanently transferred to the protocol treasury.
 ## 6. Development Roadmap (Q2 2026)
 
 * **Testnet Alignment**: Deploying V2 contracts to Testnet to validate state-clearing mechanics under simulated transaction volume.
-* **Agent Integration**: Connecting the `xcron-mcp-server` to the MultiversX Agent Arena interface.
-* **Mainnet Immutable Deployment**: Launching final verified smart contracts on Mainnet with upgrade permissions disabled.
+* **Agent Marketplace Integration**: Connecting the `xcron-mcp-server` to the decentralized Agent Marketplace, allowing users to select and delegate intents to competitive, automated agents.
+* **DeSci Focus & Chemical Agent:** Enhancing decentralized science (DeSci) by introducing the **Chemical Agent**, a specialized autonomous agent with hardcoded molecular and elemental validation rules. This ensures molecular stability and scientific validity for researchers running decentralized experiments on-chain.
+* **Mainnet Immutable Deployment**: Launching final verified smart contracts on Mainnet with upgrade permissions disabled as a secure public good.

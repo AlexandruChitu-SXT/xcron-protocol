@@ -1,27 +1,38 @@
-# CIB2 - Diseño (Arquitectura Criptográfica Avanzada)
+# CIB2 - Diseño (Auditoría e Integración del Parche de Tiempo Seguro)
 
 **Diseño de Soluciones Integradas:**
 
-1. **VDF transparente sobre Class Groups Cl(D):**
-   * Usar exponenciación modular secuencial en grupos de clase de discriminante negativo $D$ ($|D| > 2^{1024}$).
-   * Al no requerir trusted setup, se elimina el riesgo de backdoor en RSA.
-   * Cómputo secuencial off-chain calibrado para 300ms de retraso secuencial.
-   * Verificación en L1 optimizada mediante prueba Groth16 (~150k gas) para evitar los 8M de gas de la aritmética de formas en Rust.
+1. **Creación de `common::time`:**
+   - Crearemos el archivo `contracts/common/src/time.rs` con la siguiente función pura:
+     ```rust
+     use multiversx_sc::api::ManagedTypeApi;
+     use multiversx_sc::types::BlockchainWrapper;
 
-2. **Compresión ZK-PQ (Verificación Dilithium en zkVM):**
-   * El Keeper ejecuta la verificación de firmas ML-DSA dentro de una zkVM (SP1/Risc0) en su enclave.
-   * Genera una prueba de conocimiento cero corta de 250-500 bytes.
-   * Reduce el gas de transmisión on-chain en un 85.5% (de 3.6M a ~375k gas).
+     pub fn get_safe_block_timestamp<API: ManagedTypeApi>(blockchain: &BlockchainWrapper<API>) -> u64 {
+         let ts = blockchain.get_block_timestamp_seconds().as_u64_seconds();
+         if ts > 50_000_000_000 {
+             ts / 1000
+         } else {
+             ts
+         }
+     }
+     ```
+   - Registraremos el nuevo módulo en `contracts/common/src/lib.rs`.
 
-3. **TEE-ZK Cryptographic Binding (Vinculación de Atestación):**
-   * El enclave Nitro firma la prueba ZK final con su clave efímera $sk_{enc}$.
-   * El circuito ZK exige que los inputs públicos contengan exactamente `SHA-256(pk_enc || PCR0_hash || TaskHash)`.
-   * Evita la reutilización de pruebas (replay) y garantiza que la prueba se generó en un enclave atestado legítimo.
+2. **Propagación del Timestamp Seguro en todos los Contratos Inteligentes:**
+   - **Scheduler (`contracts/scheduler/src/`)**:
+     - Actualizar `commit_reveal.rs` para que `get_safe_block_timestamp` llame a `common::time::get_safe_block_timestamp(&self.blockchain())`.
+     - Actualizar `clone_keys.rs` (líneas 101, 179, 246, 264), `execution.rs` (líneas 203, 421, 506) e `intents.rs` (líneas 43, 112, 178, 232, 293, 367) para reemplazar llamadas directas a `self.blockchain().get_block_timestamp_seconds().as_u64_seconds()` por `self.get_safe_block_timestamp()`.
+   - **Keeper Registry (`contracts/keeper-registry/src/lib.rs`)**:
+     - Reemplazar llamadas a `self.blockchain().get_block_timestamp_seconds().as_u64_seconds()` en las líneas 75, 128, 151 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
+   - **Vault (`contracts/vault/src/lib.rs`)**:
+     - Reemplazar llamadas en las líneas 256, 283, 338, 396, 440 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
+   - **Agent Shield Escrow (`contracts/xcron-agent-shield/escrow/src/lib.rs`)**:
+     - Reemplazar llamadas en las líneas 137, 249, 326 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
+   - **Validation Registry (`contracts/xcron-agent-shield/validation-registry/src/lib.rs`)**:
+     - Reemplazar llamadas en la línea 255 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
+   - **ZK Verifier (`contracts/zk-verifier/src/lib.rs`)**:
+     - Reemplazar llamadas en la línea 89 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
 
-4. **Mitigaciones Microarquitecturales (Aislamiento AWS Nitro):**
-   * **NUMA Node Pinning:** El sistema operativo host de la instancia EC2 mapea los recursos de hardware de forma que los núcleos físicos de CPU y los canales de memoria DRAM asignados al Enclave Nitro estén en un nodo NUMA (Non-Uniform Memory Access) físico totalmente separado del sistema operativo host. Esto previene que el host pueda realizar ataques de sincronización de caché (como Flush+Reload o Prime+Probe) al no compartir los mismos buffers físicos de memoria.
-   * **Deshabilitar Hyper-Threading (SMT):** El Hyper-Threading permite que un núcleo físico ejecute dos hilos lógicos de forma simultánea. Al deshabilitarlo para el Enclave, se garantiza que ningún hilo del host pueda ejecutarse en el mismo núcleo físico que procesa los secretos del Enclave, cerrando los ataques de canal lateral de ejecución especulativa (tipo MDS o PortSmash).
-   * **Padding de Latencia vsock (Time Padding):** Para evitar que un atacante midiendo el tiempo exacto que tarda la respuesta del enclave a través del canal virtual socket (`vsock`) pueda deducir información de la clave privada, la respuesta del Enclave se retrasa artificialmente con un búfer de tiempo constante (ej. retrasando todas las salidas para que siempre tarden exactamente 300ms, independientemente de la carga de procesamiento).
-   * **Memory Blinding (Enmascaramiento DRAM):** Inyección de datos y operaciones espurias o aleatorias en los accesos a la memoria principal para oscurecer los patrones de lectura/escritura, mitigando ataques de monitoreo del bus de memoria física.
-   * **Atestación de Hardware (PCR0):** Registro de configuración de plataforma criptográfica que contiene la huella (hash SHA-256) exacta de la imagen del Enclave (`.eif`). Esto garantiza al contrato inteligente en L1 que el Enclave está ejecutando el código original compilado y no una versión modificada o alterada.
-
+3. **Verificación de la dApp Frontend (`frontend-next`):**
+   - Asegurar que todas las peticiones a la API del gateway o Elasticsearch no asuman unidades incorrectas y que el cambio interno en `mx-api-service: v1.20.0` no interfiera con el cálculo diario en segundos de `oneDayAgo` en `ProtocolRadar.tsx`.

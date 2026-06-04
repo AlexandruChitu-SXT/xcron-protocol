@@ -77,6 +77,7 @@ export interface ScheduleTaskParams {
     maxRetries?: number;
     ttlSeconds?: number;
     depositEgld: string;
+    caller?: string;
 }
 
 export interface XCronAddresses {

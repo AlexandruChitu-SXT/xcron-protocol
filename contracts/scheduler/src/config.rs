@@ -151,4 +151,18 @@ pub trait ConfigModule: crate::storage::StorageModule {
     fn get_xwap_address(&self) -> ManagedAddress {
         self.xwap_address().get()
     }
+
+    /// Owner-only: Whitelist an ESDT token to prevent poisoned token attacks while allowing its use in Intents.
+    #[only_owner]
+    #[endpoint(addAcceptedPaymentToken)]
+    fn add_accepted_payment_token(&self, token_id: TokenIdentifier) {
+        self.accepted_payment_tokens(&token_id).set(true);
+    }
+
+    /// Owner-only: Remove an ESDT token from the whitelist.
+    #[only_owner]
+    #[endpoint(removeAcceptedPaymentToken)]
+    fn remove_accepted_payment_token(&self, token_id: TokenIdentifier) {
+        self.accepted_payment_tokens(&token_id).clear();
+    }
 }

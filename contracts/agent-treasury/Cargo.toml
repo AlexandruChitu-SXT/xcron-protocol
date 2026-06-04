@@ -9,7 +9,7 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
-multiversx-sc = "0.66.0"
+multiversx-sc = "0.66.1"
 
 [dev-dependencies]
-multiversx-sc-scenario = "0.66.0"
+multiversx-sc-scenario = "0.66.1"

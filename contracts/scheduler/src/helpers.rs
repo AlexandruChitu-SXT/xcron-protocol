@@ -15,6 +15,10 @@ pub trait HelpersModule: crate::storage::StorageModule {
         self.blockchain().get_block_timestamp_millis().as_u64_millis()
     }
 
+    fn get_safe_block_timestamp(&self) -> u64 {
+        common::time::get_safe_block_timestamp(&self.blockchain())
+    }
+
     // calculate_protocol_fee, index_task, remove_from_indices, reindex_task, and reschedule_recurring
     // have been purged. The blockchain no longer maintains cross-shard indices, time arrays, or recurring states.
     // The Rust-Tokio Keeper assumes 100% responsibility for this logic off-chain, reducing gas usage by >80%.

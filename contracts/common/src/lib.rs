@@ -13,4 +13,6 @@ pub mod lns;
 pub mod hyperbolic;
 pub mod trig;
 pub mod chaotic;
+pub mod time;
+
 

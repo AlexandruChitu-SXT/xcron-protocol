@@ -8,10 +8,13 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies.multiversx-sc]
-version = "0.66.0"
+version = "0.66.1"
 
 [dependencies.common]
 path = "../common"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.66.0"
+version = "0.66.1"
+
+[dev-dependencies]
+ed25519-dalek = "2.1.1"

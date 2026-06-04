@@ -33,4 +33,9 @@ pub trait ViewsModule: crate::storage::StorageModule {
     fn get_min_stake(&self) -> BigUint {
         self.min_stake().get()
     }
+
+    #[view(totalCommittedCooldownEgld)]
+    fn get_total_committed_cooldown_egld(&self) -> BigUint {
+        self.total_committed_cooldown_egld().get()
+    }
 }

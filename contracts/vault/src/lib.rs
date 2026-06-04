@@ -253,7 +253,7 @@ pub trait VaultContract:
     ) {
         if let ManagedAsyncCallResult::Ok(_) = result {
             self.compound_count().update(|c| *c += 1);
-            self.compound_event(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
+            self.compound_event(common::time::get_safe_block_timestamp(&self.blockchain()));
         }
     }
 
@@ -280,7 +280,7 @@ pub trait VaultContract:
         #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
     ) {
         if let ManagedAsyncCallResult::Ok(_) = result {
-            self.claim_event(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
+            self.claim_event(common::time::get_safe_block_timestamp(&self.blockchain()));
         }
     }
 
@@ -335,7 +335,7 @@ pub trait VaultContract:
         #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
     ) {
         if let ManagedAsyncCallResult::Ok(_) = result {
-            self.swap_event(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
+            self.swap_event(common::time::get_safe_block_timestamp(&self.blockchain()));
         }
     }
 
@@ -393,7 +393,7 @@ pub trait VaultContract:
         #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
     ) {
         if let ManagedAsyncCallResult::Ok(_) = result {
-            self.emergency_swap_event(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
+            self.emergency_swap_event(common::time::get_safe_block_timestamp(&self.blockchain()));
         }
     }
 
@@ -437,7 +437,7 @@ pub trait VaultContract:
         #[call_result] result: ManagedAsyncCallResult<MultiValueEncoded<ManagedBuffer>>,
     ) {
         if let ManagedAsyncCallResult::Ok(_) = result {
-            self.mint_event(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
+            self.mint_event(common::time::get_safe_block_timestamp(&self.blockchain()));
         }
     }
 

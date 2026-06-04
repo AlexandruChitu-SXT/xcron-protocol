@@ -72,7 +72,7 @@ pub trait KeeperRegistryContract:
     let info = common::types::KeeperInfo {
       addr: caller.clone(),
       stake,
-      registered_at: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
+      registered_at: common::time::get_safe_block_timestamp(&self.blockchain()),
       total_executions: 0,
       successful_execs: 0,
       failed_execs: 0,
@@ -125,7 +125,7 @@ pub trait KeeperRegistryContract:
     }
 
     self.unstake_request_time(&caller)
-      .set(self.blockchain().get_block_timestamp_seconds().as_u64_seconds());
+      .set(common::time::get_safe_block_timestamp(&self.blockchain()));
     
     // V3/V5 FIX: Track committed cooldown EGLD atomically
     self.total_committed_cooldown_egld().update(|total| *total += &info.stake);
@@ -148,7 +148,7 @@ pub trait KeeperRegistryContract:
     require!(!info.active, "Must request unstake first");
 
     let request_time = self.unstake_request_time(&caller).get();
-    let current = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current = common::time::get_safe_block_timestamp(&self.blockchain());
     require!(
       current >= request_time + self.cooldown_seconds().get(),
       "Cooldown not elapsed"

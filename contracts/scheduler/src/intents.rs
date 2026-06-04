@@ -15,7 +15,7 @@ pub trait IntentsModule:
   /// The user specifies exactly what they want (`token_out`, `min_return`)
   /// and offers a `solver_fee` in EGLD out of the protocol's internal balance or
   /// attached EGLD (to be refined based on exact fee model).
-  #[payable("*")]
+  #[payable]
   #[endpoint(createIntent)]
   fn create_intent(
     &self,
@@ -40,7 +40,7 @@ pub trait IntentsModule:
       "XCRON-PROTECT: Token is not in the strict Whitelist. Poisoned Token Attack blocked."
     );
     
-    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current_time = self.get_safe_block_timestamp();
     
     // PROTECCIÓN CONTRA BUG DE TIEMPO (Milisegundos en JS vs Segundos en Rust)
     require!(deadline < 10_000_000_000u64, "XCRON-PROTECT: Deadline debe estar en segundos (Linux Epoch), no en milisegundos");
@@ -109,7 +109,7 @@ pub trait IntentsModule:
     let mut intent = self.intent_by_id(intent_id).get();
     require!(intent.status == IntentStatus::Pending, "XCRON-PROTECT: Intent not pending");
     require!(
-      self.blockchain().get_block_timestamp_seconds().as_u64_seconds() <= intent.deadline,
+      self.get_safe_block_timestamp() <= intent.deadline,
       "XCRON-PROTECT: Intent expired"
     );
 
@@ -175,7 +175,7 @@ pub trait IntentsModule:
       }
     }
 
-    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current_time = self.get_safe_block_timestamp();
     require!(deadline < 10_000_000_000u64, "XCRON-PROTECT: Deadline must be in seconds");
     require!(deadline > current_time, "XCRON-PROTECT: Deadline must be in the future");
 
@@ -229,7 +229,7 @@ pub trait IntentsModule:
     let mut intent = self.multi_intent_by_id(intent_id).get();
     require!(intent.status == IntentStatus::Pending, "XCRON-PROTECT: Intent not pending");
     require!(
-      self.blockchain().get_block_timestamp_seconds().as_u64_seconds() <= intent.deadline,
+      self.get_safe_block_timestamp() <= intent.deadline,
       "XCRON-PROTECT: Intent expired"
     );
 
@@ -290,7 +290,7 @@ pub trait IntentsModule:
     let amount_in = amount_ref.clone_value();
     require!(amount_in > 0, "Amount in must be greater than 0");
     
-    let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+    let current_time = self.get_safe_block_timestamp();
     require!(deadline < 10_000_000_000u64, "XCRON-PROTECT: Deadline must be in Linux Epoch seconds");
     require!(deadline > current_time, "XCRON-PROTECT: Deadline must be in the future");
 
@@ -364,7 +364,7 @@ pub trait IntentsModule:
     let mut intent = self.pre_cognitive_intent_by_id(intent_id).get();
     require!(intent.status == PreCognitiveIntentStatus::Pending, "XCRON-PROTECT: Intent not pending");
     require!(
-      self.blockchain().get_block_timestamp_seconds().as_u64_seconds() <= intent.deadline,
+      self.get_safe_block_timestamp() <= intent.deadline,
       "XCRON-PROTECT: Intent expired"
     );
 

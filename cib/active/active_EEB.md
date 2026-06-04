@@ -22,14 +22,22 @@
 | Componente | Comando | Resultado |
 |:---|:---|:---|
 | `xse-protocol` | `cargo test` | **8/8 PASS** |
-| `xcron-keeper-rs` (lib) | `cargo test` | **9/9 PASS** |
+| `xcron-keeper-rs` (lib) | `cargo test` | **10/10 PASS** |
 | `xcron-keeper-rs` (bin) | `cargo test` | **6/6 PASS** |
-| `contracts/scheduler` | `cargo check` | **OK** |
+| `contracts/common` | `cargo test` | **28/28 PASS** |
+| `contracts/keeper-registry` | `cargo test` | **6/6 PASS** |
+| `contracts/rewards` | `cargo test` | **3/3 PASS** |
+| `contracts/scheduler` | `cargo test` | **33/33 PASS** |
+| `contracts/zk-verifier` | `cargo test` | **1/1 PASS** |
+| `contracts (E2E Testnet)` | `./testnet_e2e_verification.sh` | **SUCCESS (0)** |
+
 
 ## 3. Decisiones Arquitectónicas (No Desviar)
 
 - **Sharding en Memoria:** `ShardedSeenHashes` usa el primer carácter hexadecimal del hash de transacciones de MultiversX para direccionar a 1 de los 16 shards disponibles de forma determinista O(1), optimizando el rendimiento de concurrencia multinúcleo en el mempool sniffer.
 - **Liberación de Mutex en Tokio:** Todos los locks en memoria se manejan dentro de alcances puramente síncronos y no retienen guardas a través de suspensiones `.await`, previniendo starvation.
+- **Normalización de Tiempo Core (`common::time`):** Para mitigar la asimetría temporal en entornos Supernova, la lectura del block timestamp se centraliza y normaliza dividiendo entre 1000 cuando supera `50_000_000_000`, garantizando compatibilidad entre redes que devuelven segundos o milisegundos.
+
 
 ## 4. Próximos Pasos (Siguiente Ciclo)
 

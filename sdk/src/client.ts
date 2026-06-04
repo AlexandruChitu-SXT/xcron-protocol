@@ -89,7 +89,7 @@ export class XCronClient {
             args,
             gasLimit: DEFAULT_GAS_LIMIT,
             value: TokenTransfer.egldFromBigInteger(params.depositEgld),
-            caller: Address.Zero(), // Set by signer
+            caller: params.caller ? new Address(params.caller) : new Address(this.addresses.scheduler),
             chainID: this.getChainId(),
         });
 
@@ -121,6 +121,7 @@ export class XCronClient {
         maxRetries?: number;
         ttlSeconds?: number;
         depositEgld: string;
+        caller?: string;
     }): Transaction {
         const startTime = Math.floor(Date.now() / 1000) + params.intervalSeconds;
         return this.scheduleTask({
@@ -137,12 +138,12 @@ export class XCronClient {
     /**
      * Build a transaction to cancel a pending task and get a refund.
      */
-    cancelTask(taskId: number): Transaction {
+    cancelTask(taskId: number, caller?: string): Transaction {
         return this.scheduler.call({
             func: new ContractFunction("cancelTask"),
             args: [new U64Value(taskId)],
             gasLimit: 15_000_000,
-            caller: Address.Zero(),
+            caller: caller ? new Address(caller) : new Address(this.addresses.scheduler),
             chainID: this.getChainId(),
         });
     }
@@ -164,19 +165,75 @@ export class XCronClient {
     scheduleQuantumTask(params: ScheduleTaskParams & { quantumSecret?: string }): Transaction {
         const args = this.buildScheduleArgs(params);
 
-        // For Quantum Tasks, the data field in MultiversX ABI includes the secret
-        // executeQuantumTask@<serialized_task>@<secret_option>
-        // Here we call the scheduler endpoint directly
         const tx = this.scheduler.call({
             func: new ContractFunction("scheduleQuantumTask"),
             args,
             gasLimit: DEFAULT_GAS_LIMIT,
             value: TokenTransfer.egldFromBigInteger(params.depositEgld),
-            caller: Address.Zero(),
+            caller: params.caller ? new Address(params.caller) : new Address(this.addresses.scheduler),
             chainID: this.getChainId(),
         });
 
         return tx;
+    }
+
+    /**
+     * Build a transaction to schedule a Sovereign Enclave API task (XSE) with encrypted payload.
+     *
+     * @example
+     * ```typescript
+     * const tx = xcron.scheduleSovereignTask({
+     *     encryptedPayloadHex: "8a1f2b...",
+     *     depositEgld: "100000000000000000",
+     *     requestedDeposit: "100000000000000000",
+     * });
+     * ```
+     */
+    scheduleSovereignTask(params: {
+        encryptedPayloadHex: string;
+        depositEgld: string;
+        requestedDeposit?: string;
+        caller?: string;
+    }): Transaction {
+        const args: TypedValue[] = [
+            BytesValue.fromHex(params.encryptedPayloadHex)
+        ];
+        
+        if (params.requestedDeposit) {
+            args.push(new BigUIntValue(params.requestedDeposit));
+        }
+
+        const tx = this.scheduler.call({
+            func: new ContractFunction("scheduleSovereignTask"),
+            args,
+            gasLimit: DEFAULT_GAS_LIMIT,
+            value: TokenTransfer.egldFromBigInteger(params.depositEgld),
+            caller: params.caller ? new Address(params.caller) : new Address(this.addresses.scheduler),
+            chainID: this.getChainId(),
+        });
+
+        return tx;
+    }
+
+    /**
+     * Build a transaction to cancel a pending Quantum or Sovereign task.
+     * Takes either the 32-byte task hash (as a hex string) or the legacy task ID (as a number).
+     */
+    cancelQuantumTask(taskHashOrId: string | number, caller?: string): Transaction {
+        let arg: TypedValue;
+        if (typeof taskHashOrId === "number") {
+            arg = new U64Value(taskHashOrId);
+        } else {
+            arg = BytesValue.fromHex(taskHashOrId);
+        }
+
+        return this.scheduler.call({
+            func: new ContractFunction("cancelQuantumTask"),
+            args: [arg],
+            gasLimit: 15_000_000,
+            caller: caller ? new Address(caller) : new Address(this.addresses.scheduler),
+            chainID: this.getChainId(),
+        });
     }
 
     /**

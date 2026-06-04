@@ -84,10 +84,7 @@ pub trait ZkVerifierContract {
         let payment = self.call_value().egld_value().clone_value();
         let min_stake = BigUint::from(10_000_000_000_000_000u64);
         require!(payment >= min_stake, "Insufficient stake for proof submission");
-        let now = self
-            .blockchain()
-            .get_block_timestamp_seconds()
-            .as_u64_seconds();
+        let now = common::time::get_safe_block_timestamp(&self.blockchain());
 
         // Prevent overwriting existing verified proofs
         if !self.proofs(&task_hash).is_empty() {
@@ -116,19 +113,25 @@ pub trait ZkVerifierContract {
     //  VERIFICATION
     // ═════════════════════════════════════════════════════════
 
-    /// Verify a submitted Groth16 ZK-proof (Phase 2 / v2.7 Hardened).
+    /// Verify a submitted Ed25519 signature from an authorized Nitro Enclave (Phase 2 / v2.7 Hardened).
     ///
     /// Recomputes: expected_binding_hash = SHA-256(task_hash || ephemeral_pubkey || authorized_pcr0)
-    /// and verifies the Groth16 BN254 ZK proof against this statement.
+    /// and verifies the Ed25519 signature against this statement.
     #[endpoint(verifyProof)]
     fn verify_proof(
         &self,
         task_hash: ManagedByteArray<Self::Api, 32>,
-        zk_proof: ManagedBuffer,
+        zk_proof: ManagedBuffer, // This is treated as the 64-byte Ed25519 signature from the Enclave
         ephemeral_pubkey: ManagedByteArray<Self::Api, 32>,
     ) -> bool {
         let caller = self.blockchain().get_caller();
         require!(self.whitelisted_keepers().contains(&caller), "Not an authorized keeper");
+
+        // Validar que la clave efímera del enclave esté registrada y autorizada en L1
+        require!(
+            self.authorized_enclave_keys(&ephemeral_pubkey).get(),
+            "XSE: Ephemeral enclave key is not authorized in L1 registry"
+        );
 
         // Reconstruye el binding hash esperado en L1: SHA-256(task_hash || ephemeral_pubkey || authorized_pcr0)
         let expected_pcr0 = self.authorized_pcr0().get();
@@ -140,9 +143,13 @@ pub trait ZkVerifierContract {
         
         let expected_binding_hash = self.crypto().sha256(&hash_input);
 
-        // Verifica la prueba Groth16 utilizando la curva BN254.
-        let is_valid = self.verify_groth16_bn254_proof(&zk_proof, &expected_binding_hash);
-        require!(is_valid, "ZK verification failed: invalid statement or proof");
+        // Verifica la firma Ed25519 generada por el Enclave Nitro atestado.
+        // Panics si es inválida, revirtiendo la transacción de forma segura en L1.
+        self.crypto().verify_ed25519(
+            &ephemeral_pubkey.as_managed_buffer(),
+            &expected_binding_hash.as_managed_buffer(),
+            &zk_proof,
+        );
 
         // ERR-10 Fix: Guardar el estado verificado para que is_proof_valid devuelva true
         if !self.proofs(&task_hash).is_empty() {
@@ -152,18 +159,6 @@ pub trait ZkVerifierContract {
         }
 
         self.proof_verified_event(task_hash, true); // Log event
-        true
-    }
-
-    /// Helper portable para invocar o simular la verificación de curvas BN254 en L1.
-    fn verify_groth16_bn254_proof(
-        &self,
-        proof: &ManagedBuffer,
-        binding_hash: &ManagedByteArray<Self::Api, 32>,
-    ) -> bool {
-        if proof.len() < 256 || binding_hash.is_empty() {
-            return false;
-        }
         true
     }
 
@@ -179,6 +174,20 @@ pub trait ZkVerifierContract {
     #[endpoint(setAuthorizedPcr0)]
     fn set_authorized_pcr0(&self, pcr0: ManagedByteArray<Self::Api, 32>) {
         self.authorized_pcr0().set(&pcr0);
+    }
+
+    /// Register a trusted ephemeral enclave key (Admin only).
+    #[only_owner]
+    #[endpoint(registerEnclaveKey)]
+    fn register_enclave_key(&self, ephemeral_pubkey: ManagedByteArray<Self::Api, 32>) {
+        self.authorized_enclave_keys(&ephemeral_pubkey).set(true);
+    }
+
+    /// Revoke an ephemeral enclave key (Admin only).
+    #[only_owner]
+    #[endpoint(revokeEnclaveKey)]
+    fn revoke_enclave_key(&self, ephemeral_pubkey: ManagedByteArray<Self::Api, 32>) {
+        self.authorized_enclave_keys(&ephemeral_pubkey).clear();
     }
 
     // ═════════════════════════════════════════════════════════
@@ -222,6 +231,9 @@ pub trait ZkVerifierContract {
 
     #[storage_mapper("authorizedPcr0")]
     fn authorized_pcr0(&self) -> SingleValueMapper<ManagedByteArray<Self::Api, 32>>;
+
+    #[storage_mapper("authorizedEnclaveKeys")]
+    fn authorized_enclave_keys(&self, ephemeral_pubkey: &ManagedByteArray<Self::Api, 32>) -> SingleValueMapper<bool>;
 
     #[storage_mapper("schedulerAddr")]
     fn scheduler_addr(&self) -> SingleValueMapper<ManagedAddress>;

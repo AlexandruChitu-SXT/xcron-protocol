@@ -5,4 +5,4 @@ edition = "2021"
 publish = false
 
 [dependencies]
-multiversx-sc = "0.66.0"
+multiversx-sc = "0.66.1"

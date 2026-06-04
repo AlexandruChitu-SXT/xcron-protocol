@@ -60,21 +60,24 @@ pub fn generate_zk_pq_proof(inputs: &ProverInputs) -> Result<Groth16Proof, Strin
     let verified_pcr0 = verify_nsm_attestation_document(&inputs.attestation_document)?;
     println!(" [ZK-PROVER] NSM Attestation verified. Extracted PCR0: 0x{}", hex::encode(verified_pcr0));
 
-    // 3. Derive Ephemeral BabyJubjub Public Key from Private Key
-    let ephemeral_pubkey = derive_babyjubjub_public_key(&inputs.babyjubjub_private_key)?;
+    // 3. Derive Ephemeral Ed25519 Public Key from Private Key
+    let signing_key = ed25519_dalek::SigningKey::from_bytes(&inputs.babyjubjub_private_key);
+    let ephemeral_pubkey = signing_key.verifying_key().to_bytes();
 
     // 4. Compute Cryptographic Binding Hash: SHA-256(TaskHash || EphemeralPubkey || PCR0)
     let binding_hash = compute_binding_hash(&inputs.task_hash, &ephemeral_pubkey, &verified_pcr0);
     println!(" [ZK-PROVER] Cryptographic Binding Hash generated: 0x{}", hex::encode(binding_hash));
 
-    // 5. Generate the final Groth16 Proof (simulating the zkVM prover backend)
+    // 5. Generate the final Ed25519 signature proof
+    use ed25519_dalek::Signer;
+    let signature = signing_key.sign(&binding_hash);
+    let proof_bytes = signature.to_bytes().to_vec();
+    println!(" [ZK-PROVER] Ed25519 Signature compiled successfully. Signature size: {} bytes", proof_bytes.len());
+
     let public_statement = PublicStatement {
         binding_hash,
         ephemeral_pubkey,
     };
-
-    let proof_bytes = simulate_groth16_proving_backend(&public_statement)?;
-    println!(" [ZK-PROVER] Groth16 Proof compiled successfully. Proof size: {} bytes", proof_bytes.len());
 
     Ok(Groth16Proof {
         proof_bytes,
@@ -271,9 +274,17 @@ fn simulate_groth16_proving_backend(_stmt: &PublicStatement) -> Result<Vec<u8>, 
     Ok(mock_proof)
 }
 
-/// Verifies the correctness of the SNARK Groth16 proof (used by off-chain keepers or nodes).
+/// Verifies the correctness of the Ed25519 signature proof.
 pub fn verify_groth16_proof(proof: &Groth16Proof) -> bool {
-    !proof.proof_bytes.is_empty()
+    use ed25519_dalek::{Verifier, VerifyingKey, Signature};
+    let pk_res = VerifyingKey::from_bytes(&proof.public_statement.ephemeral_pubkey);
+    let sig_bytes: Result<[u8; 64], _> = proof.proof_bytes.as_slice().try_into();
+    if let (Ok(pk), Ok(sig_arr)) = (pk_res, sig_bytes) {
+        let sig = Signature::from_bytes(&sig_arr);
+        pk.verify(&proof.public_statement.binding_hash, &sig).is_ok()
+    } else {
+        false
+    }
 }
 
 #[cfg(test)]

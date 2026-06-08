@@ -64,7 +64,7 @@ impl AgentTestState {
             .to(IDENTITY_SC_ADDRESS)
             .whitebox(identity_registry::contract_obj, |sc| {
                 sc.agent_token_id()
-                    .set_token_id(AGENT_TOKEN.to_token_identifier());
+                    .set_token_id(AGENT_TOKEN.to_esdt_token_identifier());
             });
 
         world.set_esdt_local_roles(IDENTITY_SC_ADDRESS, AGENT_TOKEN.as_bytes(), NFT_ROLES);
@@ -1326,7 +1326,7 @@ impl EscrowTestState {
             .to(IDENTITY_SC_ADDRESS)
             .whitebox(identity_registry::contract_obj, |sc| {
                 sc.agent_token_id()
-                    .set_token_id(AGENT_TOKEN.to_token_identifier());
+                    .set_token_id(AGENT_TOKEN.to_esdt_token_identifier());
             });
 
         world.set_esdt_local_roles(IDENTITY_SC_ADDRESS, AGENT_TOKEN.as_bytes(), NFT_ROLES);

@@ -690,7 +690,7 @@ fn test_issue_token_already_issued() {
 fn test_query_agent_token_id() {
     let mut state = AgentTestState::new();
     let token_id = state.query_agent_token_id();
-    assert_eq!(token_id, AGENT_TOKEN.to_token_identifier());
+    assert_eq!(token_id, AGENT_TOKEN.to_esdt_token_identifier());
 }
 
 // ============================================

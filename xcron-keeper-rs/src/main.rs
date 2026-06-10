@@ -10,6 +10,8 @@ pub mod quantum_shield;
 pub mod event_engine;
 pub mod cex_relayer;
 pub mod dispatcher;
+pub mod l1_observer;
+pub mod sentinel_node;
 
 use wallet::KeeperWallet;
 use transaction::Transaction;

@@ -177,6 +177,8 @@ pub trait SchedulingModule:
   fn schedule_sovereign_task(
     &self,
     encrypted_payload_hex: ManagedBuffer,
+    user_nonce: u64,
+    keeper_id: ManagedAddress,
     requested_deposit: OptionalValue<BigUint>,
   ) -> ManagedByteArray<Self::Api, 32> {
     self.require_not_paused();
@@ -194,14 +196,19 @@ pub trait SchedulingModule:
       self.call_value().egld().clone_value()
     };
 
-    require!(deposit >= self.min_deposit().get(), "Deposit below minimum");
+    require!(deposit >= self.min_deposit().get(), "Premium fee below minimum");
     self.require_deposit_within_cap(&deposit);
 
-    // Generate Task Hash for Sovereign Task (Encrypted Payload + Owner + Deposit)
+    // Replay 2.0: Generate Task Hash for Sovereign Task (Encrypted Payload + Owner + Deposit + Nonce + Timestamp + Keeper)
     let mut hash_data = ManagedBuffer::new();
     hash_data.append(&encrypted_payload_hex);
     hash_data.append(caller.as_managed_buffer());
     let _ = deposit.top_encode(&mut hash_data);
+    let _ = user_nonce.top_encode(&mut hash_data);
+    let current_timestamp = self.get_safe_block_timestamp();
+    let _ = current_timestamp.top_encode(&mut hash_data);
+    hash_data.append(keeper_id.as_managed_buffer());
+    
     let task_hash: ManagedByteArray<Self::Api, 32> = self.crypto().sha256(&hash_data).into();
 
     require!(self.quantum_tasks(&task_hash).is_empty(), "Sovereign task already exists");

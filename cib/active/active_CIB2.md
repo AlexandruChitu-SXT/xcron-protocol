@@ -1,38 +1,20 @@
-# CIB2 - Diseño (Auditoría e Integración del Parche de Tiempo Seguro)
+# CIB2 (Design) - Unbreakable Shielded Pool v2.1
 
-**Diseño de Soluciones Integradas:**
+Arquitectura consolidada (Grok + Gemini) para el protocolo híbrido de privacidad de XCron.
 
-1. **Creación de `common::time`:**
-   - Crearemos el archivo `contracts/common/src/time.rs` con la siguiente función pura:
-     ```rust
-     use multiversx_sc::api::ManagedTypeApi;
-     use multiversx_sc::types::BlockchainWrapper;
+## 1. El Flujo de Usuario (Magia Web2)
+- El remitente envía cifrado con **ML-KEM (Kyber)**. Paga la cantidad + Privacy Fee.
+- El receptor no hace nada. Recibe el balance de forma nativa en su wallet. El Smart Contract corta el vínculo entre el origen y el destino.
 
-     pub fn get_safe_block_timestamp<API: ManagedTypeApi>(blockchain: &BlockchainWrapper<API>) -> u64 {
-         let ts = blockchain.get_block_timestamp_seconds().as_u64_seconds();
-         if ts > 50_000_000_000 {
-             ts / 1000
-         } else {
-             ts
-         }
-     }
-     ```
-   - Registraremos el nuevo módulo en `contracts/common/src/lib.rs`.
+## 2. Nivel 1: Blindaje del TEE
+- **Pool 4-de-7:** Mínimo 7 Keepers en hardware diverso (Intel, AMD, AWS, ARM). Se requiere que 4 firmen para validar la transacción (Threshold ML-DSA).
+- **Attestation L1:** El contrato verifica los PCRs de los 4 Keepers.
 
-2. **Propagación del Timestamp Seguro en todos los Contratos Inteligentes:**
-   - **Scheduler (`contracts/scheduler/src/`)**:
-     - Actualizar `commit_reveal.rs` para que `get_safe_block_timestamp` llame a `common::time::get_safe_block_timestamp(&self.blockchain())`.
-     - Actualizar `clone_keys.rs` (líneas 101, 179, 246, 264), `execution.rs` (líneas 203, 421, 506) e `intents.rs` (líneas 43, 112, 178, 232, 293, 367) para reemplazar llamadas directas a `self.blockchain().get_block_timestamp_seconds().as_u64_seconds()` por `self.get_safe_block_timestamp()`.
-   - **Keeper Registry (`contracts/keeper-registry/src/lib.rs`)**:
-     - Reemplazar llamadas a `self.blockchain().get_block_timestamp_seconds().as_u64_seconds()` en las líneas 75, 128, 151 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
-   - **Vault (`contracts/vault/src/lib.rs`)**:
-     - Reemplazar llamadas en las líneas 256, 283, 338, 396, 440 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
-   - **Agent Shield Escrow (`contracts/xcron-agent-shield/escrow/src/lib.rs`)**:
-     - Reemplazar llamadas en las líneas 137, 249, 326 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
-   - **Validation Registry (`contracts/xcron-agent-shield/validation-registry/src/lib.rs`)**:
-     - Reemplazar llamadas en la línea 255 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
-   - **ZK Verifier (`contracts/zk-verifier/src/lib.rs`)**:
-     - Reemplazar llamadas en la línea 89 por `common::time::get_safe_block_timestamp(&self.blockchain())`.
+## 3. Nivel 2: Smart Contract (Anti-DoS & Replay)
+- **Replay 2.0:** `hash(user_nonce + timestamp + keeper_id + payload)`.
+- **Cobro Directo:** Tarifa Premium cobrada automáticamente por transacción.
+- **Escape Hatch (15 min):** Basado en bloques (~1500 bloques de Supernova a 600ms). Si el sistema falla, retiro asegurado.
 
-3. **Verificación de la dApp Frontend (`frontend-next`):**
-   - Asegurar que todas las peticiones a la API del gateway o Elasticsearch no asuman unidades incorrectas y que el cambio interno en `mx-api-service: v1.20.0` no interfiera con el cálculo diario en segundos de `oneDayAgo` en `ProtocolRadar.tsx`.
+## 4. Nivel 3: Sistema de Centinelas Descentralizado
+- Detección de ataques térmicos/voltaje en menos de 1 segundo.
+- **Verdugo 3-de-7:** Para pausar el contrato en L1 por emergencia, deben coincidir al menos 3 centinelas independientes, eliminando el riesgo de que una sola máquina maliciosa bloquee la red.

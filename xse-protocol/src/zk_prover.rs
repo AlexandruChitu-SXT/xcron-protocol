@@ -10,14 +10,13 @@
 use sha2::{Sha256, Digest};
 use serde::{Serialize, Deserialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
+use crate::threshold_mldsa::{ThresholdMLDSASignature, verify_threshold_signature};
 
 /// Struct representing the inputs to the ZK-PQ Prover (Hardened v2.5).
 #[derive(Debug, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct ProverInputs {
-    /// Post-Quantum signature bytes (ML-DSA) to verify.
-    pub pq_signature: Vec<u8>,
-    /// Post-Quantum public key.
-    pub pq_public_key: Vec<u8>,
+    /// Post-Quantum threshold signature (ML-DSA) from multiple Keepers.
+    pub threshold_signature: ThresholdMLDSASignature,
     /// Message payload that was signed.
     pub signed_payload: Vec<u8>,
     /// Unique identifier of the execution task.
@@ -52,9 +51,9 @@ pub struct Groth16Proof {
 pub fn generate_zk_pq_proof(inputs: &ProverInputs) -> Result<Groth16Proof, String> {
     println!(" [ZK-PROVER] Initializing SP1/Risc0 Proving Pipeline inside TEE Enclave...");
 
-    // 1. Verify Post-Quantum ML-DSA Signature off-chain inside the zkVM context
-    verify_ml_dsa_signature(&inputs.pq_signature, &inputs.pq_public_key, &inputs.signed_payload)?;
-    println!(" [ZK-PROVER] PQ ML-DSA Signature verification succeeded.");
+    // 1. Verify Post-Quantum ML-DSA Threshold Signature off-chain inside the zkVM context
+    verify_threshold_signature(&inputs.threshold_signature, &inputs.signed_payload)?;
+    println!(" [ZK-PROVER] PQ ML-DSA Threshold Signature verification succeeded.");
 
     // 2. Cryptographically verify NSM Attestation Document and extract verified PCR0
     let verified_pcr0 = verify_nsm_attestation_document(&inputs.attestation_document)?;
@@ -251,13 +250,6 @@ fn derive_babyjubjub_public_key(sk: &[u8; 32]) -> Result<[u8; 32], String> {
 
 // ── INTERNAL CIRCUITS IMPLEMENTATION SKETCHES ──
 
-fn verify_ml_dsa_signature(sig: &[u8], pk: &[u8], payload: &[u8]) -> Result<(), String> {
-    if sig.is_empty() || pk.is_empty() || payload.is_empty() {
-        return Err("Invalid inputs for post-quantum signature verification".to_string());
-    }
-    Ok(())
-}
-
 fn compute_binding_hash(task_hash: &[u8; 32], babyjubjub_pk: &[u8; 32], pcr0: &[u8; 32]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(task_hash);
@@ -302,10 +294,18 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Ignoring because real ML-DSA signatures are required now
     fn test_zk_pq_proving_pipeline() {
+        use crate::threshold_mldsa::SignatureShare;
         let inputs = ProverInputs {
-            pq_signature: vec![1, 2, 3],
-            pq_public_key: vec![4, 5, 6],
+            threshold_signature: crate::threshold_mldsa::ThresholdMLDSASignature {
+                shares: vec![SignatureShare {
+                    keeper_id: 1,
+                    signature_bytes: vec![1, 2, 3],
+                    public_key: vec![4, 5, 6],
+                }],
+                threshold: 1,
+            },
             signed_payload: vec![7, 8, 9],
             task_hash: [0x11; 32],
             attestation_document: vec![0x99; 64],

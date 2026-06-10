@@ -2366,6 +2366,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pqcrypto-kyber"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15c00293cf898859d0c771455388054fd69ab712263c73fdc7f287a39b1ba000"
+dependencies = [
+ "cc",
+ "glob",
+ "libc",
+ "pqcrypto-internals",
+ "pqcrypto-traits",
+]
+
+[[package]]
 name = "pqcrypto-traits"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4408,6 +4421,7 @@ dependencies = [
  "hex",
  "hmac",
  "pqcrypto-dilithium",
+ "pqcrypto-kyber",
  "pqcrypto-traits",
  "rand 0.8.5",
  "reqwest 0.12.28",

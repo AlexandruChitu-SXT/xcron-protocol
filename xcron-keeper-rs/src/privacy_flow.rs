@@ -213,6 +213,15 @@ impl IntegratedPrivacyFlow {
     }
     log::info!("   Account activated successfully.");
 
+    // 2.5 Gather Threshold Signatures via P2P (Multi-Keeper Coordination)
+    log::info!(" [STEP 2.5/6] Gathering Threshold Signatures (4-de-7) via P2P...");
+    // Mock: En producción esto usará libp2p GossipSub para intercambiar ThresholdMLDSASignature shares
+    for keeper_id in 1..=4 {
+        tokio::time::sleep(Duration::from_millis(50)).await; // Simular latencia de red
+        log::info!("   [P2P] Received valid ML-DSA Signature Share from Keeper #{}", keeper_id);
+    }
+    log::info!("   [P2P] Quorum Reached: 4/7 Keepers Co-Signed. Assembling Threshold Signature.");
+
     // 3. Relayed V3 Execution (Sovereign Enclave dispatch)
     log::info!(" [STEP 3/6] Dispatching Relayed V3 execution task...");
     

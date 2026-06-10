@@ -4,12 +4,14 @@ mod crypto;
 mod relayer;
 mod red_team;
 mod quantum_shield; // Import the new quantum shield module
+mod threshold_mldsa;
 mod observer_listener; // Import the VPS network observer listener daemon module
 
 use schema::{ExecutionIntent, ExecutionReceipt, ExecutedOrder, Proof};
 use validator::validate_intent;
 use crypto::{EncryptedSecrets, HardwareEnclave};
-use quantum_shield::verify_post_quantum_authorization;
+use quantum_shield::verify_post_quantum_authorization_threshold;
+use threshold_mldsa::{ThresholdMLDSASignature, SignatureShare};
 use relayer::CexRelayer;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::fs;
@@ -62,8 +64,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   // 3. POST-QUANTUM ON-CHAIN AUTHORIZATION (FIPS-204 / ML-DSA)
-  println!(" [QUANTUM-SHIELD] Bypassing Ed25519. Verifying FIPS-204 ML-DSA Post-Quantum Signature...");
-  match verify_post_quantum_authorization(&payload_to_sign, &real_quantum_sig_bytes, &real_pubkey_bytes) {
+  println!(" [QUANTUM-SHIELD] Bypassing Ed25519. Verifying FIPS-204 ML-DSA Post-Quantum Threshold Signature...");
+  
+  let threshold_sig = ThresholdMLDSASignature {
+      shares: vec![SignatureShare {
+          keeper_id: 1,
+          signature_bytes: real_quantum_sig_bytes.clone(),
+          public_key: real_pubkey_bytes.clone(),
+      }],
+      threshold: 1, // Mock threshold for testing
+  };
+
+  match verify_post_quantum_authorization_threshold(&payload_to_sign, &threshold_sig) {
     Ok(_) => println!(" [QUANTUM-SHIELD] FIPS-204 ML-DSA Signature valid. Execution authorized."),
     Err(e) => {
       println!(" [QUANTUM-SHIELD] {}", e);

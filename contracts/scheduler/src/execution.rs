@@ -114,6 +114,7 @@ pub trait ExecutionModule:
     task_hash: ManagedByteArray<Self::Api, 32>,
     zk_proof: ManagedBuffer,
     ephemeral_pubkey: ManagedByteArray<Self::Api, 32>,
+    attestation_pcr: ManagedByteArray<Self::Api, 32>,
     target_contract: ManagedAddress,
     target_endpoint: ManagedBuffer,
     target_args: MultiValueEncoded<ManagedBuffer>,
@@ -138,6 +139,7 @@ pub trait ExecutionModule:
       .argument(&task_hash.as_managed_buffer())
       .argument(&zk_proof)
       .argument(&ephemeral_pubkey.as_managed_buffer())
+      .argument(&attestation_pcr.as_managed_buffer())
       .returns(ReturnsRawResult)
       .sync_call();
 
@@ -401,10 +403,10 @@ pub trait ExecutionModule:
     self.xse_payload_triggered_event(&caller, &encrypted_payload_hex);
   }
 
-  /// ️ XCRON-PROTECT: V12 FIX — 24-Hour Safety Valve for Stuck XSE Tasks
+  /// ️ XCRON-PROTECT: V12 FIX — 15-Minute Safety Valve for Stuck XSE Tasks
   /// If a keeper puts a task into Executing state (for XSE enclave processing)
   /// but never calls settleXseTask, the task is stuck forever and the deposit locked.
-  /// This endpoint allows the task owner to rescue their deposit after 24 hours.
+  /// This endpoint allows the task owner to rescue their deposit after 15 minutes (1500 blocks).
   /// The keeper responsible is reported as failed (reputation strike).
   #[endpoint(rescueStuckXseTask)]
   fn rescue_stuck_xse_task(&self, task_hash: ManagedByteArray<Self::Api, 32>) {
@@ -419,10 +421,10 @@ pub trait ExecutionModule:
     );
 
     let current_time = self.get_safe_block_timestamp();
-    let stuck_threshold = 24 * 60 * 60; // 24 hours in seconds
+    let stuck_threshold = 15 * 60; // 15 minutes in seconds (1500 blocks in Supernova)
     require!(
       current_time >= quantum_state.executing_at + stuck_threshold,
-      "V12: Task has not been stuck for 24 hours yet"
+      "V12: Task has not been stuck for 15 minutes yet"
     );
 
     // Only the task owner or the contract owner can rescue
@@ -504,10 +506,10 @@ pub trait ExecutionModule:
     );
 
     let current_time = self.get_safe_block_timestamp();
-    let stuck_threshold = 24 * 60 * 60; // 24 hours
+    let stuck_threshold = 15 * 60; // 15 minutes
     require!(
       current_time >= quantum_state.executing_at + stuck_threshold,
-      "Task not stuck yet (wait 24h)"
+      "Task not stuck yet (wait 15m)"
     );
 
     let deposit = quantum_state.deposit.clone();

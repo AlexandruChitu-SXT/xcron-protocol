@@ -1,16 +1,22 @@
-# CIB3 - Puente a la Construcción (Plan de Modificación de Contratos y Verificación)
+# CIB3 (Puente a la Construcción) - Archivos y Tareas para v2.1
 
-**Plan de Implementación y de Seguridad:**
+Este documento establece el puente entre el diseño aprobado en CIB2 y la ejecución real en código.
 
-1. **Estructura Común de Parcheo:**
-   - Crear el módulo de tiempo seguro en `common/src/time.rs`.
-   - Modificar `common/src/lib.rs` para exportar `pub mod time;`.
+## 1. Smart Contracts L1 (`contracts/scheduler/src/`)
+- **`execution.rs`**: 
+  - Ajuste del Escape Hatch V2 a 1500 bloques.
+  - Binding de PCRs en el Verifier.
+- **`scheduling.rs`**: 
+  - Refactorizar el cálculo del depósito a Premium Privacy Fee.
+  - Implementar Replay 2.0 en la generación del `task_hash`.
 
-2. **Refactorización de Contratos:**
-   - Modificar `commit_reveal.rs` en `scheduler` para llamar al helper en `common::time::get_safe_block_timestamp(&self.blockchain())`.
-   - Modificar todos los demás accesos directos al tiempo del bloque en `scheduler` (`clone_keys.rs`, `execution.rs`, `intents.rs`).
-   - Modificar las llamadas en `keeper-registry`, `vault`, `xcron-agent-shield` y `zk-verifier` para que usen la misma función normalizadora.
+## 2. Keeper Network (`xcron-keeper-rs/src/`)
+- **`l1_observer.rs`** [NUEVO]: Centinela que vigila la red.
+- **`sentinel_node.rs`** [NUEVO]: Termómetro TEE con Kill-Switch en memoria.
+- **`quantum_shield.rs`**: Rotación de claves Dilithium y hardening de CPU.
 
-3. **Ejecución y Safety Loop:**
-   - Compilación completa de cada contrato usando `cargo check` y tests en `cargo test` para garantizar cero regresiones o errores de firma de funciones.
-   - Creación del archivo `implementation_plan.md` y solicitud de feedback.
+## 3. ZK-PQ Core (`xse-protocol/src/`)
+- **`threshold_mldsa.rs`** [NUEVO]: Lógica de firmas fraccionadas (4-de-7).
+- **`zk_prover.rs`**: Integración de ML-KEM (Kyber) y soporte para las firmas Threshold en los inputs públicos de Groth16.
+
+*Nota: El tracking de tareas detallado (Checklist) se mantendrá en el artefacto `task.md` durante la Fase 4 de ejecución.*
